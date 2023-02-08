@@ -1,5 +1,8 @@
 {
-    "name": "template-react-component-library",
+    "name": "@ezpzcoders-llc/ezpz-component-lib",
+    "publishConfig": {
+        "registry": "https://npm.pkg.github.com/YOUR_GITHUB_USERNAME"
+    },
     "version": "0.0.1",
     "description": "A simple template for a custom React component library",
     "scripts": {
