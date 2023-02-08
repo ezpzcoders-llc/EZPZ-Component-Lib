@@ -1,4 +1,6 @@
 /// <reference types="react" />
+import { ChangeEventHandler } from 'react';
+
 interface ButtonProps {
     label: string;
 }
@@ -18,4 +20,26 @@ type TextFieldProps = {
 };
 declare const TextField: ({ field, type, id, name, label, onChange, disabled }: TextFieldProps) => JSX.Element;
 
-export { Button, TextField };
+interface props {
+    field: {
+        value: string;
+        error: string;
+    };
+    id: string;
+    name: string;
+    label: string;
+    onChange: any;
+    disabled?: boolean;
+    minDate?: Date;
+}
+declare const DateField: ({ field, label, onChange, name, id, minDate }: props) => JSX.Element;
+
+declare const useForm: (initialState: any, validations: any) => {
+    form: any;
+    handleChange: ChangeEventHandler<HTMLInputElement>;
+    handleReset: () => void;
+    handleImport: (payload: any) => void;
+    isFormValid: boolean;
+};
+
+export { Button, DateField, TextField, useForm };

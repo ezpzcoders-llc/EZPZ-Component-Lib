@@ -2833,7 +2833,7 @@ var React$1 = /*#__PURE__*/_mergeNamespaces({
 	default: React
 }, [reactExports]);
 
-var Button = function (props) {
+var Button$2 = function (props) {
     return React.createElement("button", null, props.label);
 };
 
@@ -4729,6 +4729,30 @@ function ownerDocument(node) {
 function ownerWindow(node) {
   const doc = ownerDocument(node);
   return doc.defaultView || window;
+}
+
+function requirePropFactory(componentNameInError, Component) {
+  if (process.env.NODE_ENV === 'production') {
+    return () => null;
+  }
+
+  // eslint-disable-next-line react/forbid-foreign-prop-types
+  const prevPropTypes = Component ? _extends({}, Component.propTypes) : null;
+  const requireProp = requiredProp => (props, propName, componentName, location, propFullName, ...args) => {
+    const propFullNameSafe = propFullName || propName;
+    const defaultTypeChecker = prevPropTypes == null ? void 0 : prevPropTypes[propFullNameSafe];
+    if (defaultTypeChecker) {
+      const typeCheckerResult = defaultTypeChecker(props, propName, componentName, location, propFullName, ...args);
+      if (typeCheckerResult) {
+        return typeCheckerResult;
+      }
+    }
+    if (typeof props[propName] !== 'undefined' && !props[requiredProp]) {
+      return new Error(`The prop \`${propFullNameSafe}\` of ` + `\`${componentNameInError}\` can only be used together with the \`${requiredProp}\` prop.`);
+    }
+    return null;
+  };
+  return requireProp;
 }
 
 /**
@@ -6668,6 +6692,56 @@ function removeUnusedBreakpoints(breakpointKeys, style) {
   }, style);
 }
 
+// compute base for responsive values; e.g.,
+// [1,2,3] => {xs: true, sm: true, md: true}
+// {xs: 1, sm: 2, md: 3} => {xs: true, sm: true, md: true}
+function computeBreakpointsBase(breakpointValues, themeBreakpoints) {
+  // fixed value
+  if (typeof breakpointValues !== 'object') {
+    return {};
+  }
+  const base = {};
+  const breakpointsKeys = Object.keys(themeBreakpoints);
+  if (Array.isArray(breakpointValues)) {
+    breakpointsKeys.forEach((breakpoint, i) => {
+      if (i < breakpointValues.length) {
+        base[breakpoint] = true;
+      }
+    });
+  } else {
+    breakpointsKeys.forEach(breakpoint => {
+      if (breakpointValues[breakpoint] != null) {
+        base[breakpoint] = true;
+      }
+    });
+  }
+  return base;
+}
+function resolveBreakpointValues({
+  values: breakpointValues,
+  breakpoints: themeBreakpoints,
+  base: customBase
+}) {
+  const base = customBase || computeBreakpointsBase(breakpointValues, themeBreakpoints);
+  const keys = Object.keys(base);
+  if (keys.length === 0) {
+    return breakpointValues;
+  }
+  let previous;
+  return keys.reduce((acc, breakpoint, i) => {
+    if (Array.isArray(breakpointValues)) {
+      acc[breakpoint] = breakpointValues[i] != null ? breakpointValues[i] : breakpointValues[previous];
+      previous = i;
+    } else if (typeof breakpointValues === 'object') {
+      acc[breakpoint] = breakpointValues[breakpoint] != null ? breakpointValues[breakpoint] : breakpointValues[previous];
+      previous = breakpoint;
+    } else {
+      acc[breakpoint] = breakpointValues;
+    }
+    return acc;
+  }, {});
+}
+
 function getPath(obj, path, checkVars = true) {
   if (!path || typeof path !== 'string') {
     return null;
@@ -7532,7 +7606,7 @@ const styleFunctionSx = unstable_createStyleFunctionSx();
 styleFunctionSx.filterProps = ['sx'];
 var styleFunctionSx$1 = styleFunctionSx;
 
-const _excluded$D = ["sx"];
+const _excluded$X = ["sx"];
 const splitProps = props => {
   var _props$theme$unstable, _props$theme;
   const result = {
@@ -7553,7 +7627,7 @@ function extendSxProp(props) {
   const {
       sx: inSx
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$D);
+    other = _objectWithoutPropertiesLoose(props, _excluded$X);
   const {
     systemProps,
     otherProps
@@ -7579,7 +7653,7 @@ function extendSxProp(props) {
 
 function r(e){var t,f,n="";if("string"==typeof e||"number"==typeof e)n+=e;else if("object"==typeof e)if(Array.isArray(e))for(t=0;t<e.length;t++)e[t]&&(f=r(e[t]))&&(n&&(n+=" "),n+=f);else for(t in e)e[t]&&(n&&(n+=" "),n+=t);return n}function clsx(){for(var e,t,f=0,n="";f<arguments.length;)(e=arguments[f++])&&(t=r(e))&&(n&&(n+=" "),n+=t);return n}
 
-const _excluded$C = ["values", "unit", "step"];
+const _excluded$W = ["values", "unit", "step"];
 const sortBreakpointsValues = values => {
   const breakpointsAsArray = Object.keys(values).map(key => ({
     key,
@@ -7614,7 +7688,7 @@ function createBreakpoints(breakpoints) {
       unit = 'px',
       step = 5
     } = breakpoints,
-    other = _objectWithoutPropertiesLoose(breakpoints, _excluded$C);
+    other = _objectWithoutPropertiesLoose(breakpoints, _excluded$W);
   const sortedValues = sortBreakpointsValues(values);
   const keys = Object.keys(sortedValues);
   function up(key) {
@@ -7693,7 +7767,7 @@ function createSpacing(spacingInput = 8) {
   return spacing;
 }
 
-const _excluded$B = ["breakpoints", "palette", "spacing", "shape"];
+const _excluded$V = ["breakpoints", "palette", "spacing", "shape"];
 function createTheme$1(options = {}, ...args) {
   const {
       breakpoints: breakpointsInput = {},
@@ -7701,7 +7775,7 @@ function createTheme$1(options = {}, ...args) {
       spacing: spacingInput,
       shape: shapeInput = {}
     } = options,
-    other = _objectWithoutPropertiesLoose(options, _excluded$B);
+    other = _objectWithoutPropertiesLoose(options, _excluded$V);
   const breakpoints = createBreakpoints(breakpointsInput);
   const spacing = createSpacing(spacingInput);
   let muiTheme = deepmerge({
@@ -7754,7 +7828,7 @@ function useTheme$1(defaultTheme = systemDefaultTheme$1) {
   return useTheme$2(defaultTheme);
 }
 
-const _excluded$A = ["variant"];
+const _excluded$U = ["variant"];
 function isEmpty$3(string) {
   return string.length === 0;
 }
@@ -7768,7 +7842,7 @@ function propsToClassKey(props) {
   const {
       variant
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$A);
+    other = _objectWithoutPropertiesLoose(props, _excluded$U);
   let classKey = variant || '';
   Object.keys(other).sort().forEach(key => {
     if (key === 'color') {
@@ -7780,7 +7854,7 @@ function propsToClassKey(props) {
   return classKey;
 }
 
-const _excluded$z = ["name", "slot", "skipVariantsResolver", "skipSx", "overridesResolver"],
+const _excluded$T = ["name", "slot", "skipVariantsResolver", "skipSx", "overridesResolver"],
   _excluded2$2 = ["theme"],
   _excluded3 = ["theme"];
 function isEmpty$2(obj) {
@@ -7867,7 +7941,7 @@ function createStyled(input = {}) {
         skipSx: inputSkipSx,
         overridesResolver
       } = inputOptions,
-      options = _objectWithoutPropertiesLoose(inputOptions, _excluded$z);
+      options = _objectWithoutPropertiesLoose(inputOptions, _excluded$T);
 
     // if skipVariantsResolver option is defined, take the value, otherwise, true for root and false for other slots.
     const skipVariantsResolver = inputSkipVariantsResolver !== undefined ? inputSkipVariantsResolver : componentSlot && componentSlot !== 'Root' || false;
@@ -8250,7 +8324,7 @@ function createMixins(breakpoints, mixins) {
   }, mixins);
 }
 
-const _excluded$y = ["mode", "contrastThreshold", "tonalOffset"];
+const _excluded$S = ["mode", "contrastThreshold", "tonalOffset"];
 const light = {
   // The colors used to style the text.
   text: {
@@ -8419,7 +8493,7 @@ function createPalette(palette) {
       contrastThreshold = 3,
       tonalOffset = 0.2
     } = palette,
-    other = _objectWithoutPropertiesLoose(palette, _excluded$y);
+    other = _objectWithoutPropertiesLoose(palette, _excluded$S);
   const primary = palette.primary || getDefaultPrimary(mode);
   const secondary = palette.secondary || getDefaultSecondary(mode);
   const error = palette.error || getDefaultError(mode);
@@ -8543,7 +8617,7 @@ const theme2 = createTheme({ palette: {
   return paletteOutput;
 }
 
-const _excluded$x = ["fontFamily", "fontSize", "fontWeightLight", "fontWeightRegular", "fontWeightMedium", "fontWeightBold", "htmlFontSize", "allVariants", "pxToRem"];
+const _excluded$R = ["fontFamily", "fontSize", "fontWeightLight", "fontWeightRegular", "fontWeightMedium", "fontWeightBold", "htmlFontSize", "allVariants", "pxToRem"];
 function round(value) {
   return Math.round(value * 1e5) / 1e5;
 }
@@ -8574,7 +8648,7 @@ function createTypography(palette, typography) {
       allVariants,
       pxToRem: pxToRem2
     } = _ref,
-    other = _objectWithoutPropertiesLoose(_ref, _excluded$x);
+    other = _objectWithoutPropertiesLoose(_ref, _excluded$R);
   if (process.env.NODE_ENV !== 'production') {
     if (typeof fontSize !== 'number') {
       console.error('MUI: `fontSize` is required to be a number.');
@@ -8634,7 +8708,7 @@ function createShadow(...px) {
 const shadows = ['none', createShadow(0, 2, 1, -1, 0, 1, 1, 0, 0, 1, 3, 0), createShadow(0, 3, 1, -2, 0, 2, 2, 0, 0, 1, 5, 0), createShadow(0, 3, 3, -2, 0, 3, 4, 0, 0, 1, 8, 0), createShadow(0, 2, 4, -1, 0, 4, 5, 0, 0, 1, 10, 0), createShadow(0, 3, 5, -1, 0, 5, 8, 0, 0, 1, 14, 0), createShadow(0, 3, 5, -1, 0, 6, 10, 0, 0, 1, 18, 0), createShadow(0, 4, 5, -2, 0, 7, 10, 1, 0, 2, 16, 1), createShadow(0, 5, 5, -3, 0, 8, 10, 1, 0, 3, 14, 2), createShadow(0, 5, 6, -3, 0, 9, 12, 1, 0, 3, 16, 2), createShadow(0, 6, 6, -3, 0, 10, 14, 1, 0, 4, 18, 3), createShadow(0, 6, 7, -4, 0, 11, 15, 1, 0, 4, 20, 3), createShadow(0, 7, 8, -4, 0, 12, 17, 2, 0, 5, 22, 4), createShadow(0, 7, 8, -4, 0, 13, 19, 2, 0, 5, 24, 4), createShadow(0, 7, 9, -4, 0, 14, 21, 2, 0, 5, 26, 4), createShadow(0, 8, 9, -5, 0, 15, 22, 2, 0, 6, 28, 5), createShadow(0, 8, 10, -5, 0, 16, 24, 2, 0, 6, 30, 5), createShadow(0, 8, 11, -5, 0, 17, 26, 2, 0, 6, 32, 5), createShadow(0, 9, 11, -5, 0, 18, 28, 2, 0, 7, 34, 6), createShadow(0, 9, 12, -6, 0, 19, 29, 2, 0, 7, 36, 6), createShadow(0, 10, 13, -6, 0, 20, 31, 3, 0, 8, 38, 7), createShadow(0, 10, 13, -6, 0, 21, 33, 3, 0, 8, 40, 7), createShadow(0, 10, 14, -6, 0, 22, 35, 3, 0, 8, 42, 7), createShadow(0, 11, 14, -7, 0, 23, 36, 3, 0, 9, 44, 8), createShadow(0, 11, 15, -7, 0, 24, 38, 3, 0, 9, 46, 8)];
 var shadows$1 = shadows;
 
-const _excluded$w = ["duration", "easing", "delay"];
+const _excluded$Q = ["duration", "easing", "delay"];
 // Follow https://material.google.com/motion/duration-easing.html#duration-easing-natural-easing-curves
 // to learn the context in which each easing should be used.
 const easing = {
@@ -8685,7 +8759,7 @@ function createTransitions(inputTransitions) {
         easing: easingOption = mergedEasing.easeInOut,
         delay = 0
       } = options,
-      other = _objectWithoutPropertiesLoose(options, _excluded$w);
+      other = _objectWithoutPropertiesLoose(options, _excluded$Q);
     if (process.env.NODE_ENV !== 'production') {
       const isString = value => typeof value === 'string';
       // IE11 support, replace with Number.isNaN
@@ -8732,7 +8806,7 @@ const zIndex = {
 };
 var zIndex$1 = zIndex;
 
-const _excluded$v = ["breakpoints", "mixins", "spacing", "palette", "transitions", "typography", "shape"];
+const _excluded$P = ["breakpoints", "mixins", "spacing", "palette", "transitions", "typography", "shape"];
 function createTheme(options = {}, ...args) {
   const {
       mixins: mixinsInput = {},
@@ -8740,7 +8814,7 @@ function createTheme(options = {}, ...args) {
       transitions: transitionsInput = {},
       typography: typographyInput = {}
     } = options,
-    other = _objectWithoutPropertiesLoose(options, _excluded$v);
+    other = _objectWithoutPropertiesLoose(options, _excluded$P);
   if (options.vars) {
     throw new Error(process.env.NODE_ENV !== "production" ? `MUI: \`vars\` is a private field used for CSS variables support.
 Please use another name.` : formatMuiErrorMessage(18));
@@ -8982,7 +9056,7 @@ function mergeSlotProps(parameters) {
   };
 }
 
-const _excluded$u = ["elementType", "externalSlotProps", "ownerState"];
+const _excluded$O = ["elementType", "externalSlotProps", "ownerState"];
 /**
  * @ignore - do not document.
  * Builds the props to be passed into the slot of an unstyled component.
@@ -8998,7 +9072,7 @@ function useSlotProps(parameters) {
       externalSlotProps,
       ownerState
     } = parameters,
-    rest = _objectWithoutPropertiesLoose(parameters, _excluded$u);
+    rest = _objectWithoutPropertiesLoose(parameters, _excluded$O);
   const resolvedComponentsProps = resolveComponentProps(externalSlotProps, ownerState);
   const {
     props: mergedProps,
@@ -40550,8 +40624,8 @@ function getModalUtilityClass(slot) {
 }
 generateUtilityClasses('MuiModal', ['root', 'hidden']);
 
-const _excluded$t = ["children", "classes", "closeAfterTransition", "component", "container", "disableAutoFocus", "disableEnforceFocus", "disableEscapeKeyDown", "disablePortal", "disableRestoreFocus", "disableScrollLock", "hideBackdrop", "keepMounted", "manager", "onBackdropClick", "onClose", "onKeyDown", "open", "onTransitionEnter", "onTransitionExited", "slotProps", "slots"];
-const useUtilityClasses$m = ownerState => {
+const _excluded$N = ["children", "classes", "closeAfterTransition", "component", "container", "disableAutoFocus", "disableEnforceFocus", "disableEscapeKeyDown", "disablePortal", "disableRestoreFocus", "disableScrollLock", "hideBackdrop", "keepMounted", "manager", "onBackdropClick", "onClose", "onKeyDown", "open", "onTransitionEnter", "onTransitionExited", "slotProps", "slots"];
+const useUtilityClasses$J = ownerState => {
   const {
     open,
     exited,
@@ -40622,7 +40696,7 @@ const ModalUnstyled = /*#__PURE__*/reactExports.forwardRef(function ModalUnstyle
       slotProps = {},
       slots = {}
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$t);
+    other = _objectWithoutPropertiesLoose(props, _excluded$N);
   const [exited, setExited] = reactExports.useState(!open);
   const modal = reactExports.useRef({});
   const mountNodeRef = reactExports.useRef(null);
@@ -40695,7 +40769,7 @@ const ModalUnstyled = /*#__PURE__*/reactExports.forwardRef(function ModalUnstyle
     hideBackdrop,
     keepMounted
   });
-  const classes = useUtilityClasses$m(ownerState);
+  const classes = useUtilityClasses$J(ownerState);
   const handleEnter = () => {
     setExited(false);
     if (onTransitionEnter) {
@@ -40923,7 +40997,7 @@ process.env.NODE_ENV !== "production" ? ModalUnstyled.propTypes /* remove-propty
 } : void 0;
 var ModalUnstyled$1 = ModalUnstyled;
 
-const _excluded$s = ["onChange", "maxRows", "minRows", "style", "value"];
+const _excluded$M = ["onChange", "maxRows", "minRows", "style", "value"];
 function getStyleValue(computedStyle, property) {
   return parseInt(computedStyle[property], 10) || 0;
 }
@@ -40953,7 +41027,7 @@ const TextareaAutosize = /*#__PURE__*/reactExports.forwardRef(function TextareaA
       style,
       value
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$s);
+    other = _objectWithoutPropertiesLoose(props, _excluded$M);
   const {
     current: isControlled
   } = reactExports.useRef(value != null);
@@ -41164,8 +41238,8 @@ function getSvgIconUtilityClass(slot) {
 }
 generateUtilityClasses('MuiSvgIcon', ['root', 'colorPrimary', 'colorSecondary', 'colorAction', 'colorError', 'colorDisabled', 'fontSizeInherit', 'fontSizeSmall', 'fontSizeMedium', 'fontSizeLarge']);
 
-const _excluded$r = ["children", "className", "color", "component", "fontSize", "htmlColor", "inheritViewBox", "titleAccess", "viewBox"];
-const useUtilityClasses$l = ownerState => {
+const _excluded$L = ["children", "className", "color", "component", "fontSize", "htmlColor", "inheritViewBox", "titleAccess", "viewBox"];
+const useUtilityClasses$I = ownerState => {
   const {
     color,
     fontSize,
@@ -41230,7 +41304,7 @@ const SvgIcon = /*#__PURE__*/reactExports.forwardRef(function SvgIcon(inProps, r
       titleAccess,
       viewBox = '0 0 24 24'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$r);
+    other = _objectWithoutPropertiesLoose(props, _excluded$L);
   const ownerState = _extends({}, props, {
     color,
     component,
@@ -41243,7 +41317,7 @@ const SvgIcon = /*#__PURE__*/reactExports.forwardRef(function SvgIcon(inProps, r
   if (!inheritViewBox) {
     more.viewBox = viewBox;
   }
-  const classes = useUtilityClasses$l(ownerState);
+  const classes = useUtilityClasses$I(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(SvgIconRoot, _extends({
     as: component,
     className: clsx(classes.root, className),
@@ -41352,18 +41426,61 @@ function createSvgIcon(path, displayName) {
   return /*#__PURE__*/reactExports.memo( /*#__PURE__*/reactExports.forwardRef(Component));
 }
 
-function _setPrototypeOf(o, p) {
-  _setPrototypeOf = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) {
+function _setPrototypeOf$w(o, p) {
+  _setPrototypeOf$w = Object.setPrototypeOf ? Object.setPrototypeOf.bind() : function _setPrototypeOf(o, p) {
     o.__proto__ = p;
     return o;
   };
-  return _setPrototypeOf(o, p);
+  return _setPrototypeOf$w(o, p);
 }
 
 function _inheritsLoose(subClass, superClass) {
   subClass.prototype = Object.create(superClass.prototype);
   subClass.prototype.constructor = subClass;
-  _setPrototypeOf(subClass, superClass);
+  _setPrototypeOf$w(subClass, superClass);
+}
+
+/**
+ * Checks if a given element has a CSS class.
+ * 
+ * @param element the element
+ * @param className the CSS class name
+ */
+function hasClass(element, className) {
+  if (element.classList) return !!className && element.classList.contains(className);
+  return (" " + (element.className.baseVal || element.className) + " ").indexOf(" " + className + " ") !== -1;
+}
+
+/**
+ * Adds a CSS class to a given element.
+ * 
+ * @param element the element
+ * @param className the CSS class name
+ */
+
+function addClass(element, className) {
+  if (element.classList) element.classList.add(className);else if (!hasClass(element, className)) if (typeof element.className === 'string') element.className = element.className + " " + className;else element.setAttribute('class', (element.className && element.className.baseVal || '') + " " + className);
+}
+
+function replaceClassName(origClass, classToRemove) {
+  return origClass.replace(new RegExp("(^|\\s)" + classToRemove + "(?:\\s|$)", 'g'), '$1').replace(/\s+/g, ' ').replace(/^\s*|\s*$/g, '');
+}
+/**
+ * Removes a CSS class from a given element.
+ * 
+ * @param element the element
+ * @param className the CSS class name
+ */
+
+
+function removeClass$1(element, className) {
+  if (element.classList) {
+    element.classList.remove(className);
+  } else if (typeof element.className === 'string') {
+    element.className = replaceClassName(element.className, className);
+  } else {
+    element.setAttribute('class', replaceClassName(element.className && element.className.baseVal || '', className));
+  }
 }
 
 var config = {
@@ -41375,7 +41492,7 @@ var timeoutsShape = process.env.NODE_ENV !== 'production' ? propTypesExports.one
   exit: propTypesExports.number,
   appear: propTypesExports.number
 }).isRequired]) : null;
-process.env.NODE_ENV !== 'production' ? propTypesExports.oneOfType([propTypesExports.string, propTypesExports.shape({
+var classNamesShape = process.env.NODE_ENV !== 'production' ? propTypesExports.oneOfType([propTypesExports.string, propTypesExports.shape({
   enter: propTypesExports.string,
   exit: propTypesExports.string,
   active: propTypesExports.string
@@ -41988,7 +42105,7 @@ Transition.propTypes = process.env.NODE_ENV !== "production" ? {
   onExited: propTypesExports.func
 } : {}; // Name the function so it is clearer in the documentation
 
-function noop() {}
+function noop$3() {}
 
 Transition.defaultProps = {
   in: false,
@@ -41997,12 +42114,12 @@ Transition.defaultProps = {
   appear: false,
   enter: true,
   exit: true,
-  onEnter: noop,
-  onEntering: noop,
-  onEntered: noop,
-  onExit: noop,
-  onExiting: noop,
-  onExited: noop
+  onEnter: noop$3,
+  onEntering: noop$3,
+  onEntered: noop$3,
+  onExit: noop$3,
+  onExiting: noop$3,
+  onExited: noop$3
 };
 Transition.UNMOUNTED = UNMOUNTED;
 Transition.EXITED = EXITED;
@@ -42011,7 +42128,409 @@ Transition.ENTERED = ENTERED;
 Transition.EXITING = EXITING;
 var Transition$1 = Transition;
 
-function _assertThisInitialized(self) {
+var _addClass = function addClass$1(node, classes) {
+  return node && classes && classes.split(' ').forEach(function (c) {
+    return addClass(node, c);
+  });
+};
+
+var removeClass = function removeClass(node, classes) {
+  return node && classes && classes.split(' ').forEach(function (c) {
+    return removeClass$1(node, c);
+  });
+};
+/**
+ * A transition component inspired by the excellent
+ * [ng-animate](https://docs.angularjs.org/api/ngAnimate) library, you should
+ * use it if you're using CSS transitions or animations. It's built upon the
+ * [`Transition`](https://reactcommunity.org/react-transition-group/transition)
+ * component, so it inherits all of its props.
+ *
+ * `CSSTransition` applies a pair of class names during the `appear`, `enter`,
+ * and `exit` states of the transition. The first class is applied and then a
+ * second `*-active` class in order to activate the CSS transition. After the
+ * transition, matching `*-done` class names are applied to persist the
+ * transition state.
+ *
+ * ```jsx
+ * function App() {
+ *   const [inProp, setInProp] = useState(false);
+ *   return (
+ *     <div>
+ *       <CSSTransition in={inProp} timeout={200} classNames="my-node">
+ *         <div>
+ *           {"I'll receive my-node-* classes"}
+ *         </div>
+ *       </CSSTransition>
+ *       <button type="button" onClick={() => setInProp(true)}>
+ *         Click to Enter
+ *       </button>
+ *     </div>
+ *   );
+ * }
+ * ```
+ *
+ * When the `in` prop is set to `true`, the child component will first receive
+ * the class `example-enter`, then the `example-enter-active` will be added in
+ * the next tick. `CSSTransition` [forces a
+ * reflow](https://github.com/reactjs/react-transition-group/blob/5007303e729a74be66a21c3e2205e4916821524b/src/CSSTransition.js#L208-L215)
+ * between before adding the `example-enter-active`. This is an important trick
+ * because it allows us to transition between `example-enter` and
+ * `example-enter-active` even though they were added immediately one after
+ * another. Most notably, this is what makes it possible for us to animate
+ * _appearance_.
+ *
+ * ```css
+ * .my-node-enter {
+ *   opacity: 0;
+ * }
+ * .my-node-enter-active {
+ *   opacity: 1;
+ *   transition: opacity 200ms;
+ * }
+ * .my-node-exit {
+ *   opacity: 1;
+ * }
+ * .my-node-exit-active {
+ *   opacity: 0;
+ *   transition: opacity 200ms;
+ * }
+ * ```
+ *
+ * `*-active` classes represent which styles you want to animate **to**, so it's
+ * important to add `transition` declaration only to them, otherwise transitions
+ * might not behave as intended! This might not be obvious when the transitions
+ * are symmetrical, i.e. when `*-enter-active` is the same as `*-exit`, like in
+ * the example above (minus `transition`), but it becomes apparent in more
+ * complex transitions.
+ *
+ * **Note**: If you're using the
+ * [`appear`](http://reactcommunity.org/react-transition-group/transition#Transition-prop-appear)
+ * prop, make sure to define styles for `.appear-*` classes as well.
+ */
+
+
+var CSSTransition = /*#__PURE__*/function (_React$Component) {
+  _inheritsLoose(CSSTransition, _React$Component);
+
+  function CSSTransition() {
+    var _this;
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _React$Component.call.apply(_React$Component, [this].concat(args)) || this;
+    _this.appliedClasses = {
+      appear: {},
+      enter: {},
+      exit: {}
+    };
+
+    _this.onEnter = function (maybeNode, maybeAppearing) {
+      var _this$resolveArgument = _this.resolveArguments(maybeNode, maybeAppearing),
+          node = _this$resolveArgument[0],
+          appearing = _this$resolveArgument[1];
+
+      _this.removeClasses(node, 'exit');
+
+      _this.addClass(node, appearing ? 'appear' : 'enter', 'base');
+
+      if (_this.props.onEnter) {
+        _this.props.onEnter(maybeNode, maybeAppearing);
+      }
+    };
+
+    _this.onEntering = function (maybeNode, maybeAppearing) {
+      var _this$resolveArgument2 = _this.resolveArguments(maybeNode, maybeAppearing),
+          node = _this$resolveArgument2[0],
+          appearing = _this$resolveArgument2[1];
+
+      var type = appearing ? 'appear' : 'enter';
+
+      _this.addClass(node, type, 'active');
+
+      if (_this.props.onEntering) {
+        _this.props.onEntering(maybeNode, maybeAppearing);
+      }
+    };
+
+    _this.onEntered = function (maybeNode, maybeAppearing) {
+      var _this$resolveArgument3 = _this.resolveArguments(maybeNode, maybeAppearing),
+          node = _this$resolveArgument3[0],
+          appearing = _this$resolveArgument3[1];
+
+      var type = appearing ? 'appear' : 'enter';
+
+      _this.removeClasses(node, type);
+
+      _this.addClass(node, type, 'done');
+
+      if (_this.props.onEntered) {
+        _this.props.onEntered(maybeNode, maybeAppearing);
+      }
+    };
+
+    _this.onExit = function (maybeNode) {
+      var _this$resolveArgument4 = _this.resolveArguments(maybeNode),
+          node = _this$resolveArgument4[0];
+
+      _this.removeClasses(node, 'appear');
+
+      _this.removeClasses(node, 'enter');
+
+      _this.addClass(node, 'exit', 'base');
+
+      if (_this.props.onExit) {
+        _this.props.onExit(maybeNode);
+      }
+    };
+
+    _this.onExiting = function (maybeNode) {
+      var _this$resolveArgument5 = _this.resolveArguments(maybeNode),
+          node = _this$resolveArgument5[0];
+
+      _this.addClass(node, 'exit', 'active');
+
+      if (_this.props.onExiting) {
+        _this.props.onExiting(maybeNode);
+      }
+    };
+
+    _this.onExited = function (maybeNode) {
+      var _this$resolveArgument6 = _this.resolveArguments(maybeNode),
+          node = _this$resolveArgument6[0];
+
+      _this.removeClasses(node, 'exit');
+
+      _this.addClass(node, 'exit', 'done');
+
+      if (_this.props.onExited) {
+        _this.props.onExited(maybeNode);
+      }
+    };
+
+    _this.resolveArguments = function (maybeNode, maybeAppearing) {
+      return _this.props.nodeRef ? [_this.props.nodeRef.current, maybeNode] // here `maybeNode` is actually `appearing`
+      : [maybeNode, maybeAppearing];
+    };
+
+    _this.getClassNames = function (type) {
+      var classNames = _this.props.classNames;
+      var isStringClassNames = typeof classNames === 'string';
+      var prefix = isStringClassNames && classNames ? classNames + "-" : '';
+      var baseClassName = isStringClassNames ? "" + prefix + type : classNames[type];
+      var activeClassName = isStringClassNames ? baseClassName + "-active" : classNames[type + "Active"];
+      var doneClassName = isStringClassNames ? baseClassName + "-done" : classNames[type + "Done"];
+      return {
+        baseClassName: baseClassName,
+        activeClassName: activeClassName,
+        doneClassName: doneClassName
+      };
+    };
+
+    return _this;
+  }
+
+  var _proto = CSSTransition.prototype;
+
+  _proto.addClass = function addClass(node, type, phase) {
+    var className = this.getClassNames(type)[phase + "ClassName"];
+
+    var _this$getClassNames = this.getClassNames('enter'),
+        doneClassName = _this$getClassNames.doneClassName;
+
+    if (type === 'appear' && phase === 'done' && doneClassName) {
+      className += " " + doneClassName;
+    } // This is to force a repaint,
+    // which is necessary in order to transition styles when adding a class name.
+
+
+    if (phase === 'active') {
+      if (node) forceReflow(node);
+    }
+
+    if (className) {
+      this.appliedClasses[type][phase] = className;
+
+      _addClass(node, className);
+    }
+  };
+
+  _proto.removeClasses = function removeClasses(node, type) {
+    var _this$appliedClasses$ = this.appliedClasses[type],
+        baseClassName = _this$appliedClasses$.base,
+        activeClassName = _this$appliedClasses$.active,
+        doneClassName = _this$appliedClasses$.done;
+    this.appliedClasses[type] = {};
+
+    if (baseClassName) {
+      removeClass(node, baseClassName);
+    }
+
+    if (activeClassName) {
+      removeClass(node, activeClassName);
+    }
+
+    if (doneClassName) {
+      removeClass(node, doneClassName);
+    }
+  };
+
+  _proto.render = function render() {
+    var _this$props = this.props;
+        _this$props.classNames;
+        var props = _objectWithoutPropertiesLoose(_this$props, ["classNames"]);
+
+    return /*#__PURE__*/React.createElement(Transition$1, _extends({}, props, {
+      onEnter: this.onEnter,
+      onEntered: this.onEntered,
+      onEntering: this.onEntering,
+      onExit: this.onExit,
+      onExiting: this.onExiting,
+      onExited: this.onExited
+    }));
+  };
+
+  return CSSTransition;
+}(React.Component);
+
+CSSTransition.defaultProps = {
+  classNames: ''
+};
+CSSTransition.propTypes = process.env.NODE_ENV !== "production" ? _extends({}, Transition$1.propTypes, {
+  /**
+   * The animation classNames applied to the component as it appears, enters,
+   * exits or has finished the transition. A single name can be provided, which
+   * will be suffixed for each stage, e.g. `classNames="fade"` applies:
+   *
+   * - `fade-appear`, `fade-appear-active`, `fade-appear-done`
+   * - `fade-enter`, `fade-enter-active`, `fade-enter-done`
+   * - `fade-exit`, `fade-exit-active`, `fade-exit-done`
+   *
+   * A few details to note about how these classes are applied:
+   *
+   * 1. They are _joined_ with the ones that are already defined on the child
+   *    component, so if you want to add some base styles, you can use
+   *    `className` without worrying that it will be overridden.
+   *
+   * 2. If the transition component mounts with `in={false}`, no classes are
+   *    applied yet. You might be expecting `*-exit-done`, but if you think
+   *    about it, a component cannot finish exiting if it hasn't entered yet.
+   *
+   * 2. `fade-appear-done` and `fade-enter-done` will _both_ be applied. This
+   *    allows you to define different behavior for when appearing is done and
+   *    when regular entering is done, using selectors like
+   *    `.fade-enter-done:not(.fade-appear-done)`. For example, you could apply
+   *    an epic entrance animation when element first appears in the DOM using
+   *    [Animate.css](https://daneden.github.io/animate.css/). Otherwise you can
+   *    simply use `fade-enter-done` for defining both cases.
+   *
+   * Each individual classNames can also be specified independently like:
+   *
+   * ```js
+   * classNames={{
+   *  appear: 'my-appear',
+   *  appearActive: 'my-active-appear',
+   *  appearDone: 'my-done-appear',
+   *  enter: 'my-enter',
+   *  enterActive: 'my-active-enter',
+   *  enterDone: 'my-done-enter',
+   *  exit: 'my-exit',
+   *  exitActive: 'my-active-exit',
+   *  exitDone: 'my-done-exit',
+   * }}
+   * ```
+   *
+   * If you want to set these classes using CSS Modules:
+   *
+   * ```js
+   * import styles from './styles.css';
+   * ```
+   *
+   * you might want to use camelCase in your CSS file, that way could simply
+   * spread them instead of listing them one by one:
+   *
+   * ```js
+   * classNames={{ ...styles }}
+   * ```
+   *
+   * @type {string | {
+   *  appear?: string,
+   *  appearActive?: string,
+   *  appearDone?: string,
+   *  enter?: string,
+   *  enterActive?: string,
+   *  enterDone?: string,
+   *  exit?: string,
+   *  exitActive?: string,
+   *  exitDone?: string,
+   * }}
+   */
+  classNames: classNamesShape,
+
+  /**
+   * A `<Transition>` callback fired immediately after the 'enter' or 'appear' class is
+   * applied.
+   *
+   * **Note**: when `nodeRef` prop is passed, `node` is not passed.
+   *
+   * @type Function(node: HtmlElement, isAppearing: bool)
+   */
+  onEnter: propTypesExports.func,
+
+  /**
+   * A `<Transition>` callback fired immediately after the 'enter-active' or
+   * 'appear-active' class is applied.
+   *
+   * **Note**: when `nodeRef` prop is passed, `node` is not passed.
+   *
+   * @type Function(node: HtmlElement, isAppearing: bool)
+   */
+  onEntering: propTypesExports.func,
+
+  /**
+   * A `<Transition>` callback fired immediately after the 'enter' or
+   * 'appear' classes are **removed** and the `done` class is added to the DOM node.
+   *
+   * **Note**: when `nodeRef` prop is passed, `node` is not passed.
+   *
+   * @type Function(node: HtmlElement, isAppearing: bool)
+   */
+  onEntered: propTypesExports.func,
+
+  /**
+   * A `<Transition>` callback fired immediately after the 'exit' class is
+   * applied.
+   *
+   * **Note**: when `nodeRef` prop is passed, `node` is not passed
+   *
+   * @type Function(node: HtmlElement)
+   */
+  onExit: propTypesExports.func,
+
+  /**
+   * A `<Transition>` callback fired immediately after the 'exit-active' is applied.
+   *
+   * **Note**: when `nodeRef` prop is passed, `node` is not passed
+   *
+   * @type Function(node: HtmlElement)
+   */
+  onExiting: propTypesExports.func,
+
+  /**
+   * A `<Transition>` callback fired immediately after the 'exit' classes
+   * are **removed** and the `exit-done` class is added to the DOM node.
+   *
+   * **Note**: when `nodeRef` prop is passed, `node` is not passed
+   *
+   * @type Function(node: HtmlElement)
+   */
+  onExited: propTypesExports.func
+}) : {};
+var CSSTransition$1 = CSSTransition;
+
+function _assertThisInitialized$w(self) {
   if (self === void 0) {
     throw new ReferenceError("this hasn't been initialised - super() hasn't been called");
   }
@@ -42193,7 +42712,7 @@ var TransitionGroup = /*#__PURE__*/function (_React$Component) {
 
     _this = _React$Component.call(this, props, context) || this;
 
-    var handleExited = _this.handleExited.bind(_assertThisInitialized(_this)); // Initial children should all be entering, dependent on appear
+    var handleExited = _this.handleExited.bind(_assertThisInitialized$w(_this)); // Initial children should all be entering, dependent on appear
 
 
     _this.state = {
@@ -42359,8 +42878,8 @@ function getPaperUtilityClass(slot) {
 }
 generateUtilityClasses('MuiPaper', ['root', 'rounded', 'outlined', 'elevation', 'elevation0', 'elevation1', 'elevation2', 'elevation3', 'elevation4', 'elevation5', 'elevation6', 'elevation7', 'elevation8', 'elevation9', 'elevation10', 'elevation11', 'elevation12', 'elevation13', 'elevation14', 'elevation15', 'elevation16', 'elevation17', 'elevation18', 'elevation19', 'elevation20', 'elevation21', 'elevation22', 'elevation23', 'elevation24']);
 
-const _excluded$q = ["className", "component", "elevation", "square", "variant"];
-const useUtilityClasses$k = ownerState => {
+const _excluded$K = ["className", "component", "elevation", "square", "variant"];
+const useUtilityClasses$H = ownerState => {
   const {
     square,
     elevation,
@@ -42414,14 +42933,14 @@ const Paper = /*#__PURE__*/reactExports.forwardRef(function Paper(inProps, ref) 
       square = false,
       variant = 'elevation'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$q);
+    other = _objectWithoutPropertiesLoose(props, _excluded$K);
   const ownerState = _extends({}, props, {
     component,
     elevation,
     square,
     variant
   });
-  const classes = useUtilityClasses$k(ownerState);
+  const classes = useUtilityClasses$H(ownerState);
   if (process.env.NODE_ENV !== 'production') {
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const theme = useTheme();
@@ -42572,7 +43091,7 @@ process.env.NODE_ENV !== "production" ? Ripple.propTypes = {
 const touchRippleClasses = generateUtilityClasses('MuiTouchRipple', ['root', 'ripple', 'rippleVisible', 'ripplePulsate', 'child', 'childLeaving', 'childPulsate']);
 var touchRippleClasses$1 = touchRippleClasses;
 
-const _excluded$p = ["center", "classes", "className"];
+const _excluded$J = ["center", "classes", "className"];
 let _ = t => t,
   _t,
   _t2,
@@ -42701,7 +43220,7 @@ const TouchRipple = /*#__PURE__*/reactExports.forwardRef(function TouchRipple(in
       classes = {},
       className
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$p);
+    other = _objectWithoutPropertiesLoose(props, _excluded$J);
   const [ripples, setRipples] = reactExports.useState([]);
   const nextKey = reactExports.useRef(0);
   const rippleCallback = reactExports.useRef(null);
@@ -42902,8 +43421,8 @@ function getButtonBaseUtilityClass(slot) {
 const buttonBaseClasses = generateUtilityClasses('MuiButtonBase', ['root', 'disabled', 'focusVisible']);
 var buttonBaseClasses$1 = buttonBaseClasses;
 
-const _excluded$o = ["action", "centerRipple", "children", "className", "component", "disabled", "disableRipple", "disableTouchRipple", "focusRipple", "focusVisibleClassName", "LinkComponent", "onBlur", "onClick", "onContextMenu", "onDragLeave", "onFocus", "onFocusVisible", "onKeyDown", "onKeyUp", "onMouseDown", "onMouseLeave", "onMouseUp", "onTouchEnd", "onTouchMove", "onTouchStart", "tabIndex", "TouchRippleProps", "touchRippleRef", "type"];
-const useUtilityClasses$j = ownerState => {
+const _excluded$I = ["action", "centerRipple", "children", "className", "component", "disabled", "disableRipple", "disableTouchRipple", "focusRipple", "focusVisibleClassName", "LinkComponent", "onBlur", "onClick", "onContextMenu", "onDragLeave", "onFocus", "onFocusVisible", "onKeyDown", "onKeyUp", "onMouseDown", "onMouseLeave", "onMouseUp", "onTouchEnd", "onTouchMove", "onTouchStart", "tabIndex", "TouchRippleProps", "touchRippleRef", "type"];
+const useUtilityClasses$G = ownerState => {
   const {
     disabled,
     focusVisible,
@@ -43004,7 +43523,7 @@ const ButtonBase = /*#__PURE__*/reactExports.forwardRef(function ButtonBase(inPr
       touchRippleRef,
       type
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$o);
+    other = _objectWithoutPropertiesLoose(props, _excluded$I);
   const buttonRef = reactExports.useRef(null);
   const rippleRef = reactExports.useRef(null);
   const handleRippleRef = useForkRef(rippleRef, touchRippleRef);
@@ -43171,7 +43690,7 @@ const ButtonBase = /*#__PURE__*/reactExports.forwardRef(function ButtonBase(inPr
     tabIndex,
     focusVisible
   });
-  const classes = useUtilityClasses$j(ownerState);
+  const classes = useUtilityClasses$G(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(ButtonBaseRoot, _extends({
     as: ComponentProp,
     className: clsx(classes.root, className),
@@ -43368,8 +43887,8 @@ function getIconButtonUtilityClass(slot) {
 const iconButtonClasses = generateUtilityClasses('MuiIconButton', ['root', 'disabled', 'colorInherit', 'colorPrimary', 'colorSecondary', 'colorError', 'colorInfo', 'colorSuccess', 'colorWarning', 'edgeStart', 'edgeEnd', 'sizeSmall', 'sizeMedium', 'sizeLarge']);
 var iconButtonClasses$1 = iconButtonClasses;
 
-const _excluded$n = ["edge", "children", "className", "color", "disabled", "disableFocusRipple", "size"];
-const useUtilityClasses$i = ownerState => {
+const _excluded$H = ["edge", "children", "className", "color", "disabled", "disableFocusRipple", "size"];
+const useUtilityClasses$F = ownerState => {
   const {
     classes,
     disabled,
@@ -43469,7 +43988,7 @@ const IconButton = /*#__PURE__*/reactExports.forwardRef(function IconButton(inPr
       disableFocusRipple = false,
       size = 'medium'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$n);
+    other = _objectWithoutPropertiesLoose(props, _excluded$H);
   const ownerState = _extends({}, props, {
     edge,
     color,
@@ -43477,7 +43996,7 @@ const IconButton = /*#__PURE__*/reactExports.forwardRef(function IconButton(inPr
     disableFocusRipple,
     size
   });
-  const classes = useUtilityClasses$i(ownerState);
+  const classes = useUtilityClasses$F(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsx(IconButtonRoot, _extends({
     className: clsx(classes.root, className),
     centerRipple: true,
@@ -43563,8 +44082,8 @@ function getTypographyUtilityClass(slot) {
 }
 generateUtilityClasses('MuiTypography', ['root', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'subtitle1', 'subtitle2', 'body1', 'body2', 'inherit', 'button', 'caption', 'overline', 'alignLeft', 'alignRight', 'alignCenter', 'alignJustify', 'noWrap', 'gutterBottom', 'paragraph']);
 
-const _excluded$m = ["align", "className", "component", "gutterBottom", "noWrap", "paragraph", "variant", "variantMapping"];
-const useUtilityClasses$h = ownerState => {
+const _excluded$G = ["align", "className", "component", "gutterBottom", "noWrap", "paragraph", "variant", "variantMapping"];
+const useUtilityClasses$E = ownerState => {
   const {
     align,
     gutterBottom,
@@ -43647,7 +44166,7 @@ const Typography = /*#__PURE__*/reactExports.forwardRef(function Typography(inPr
       variant = 'body1',
       variantMapping = defaultVariantMapping
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$m);
+    other = _objectWithoutPropertiesLoose(props, _excluded$G);
   const ownerState = _extends({}, props, {
     align,
     color,
@@ -43660,7 +44179,7 @@ const Typography = /*#__PURE__*/reactExports.forwardRef(function Typography(inPr
     variantMapping
   });
   const Component = component || (paragraph ? 'p' : variantMapping[variant] || defaultVariantMapping[variant]) || 'span';
-  const classes = useUtilityClasses$h(ownerState);
+  const classes = useUtilityClasses$E(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsx(TypographyRoot, _extends({
     as: Component,
     ref: ref,
@@ -43829,7 +44348,7 @@ function getInputBaseUtilityClass(slot) {
 const inputBaseClasses = generateUtilityClasses('MuiInputBase', ['root', 'formControl', 'focused', 'disabled', 'adornedStart', 'adornedEnd', 'error', 'sizeSmall', 'multiline', 'colorSecondary', 'fullWidth', 'hiddenLabel', 'readOnly', 'input', 'inputSizeSmall', 'inputMultiline', 'inputTypeSearch', 'inputAdornedStart', 'inputAdornedEnd', 'inputHiddenLabel']);
 var inputBaseClasses$1 = inputBaseClasses;
 
-const _excluded$l = ["aria-describedby", "autoComplete", "autoFocus", "className", "color", "components", "componentsProps", "defaultValue", "disabled", "disableInjectingGlobalStyles", "endAdornment", "error", "fullWidth", "id", "inputComponent", "inputProps", "inputRef", "margin", "maxRows", "minRows", "multiline", "name", "onBlur", "onChange", "onClick", "onFocus", "onKeyDown", "onKeyUp", "placeholder", "readOnly", "renderSuffix", "rows", "size", "slotProps", "slots", "startAdornment", "type", "value"];
+const _excluded$F = ["aria-describedby", "autoComplete", "autoFocus", "className", "color", "components", "componentsProps", "defaultValue", "disabled", "disableInjectingGlobalStyles", "endAdornment", "error", "fullWidth", "id", "inputComponent", "inputProps", "inputRef", "margin", "maxRows", "minRows", "multiline", "name", "onBlur", "onChange", "onClick", "onFocus", "onKeyDown", "onKeyUp", "placeholder", "readOnly", "renderSuffix", "rows", "size", "slotProps", "slots", "startAdornment", "type", "value"];
 const rootOverridesResolver = (props, styles) => {
   const {
     ownerState
@@ -43842,7 +44361,7 @@ const inputOverridesResolver = (props, styles) => {
   } = props;
   return [styles.input, ownerState.size === 'small' && styles.inputSizeSmall, ownerState.multiline && styles.inputMultiline, ownerState.type === 'search' && styles.inputTypeSearch, ownerState.startAdornment && styles.inputAdornedStart, ownerState.endAdornment && styles.inputAdornedEnd, ownerState.hiddenLabel && styles.inputHiddenLabel];
 };
-const useUtilityClasses$g = ownerState => {
+const useUtilityClasses$D = ownerState => {
   const {
     classes,
     color,
@@ -44060,7 +44579,7 @@ const InputBase = /*#__PURE__*/reactExports.forwardRef(function InputBase(inProp
       type = 'text',
       value: valueProp
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$l);
+    other = _objectWithoutPropertiesLoose(props, _excluded$F);
   const value = inputPropsProp.value != null ? inputPropsProp.value : valueProp;
   const {
     current: isControlled
@@ -44234,7 +44753,7 @@ const InputBase = /*#__PURE__*/reactExports.forwardRef(function InputBase(inProp
     startAdornment,
     type
   });
-  const classes = useUtilityClasses$g(ownerState);
+  const classes = useUtilityClasses$D(ownerState);
   const Root = slots.root || components.Root || InputBaseRoot;
   const rootProps = slotProps.root || componentsProps.root || {};
   const Input = slots.input || components.Input || InputBaseComponent;
@@ -44538,7 +45057,7 @@ var ArrowDropDownIcon = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path"
   d: "M7 10l5 5 5-5z"
 }), 'ArrowDropDown');
 
-const _excluded$k = ["addEndListener", "appear", "children", "easing", "in", "onEnter", "onEntered", "onEntering", "onExit", "onExited", "onExiting", "style", "timeout", "TransitionComponent"];
+const _excluded$E = ["addEndListener", "appear", "children", "easing", "in", "onEnter", "onEntered", "onEntering", "onExit", "onExited", "onExiting", "style", "timeout", "TransitionComponent"];
 const styles$1 = {
   entering: {
     opacity: 1
@@ -44575,7 +45094,7 @@ const Fade = /*#__PURE__*/reactExports.forwardRef(function Fade(props, ref) {
       // eslint-disable-next-line react/prop-types
       TransitionComponent = Transition$1
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$k);
+    other = _objectWithoutPropertiesLoose(props, _excluded$E);
   const nodeRef = reactExports.useRef(null);
   const handleRef = useForkRef(nodeRef, children.ref, ref);
   const normalizedTransitionCallback = callback => maybeIsAppearing => {
@@ -44736,8 +45255,8 @@ function getBackdropUtilityClass(slot) {
 }
 generateUtilityClasses('MuiBackdrop', ['root', 'invisible']);
 
-const _excluded$j = ["children", "component", "components", "componentsProps", "className", "invisible", "open", "slotProps", "slots", "transitionDuration", "TransitionComponent"];
-const useUtilityClasses$f = ownerState => {
+const _excluded$D = ["children", "component", "components", "componentsProps", "className", "invisible", "open", "slotProps", "slots", "transitionDuration", "TransitionComponent"];
+const useUtilityClasses$C = ownerState => {
   const {
     classes,
     invisible
@@ -44792,12 +45311,12 @@ const Backdrop = /*#__PURE__*/reactExports.forwardRef(function Backdrop(inProps,
       // eslint-disable-next-line react/prop-types
       TransitionComponent = Fade$1
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$j);
+    other = _objectWithoutPropertiesLoose(props, _excluded$D);
   const ownerState = _extends({}, props, {
     component,
     invisible
   });
-  const classes = useUtilityClasses$f(ownerState);
+  const classes = useUtilityClasses$C(ownerState);
   const rootSlotProps = (_slotProps$root = slotProps.root) != null ? _slotProps$root : componentsProps.root;
   return /*#__PURE__*/jsxRuntimeExports.jsx(TransitionComponent, _extends({
     in: open,
@@ -44907,7 +45426,379 @@ process.env.NODE_ENV !== "production" ? Backdrop.propTypes /* remove-proptypes *
 } : void 0;
 var Backdrop$1 = Backdrop;
 
-const _excluded$i = ["BackdropComponent", "BackdropProps", "closeAfterTransition", "children", "component", "components", "componentsProps", "disableAutoFocus", "disableEnforceFocus", "disableEscapeKeyDown", "disablePortal", "disableRestoreFocus", "disableScrollLock", "hideBackdrop", "keepMounted", "slotProps", "slots", "theme"];
+function getButtonUtilityClass(slot) {
+  return generateUtilityClass('MuiButton', slot);
+}
+const buttonClasses = generateUtilityClasses('MuiButton', ['root', 'text', 'textInherit', 'textPrimary', 'textSecondary', 'textSuccess', 'textError', 'textInfo', 'textWarning', 'outlined', 'outlinedInherit', 'outlinedPrimary', 'outlinedSecondary', 'outlinedSuccess', 'outlinedError', 'outlinedInfo', 'outlinedWarning', 'contained', 'containedInherit', 'containedPrimary', 'containedSecondary', 'containedSuccess', 'containedError', 'containedInfo', 'containedWarning', 'disableElevation', 'focusVisible', 'disabled', 'colorInherit', 'textSizeSmall', 'textSizeMedium', 'textSizeLarge', 'outlinedSizeSmall', 'outlinedSizeMedium', 'outlinedSizeLarge', 'containedSizeSmall', 'containedSizeMedium', 'containedSizeLarge', 'sizeMedium', 'sizeSmall', 'sizeLarge', 'fullWidth', 'startIcon', 'endIcon', 'iconSizeSmall', 'iconSizeMedium', 'iconSizeLarge']);
+var buttonClasses$1 = buttonClasses;
+
+/**
+ * @ignore - internal component.
+ */
+const ButtonGroupContext = /*#__PURE__*/reactExports.createContext({});
+if (process.env.NODE_ENV !== 'production') {
+  ButtonGroupContext.displayName = 'ButtonGroupContext';
+}
+var ButtonGroupContext$1 = ButtonGroupContext;
+
+const _excluded$C = ["children", "color", "component", "className", "disabled", "disableElevation", "disableFocusRipple", "endIcon", "focusVisibleClassName", "fullWidth", "size", "startIcon", "type", "variant"];
+const useUtilityClasses$B = ownerState => {
+  const {
+    color,
+    disableElevation,
+    fullWidth,
+    size,
+    variant,
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root', variant, `${variant}${capitalize(color)}`, `size${capitalize(size)}`, `${variant}Size${capitalize(size)}`, color === 'inherit' && 'colorInherit', disableElevation && 'disableElevation', fullWidth && 'fullWidth'],
+    label: ['label'],
+    startIcon: ['startIcon', `iconSize${capitalize(size)}`],
+    endIcon: ['endIcon', `iconSize${capitalize(size)}`]
+  };
+  const composedClasses = composeClasses(slots, getButtonUtilityClass, classes);
+  return _extends({}, classes, composedClasses);
+};
+const commonIconStyles = ownerState => _extends({}, ownerState.size === 'small' && {
+  '& > *:nth-of-type(1)': {
+    fontSize: 18
+  }
+}, ownerState.size === 'medium' && {
+  '& > *:nth-of-type(1)': {
+    fontSize: 20
+  }
+}, ownerState.size === 'large' && {
+  '& > *:nth-of-type(1)': {
+    fontSize: 22
+  }
+});
+const ButtonRoot = styled$1(ButtonBase$1, {
+  shouldForwardProp: prop => rootShouldForwardProp(prop) || prop === 'classes',
+  name: 'MuiButton',
+  slot: 'Root',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    return [styles.root, styles[ownerState.variant], styles[`${ownerState.variant}${capitalize(ownerState.color)}`], styles[`size${capitalize(ownerState.size)}`], styles[`${ownerState.variant}Size${capitalize(ownerState.size)}`], ownerState.color === 'inherit' && styles.colorInherit, ownerState.disableElevation && styles.disableElevation, ownerState.fullWidth && styles.fullWidth];
+  }
+})(({
+  theme,
+  ownerState
+}) => {
+  var _theme$palette$getCon, _theme$palette;
+  return _extends({}, theme.typography.button, {
+    minWidth: 64,
+    padding: '6px 16px',
+    borderRadius: (theme.vars || theme).shape.borderRadius,
+    transition: theme.transitions.create(['background-color', 'box-shadow', 'border-color', 'color'], {
+      duration: theme.transitions.duration.short
+    }),
+    '&:hover': _extends({
+      textDecoration: 'none',
+      backgroundColor: theme.vars ? `rgba(${theme.vars.palette.text.primaryChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette.text.primary, theme.palette.action.hoverOpacity),
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        backgroundColor: 'transparent'
+      }
+    }, ownerState.variant === 'text' && ownerState.color !== 'inherit' && {
+      backgroundColor: theme.vars ? `rgba(${theme.vars.palette[ownerState.color].mainChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette[ownerState.color].main, theme.palette.action.hoverOpacity),
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        backgroundColor: 'transparent'
+      }
+    }, ownerState.variant === 'outlined' && ownerState.color !== 'inherit' && {
+      border: `1px solid ${(theme.vars || theme).palette[ownerState.color].main}`,
+      backgroundColor: theme.vars ? `rgba(${theme.vars.palette[ownerState.color].mainChannel} / ${theme.vars.palette.action.hoverOpacity})` : alpha(theme.palette[ownerState.color].main, theme.palette.action.hoverOpacity),
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        backgroundColor: 'transparent'
+      }
+    }, ownerState.variant === 'contained' && {
+      backgroundColor: (theme.vars || theme).palette.grey.A100,
+      boxShadow: (theme.vars || theme).shadows[4],
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        boxShadow: (theme.vars || theme).shadows[2],
+        backgroundColor: (theme.vars || theme).palette.grey[300]
+      }
+    }, ownerState.variant === 'contained' && ownerState.color !== 'inherit' && {
+      backgroundColor: (theme.vars || theme).palette[ownerState.color].dark,
+      // Reset on touch devices, it doesn't add specificity
+      '@media (hover: none)': {
+        backgroundColor: (theme.vars || theme).palette[ownerState.color].main
+      }
+    }),
+    '&:active': _extends({}, ownerState.variant === 'contained' && {
+      boxShadow: (theme.vars || theme).shadows[8]
+    }),
+    [`&.${buttonClasses$1.focusVisible}`]: _extends({}, ownerState.variant === 'contained' && {
+      boxShadow: (theme.vars || theme).shadows[6]
+    }),
+    [`&.${buttonClasses$1.disabled}`]: _extends({
+      color: (theme.vars || theme).palette.action.disabled
+    }, ownerState.variant === 'outlined' && {
+      border: `1px solid ${(theme.vars || theme).palette.action.disabledBackground}`
+    }, ownerState.variant === 'contained' && {
+      color: (theme.vars || theme).palette.action.disabled,
+      boxShadow: (theme.vars || theme).shadows[0],
+      backgroundColor: (theme.vars || theme).palette.action.disabledBackground
+    })
+  }, ownerState.variant === 'text' && {
+    padding: '6px 8px'
+  }, ownerState.variant === 'text' && ownerState.color !== 'inherit' && {
+    color: (theme.vars || theme).palette[ownerState.color].main
+  }, ownerState.variant === 'outlined' && {
+    padding: '5px 15px',
+    border: '1px solid currentColor'
+  }, ownerState.variant === 'outlined' && ownerState.color !== 'inherit' && {
+    color: (theme.vars || theme).palette[ownerState.color].main,
+    border: theme.vars ? `1px solid rgba(${theme.vars.palette[ownerState.color].mainChannel} / 0.5)` : `1px solid ${alpha(theme.palette[ownerState.color].main, 0.5)}`
+  }, ownerState.variant === 'contained' && {
+    color: theme.vars ?
+    // this is safe because grey does not change between default light/dark mode
+    theme.vars.palette.text.primary : (_theme$palette$getCon = (_theme$palette = theme.palette).getContrastText) == null ? void 0 : _theme$palette$getCon.call(_theme$palette, theme.palette.grey[300]),
+    backgroundColor: (theme.vars || theme).palette.grey[300],
+    boxShadow: (theme.vars || theme).shadows[2]
+  }, ownerState.variant === 'contained' && ownerState.color !== 'inherit' && {
+    color: (theme.vars || theme).palette[ownerState.color].contrastText,
+    backgroundColor: (theme.vars || theme).palette[ownerState.color].main
+  }, ownerState.color === 'inherit' && {
+    color: 'inherit',
+    borderColor: 'currentColor'
+  }, ownerState.size === 'small' && ownerState.variant === 'text' && {
+    padding: '4px 5px',
+    fontSize: theme.typography.pxToRem(13)
+  }, ownerState.size === 'large' && ownerState.variant === 'text' && {
+    padding: '8px 11px',
+    fontSize: theme.typography.pxToRem(15)
+  }, ownerState.size === 'small' && ownerState.variant === 'outlined' && {
+    padding: '3px 9px',
+    fontSize: theme.typography.pxToRem(13)
+  }, ownerState.size === 'large' && ownerState.variant === 'outlined' && {
+    padding: '7px 21px',
+    fontSize: theme.typography.pxToRem(15)
+  }, ownerState.size === 'small' && ownerState.variant === 'contained' && {
+    padding: '4px 10px',
+    fontSize: theme.typography.pxToRem(13)
+  }, ownerState.size === 'large' && ownerState.variant === 'contained' && {
+    padding: '8px 22px',
+    fontSize: theme.typography.pxToRem(15)
+  }, ownerState.fullWidth && {
+    width: '100%'
+  });
+}, ({
+  ownerState
+}) => ownerState.disableElevation && {
+  boxShadow: 'none',
+  '&:hover': {
+    boxShadow: 'none'
+  },
+  [`&.${buttonClasses$1.focusVisible}`]: {
+    boxShadow: 'none'
+  },
+  '&:active': {
+    boxShadow: 'none'
+  },
+  [`&.${buttonClasses$1.disabled}`]: {
+    boxShadow: 'none'
+  }
+});
+const ButtonStartIcon = styled$1('span', {
+  name: 'MuiButton',
+  slot: 'StartIcon',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    return [styles.startIcon, styles[`iconSize${capitalize(ownerState.size)}`]];
+  }
+})(({
+  ownerState
+}) => _extends({
+  display: 'inherit',
+  marginRight: 8,
+  marginLeft: -4
+}, ownerState.size === 'small' && {
+  marginLeft: -2
+}, commonIconStyles(ownerState)));
+const ButtonEndIcon = styled$1('span', {
+  name: 'MuiButton',
+  slot: 'EndIcon',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    return [styles.endIcon, styles[`iconSize${capitalize(ownerState.size)}`]];
+  }
+})(({
+  ownerState
+}) => _extends({
+  display: 'inherit',
+  marginRight: -4,
+  marginLeft: 8
+}, ownerState.size === 'small' && {
+  marginRight: -2
+}, commonIconStyles(ownerState)));
+const Button = /*#__PURE__*/reactExports.forwardRef(function Button(inProps, ref) {
+  // props priority: `inProps` > `contextProps` > `themeDefaultProps`
+  const contextProps = reactExports.useContext(ButtonGroupContext$1);
+  const resolvedProps = resolveProps(contextProps, inProps);
+  const props = useThemeProps({
+    props: resolvedProps,
+    name: 'MuiButton'
+  });
+  const {
+      children,
+      color = 'primary',
+      component = 'button',
+      className,
+      disabled = false,
+      disableElevation = false,
+      disableFocusRipple = false,
+      endIcon: endIconProp,
+      focusVisibleClassName,
+      fullWidth = false,
+      size = 'medium',
+      startIcon: startIconProp,
+      type,
+      variant = 'text'
+    } = props,
+    other = _objectWithoutPropertiesLoose(props, _excluded$C);
+  const ownerState = _extends({}, props, {
+    color,
+    component,
+    disabled,
+    disableElevation,
+    disableFocusRipple,
+    fullWidth,
+    size,
+    type,
+    variant
+  });
+  const classes = useUtilityClasses$B(ownerState);
+  const startIcon = startIconProp && /*#__PURE__*/jsxRuntimeExports.jsx(ButtonStartIcon, {
+    className: classes.startIcon,
+    ownerState: ownerState,
+    children: startIconProp
+  });
+  const endIcon = endIconProp && /*#__PURE__*/jsxRuntimeExports.jsx(ButtonEndIcon, {
+    className: classes.endIcon,
+    ownerState: ownerState,
+    children: endIconProp
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(ButtonRoot, _extends({
+    ownerState: ownerState,
+    className: clsx(contextProps.className, classes.root, className),
+    component: component,
+    disabled: disabled,
+    focusRipple: !disableFocusRipple,
+    focusVisibleClassName: clsx(classes.focusVisible, focusVisibleClassName),
+    ref: ref,
+    type: type
+  }, other, {
+    classes: classes,
+    children: [startIcon, children, endIcon]
+  }));
+});
+process.env.NODE_ENV !== "production" ? Button.propTypes /* remove-proptypes */ = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // |     To update them edit the d.ts file and run "yarn proptypes"     |
+  // ----------------------------------------------------------------------
+  /**
+   * The content of the component.
+   */
+  children: propTypesExports.node,
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+  /**
+   * @ignore
+   */
+  className: propTypesExports.string,
+  /**
+   * The color of the component.
+   * It supports both default and custom theme colors, which can be added as shown in the
+   * [palette customization guide](https://mui.com/material-ui/customization/palette/#adding-new-colors).
+   * @default 'primary'
+   */
+  color: propTypesExports /* @typescript-to-proptypes-ignore */.oneOfType([propTypesExports.oneOf(['inherit', 'primary', 'secondary', 'success', 'error', 'info', 'warning']), propTypesExports.string]),
+  /**
+   * The component used for the root node.
+   * Either a string to use a HTML element or a component.
+   */
+  component: propTypesExports.elementType,
+  /**
+   * If `true`, the component is disabled.
+   * @default false
+   */
+  disabled: propTypesExports.bool,
+  /**
+   * If `true`, no elevation is used.
+   * @default false
+   */
+  disableElevation: propTypesExports.bool,
+  /**
+   * If `true`, the  keyboard focus ripple is disabled.
+   * @default false
+   */
+  disableFocusRipple: propTypesExports.bool,
+  /**
+   * If `true`, the ripple effect is disabled.
+   *
+   * ⚠️ Without a ripple there is no styling for :focus-visible by default. Be sure
+   * to highlight the element by applying separate styles with the `.Mui-focusVisible` class.
+   * @default false
+   */
+  disableRipple: propTypesExports.bool,
+  /**
+   * Element placed after the children.
+   */
+  endIcon: propTypesExports.node,
+  /**
+   * @ignore
+   */
+  focusVisibleClassName: propTypesExports.string,
+  /**
+   * If `true`, the button will take up the full width of its container.
+   * @default false
+   */
+  fullWidth: propTypesExports.bool,
+  /**
+   * The URL to link to when the button is clicked.
+   * If defined, an `a` element will be used as the root node.
+   */
+  href: propTypesExports.string,
+  /**
+   * The size of the component.
+   * `small` is equivalent to the dense button styling.
+   * @default 'medium'
+   */
+  size: propTypesExports /* @typescript-to-proptypes-ignore */.oneOfType([propTypesExports.oneOf(['small', 'medium', 'large']), propTypesExports.string]),
+  /**
+   * Element placed before the children.
+   */
+  startIcon: propTypesExports.node,
+  /**
+   * The system prop that allows defining system overrides as well as additional CSS styles.
+   */
+  sx: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.func, propTypesExports.object, propTypesExports.bool])), propTypesExports.func, propTypesExports.object]),
+  /**
+   * @ignore
+   */
+  type: propTypesExports.oneOfType([propTypesExports.oneOf(['button', 'reset', 'submit']), propTypesExports.string]),
+  /**
+   * The variant to use.
+   * @default 'text'
+   */
+  variant: propTypesExports /* @typescript-to-proptypes-ignore */.oneOfType([propTypesExports.oneOf(['contained', 'outlined', 'text']), propTypesExports.string])
+} : void 0;
+var Button$1 = Button;
+
+const _excluded$B = ["BackdropComponent", "BackdropProps", "closeAfterTransition", "children", "component", "components", "componentsProps", "disableAutoFocus", "disableEnforceFocus", "disableEscapeKeyDown", "disablePortal", "disableRestoreFocus", "disableScrollLock", "hideBackdrop", "keepMounted", "slotProps", "slots", "theme"];
 const extendUtilityClasses = ownerState => {
   return ownerState.classes;
 };
@@ -44983,7 +45874,7 @@ const Modal = /*#__PURE__*/reactExports.forwardRef(function Modal(inProps, ref) 
       // eslint-disable-next-line react/prop-types
       theme
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$i);
+    other = _objectWithoutPropertiesLoose(props, _excluded$B);
   const [exited, setExited] = reactExports.useState(true);
   const commonProps = {
     closeAfterTransition,
@@ -45193,8 +46084,575 @@ process.env.NODE_ENV !== "production" ? Modal.propTypes /* remove-proptypes */ =
 } : void 0;
 var Modal$1 = Modal;
 
-const _excluded$h = ["disableUnderline", "components", "componentsProps", "fullWidth", "hiddenLabel", "inputComponent", "multiline", "slotProps", "slots", "type"];
-const useUtilityClasses$e = ownerState => {
+function getDialogUtilityClass(slot) {
+  return generateUtilityClass('MuiDialog', slot);
+}
+const dialogClasses = generateUtilityClasses('MuiDialog', ['root', 'scrollPaper', 'scrollBody', 'container', 'paper', 'paperScrollPaper', 'paperScrollBody', 'paperWidthFalse', 'paperWidthXs', 'paperWidthSm', 'paperWidthMd', 'paperWidthLg', 'paperWidthXl', 'paperFullWidth', 'paperFullScreen']);
+var dialogClasses$1 = dialogClasses;
+
+const DialogContext = /*#__PURE__*/reactExports.createContext({});
+if (process.env.NODE_ENV !== 'production') {
+  DialogContext.displayName = 'DialogContext';
+}
+var DialogContext$1 = DialogContext;
+
+const _excluded$A = ["aria-describedby", "aria-labelledby", "BackdropComponent", "BackdropProps", "children", "className", "disableEscapeKeyDown", "fullScreen", "fullWidth", "maxWidth", "onBackdropClick", "onClose", "open", "PaperComponent", "PaperProps", "scroll", "TransitionComponent", "transitionDuration", "TransitionProps"];
+const DialogBackdrop = styled$1(Backdrop$1, {
+  name: 'MuiDialog',
+  slot: 'Backdrop',
+  overrides: (props, styles) => styles.backdrop
+})({
+  // Improve scrollable dialog support.
+  zIndex: -1
+});
+const useUtilityClasses$A = ownerState => {
+  const {
+    classes,
+    scroll,
+    maxWidth,
+    fullWidth,
+    fullScreen
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    container: ['container', `scroll${capitalize(scroll)}`],
+    paper: ['paper', `paperScroll${capitalize(scroll)}`, `paperWidth${capitalize(String(maxWidth))}`, fullWidth && 'paperFullWidth', fullScreen && 'paperFullScreen']
+  };
+  return composeClasses(slots, getDialogUtilityClass, classes);
+};
+const DialogRoot = styled$1(Modal$1, {
+  name: 'MuiDialog',
+  slot: 'Root',
+  overridesResolver: (props, styles) => styles.root
+})({
+  '@media print': {
+    // Use !important to override the Modal inline-style.
+    position: 'absolute !important'
+  }
+});
+const DialogContainer = styled$1('div', {
+  name: 'MuiDialog',
+  slot: 'Container',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    return [styles.container, styles[`scroll${capitalize(ownerState.scroll)}`]];
+  }
+})(({
+  ownerState
+}) => _extends({
+  height: '100%',
+  '@media print': {
+    height: 'auto'
+  },
+  // We disable the focus ring for mouse, touch and keyboard users.
+  outline: 0
+}, ownerState.scroll === 'paper' && {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center'
+}, ownerState.scroll === 'body' && {
+  overflowY: 'auto',
+  overflowX: 'hidden',
+  textAlign: 'center',
+  '&:after': {
+    content: '""',
+    display: 'inline-block',
+    verticalAlign: 'middle',
+    height: '100%',
+    width: '0'
+  }
+}));
+const DialogPaper = styled$1(Paper$1, {
+  name: 'MuiDialog',
+  slot: 'Paper',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    return [styles.paper, styles[`scrollPaper${capitalize(ownerState.scroll)}`], styles[`paperWidth${capitalize(String(ownerState.maxWidth))}`], ownerState.fullWidth && styles.paperFullWidth, ownerState.fullScreen && styles.paperFullScreen];
+  }
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  margin: 32,
+  position: 'relative',
+  overflowY: 'auto',
+  // Fix IE11 issue, to remove at some point.
+  '@media print': {
+    overflowY: 'visible',
+    boxShadow: 'none'
+  }
+}, ownerState.scroll === 'paper' && {
+  display: 'flex',
+  flexDirection: 'column',
+  maxHeight: 'calc(100% - 64px)'
+}, ownerState.scroll === 'body' && {
+  display: 'inline-block',
+  verticalAlign: 'middle',
+  textAlign: 'left' // 'initial' doesn't work on IE11
+}, !ownerState.maxWidth && {
+  maxWidth: 'calc(100% - 64px)'
+}, ownerState.maxWidth === 'xs' && {
+  maxWidth: theme.breakpoints.unit === 'px' ? Math.max(theme.breakpoints.values.xs, 444) : `${theme.breakpoints.values.xs}${theme.breakpoints.unit}`,
+  [`&.${dialogClasses$1.paperScrollBody}`]: {
+    [theme.breakpoints.down(Math.max(theme.breakpoints.values.xs, 444) + 32 * 2)]: {
+      maxWidth: 'calc(100% - 64px)'
+    }
+  }
+}, ownerState.maxWidth && ownerState.maxWidth !== 'xs' && {
+  maxWidth: `${theme.breakpoints.values[ownerState.maxWidth]}${theme.breakpoints.unit}`,
+  [`&.${dialogClasses$1.paperScrollBody}`]: {
+    [theme.breakpoints.down(theme.breakpoints.values[ownerState.maxWidth] + 32 * 2)]: {
+      maxWidth: 'calc(100% - 64px)'
+    }
+  }
+}, ownerState.fullWidth && {
+  width: 'calc(100% - 64px)'
+}, ownerState.fullScreen && {
+  margin: 0,
+  width: '100%',
+  maxWidth: '100%',
+  height: '100%',
+  maxHeight: 'none',
+  borderRadius: 0,
+  [`&.${dialogClasses$1.paperScrollBody}`]: {
+    margin: 0,
+    maxWidth: '100%'
+  }
+}));
+
+/**
+ * Dialogs are overlaid modal paper based components with a backdrop.
+ */
+const Dialog = /*#__PURE__*/reactExports.forwardRef(function Dialog(inProps, ref) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiDialog'
+  });
+  const theme = useTheme();
+  const defaultTransitionDuration = {
+    enter: theme.transitions.duration.enteringScreen,
+    exit: theme.transitions.duration.leavingScreen
+  };
+  const {
+      'aria-describedby': ariaDescribedby,
+      'aria-labelledby': ariaLabelledbyProp,
+      BackdropComponent,
+      BackdropProps,
+      children,
+      className,
+      disableEscapeKeyDown = false,
+      fullScreen = false,
+      fullWidth = false,
+      maxWidth = 'sm',
+      onBackdropClick,
+      onClose,
+      open,
+      PaperComponent = Paper$1,
+      PaperProps = {},
+      scroll = 'paper',
+      TransitionComponent = Fade$1,
+      transitionDuration = defaultTransitionDuration,
+      TransitionProps
+    } = props,
+    other = _objectWithoutPropertiesLoose(props, _excluded$A);
+  const ownerState = _extends({}, props, {
+    disableEscapeKeyDown,
+    fullScreen,
+    fullWidth,
+    maxWidth,
+    scroll
+  });
+  const classes = useUtilityClasses$A(ownerState);
+  const backdropClick = reactExports.useRef();
+  const handleMouseDown = event => {
+    // We don't want to close the dialog when clicking the dialog content.
+    // Make sure the event starts and ends on the same DOM element.
+    backdropClick.current = event.target === event.currentTarget;
+  };
+  const handleBackdropClick = event => {
+    // Ignore the events not coming from the "backdrop".
+    if (!backdropClick.current) {
+      return;
+    }
+    backdropClick.current = null;
+    if (onBackdropClick) {
+      onBackdropClick(event);
+    }
+    if (onClose) {
+      onClose(event, 'backdropClick');
+    }
+  };
+  const ariaLabelledby = useId(ariaLabelledbyProp);
+  const dialogContextValue = reactExports.useMemo(() => {
+    return {
+      titleId: ariaLabelledby
+    };
+  }, [ariaLabelledby]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(DialogRoot, _extends({
+    className: clsx(classes.root, className),
+    closeAfterTransition: true,
+    components: {
+      Backdrop: DialogBackdrop
+    },
+    componentsProps: {
+      backdrop: _extends({
+        transitionDuration,
+        as: BackdropComponent
+      }, BackdropProps)
+    },
+    disableEscapeKeyDown: disableEscapeKeyDown,
+    onClose: onClose,
+    open: open,
+    ref: ref,
+    onClick: handleBackdropClick,
+    ownerState: ownerState
+  }, other, {
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(TransitionComponent, _extends({
+      appear: true,
+      in: open,
+      timeout: transitionDuration,
+      role: "presentation"
+    }, TransitionProps, {
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(DialogContainer, {
+        className: clsx(classes.container),
+        onMouseDown: handleMouseDown,
+        ownerState: ownerState,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(DialogPaper, _extends({
+          as: PaperComponent,
+          elevation: 24,
+          role: "dialog",
+          "aria-describedby": ariaDescribedby,
+          "aria-labelledby": ariaLabelledby
+        }, PaperProps, {
+          className: clsx(classes.paper, PaperProps.className),
+          ownerState: ownerState,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(DialogContext$1.Provider, {
+            value: dialogContextValue,
+            children: children
+          })
+        }))
+      })
+    }))
+  }));
+});
+process.env.NODE_ENV !== "production" ? Dialog.propTypes /* remove-proptypes */ = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // |     To update them edit the d.ts file and run "yarn proptypes"     |
+  // ----------------------------------------------------------------------
+  /**
+   * The id(s) of the element(s) that describe the dialog.
+   */
+  'aria-describedby': propTypesExports.string,
+  /**
+   * The id(s) of the element(s) that label the dialog.
+   */
+  'aria-labelledby': propTypesExports.string,
+  /**
+   * A backdrop component. This prop enables custom backdrop rendering.
+   * @deprecated Use `slots.backdrop` instead. While this prop currently works, it will be removed in the next major version.
+   * Use the `slots.backdrop` prop to make your application ready for the next version of Material UI.
+   * @default styled(Backdrop, {
+   *   name: 'MuiModal',
+   *   slot: 'Backdrop',
+   *   overridesResolver: (props, styles) => {
+   *     return styles.backdrop;
+   *   },
+   * })({
+   *   zIndex: -1,
+   * })
+   */
+  BackdropComponent: propTypesExports.elementType,
+  /**
+   * @ignore
+   */
+  BackdropProps: propTypesExports.object,
+  /**
+   * Dialog children, usually the included sub-components.
+   */
+  children: propTypesExports.node,
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+  /**
+   * @ignore
+   */
+  className: propTypesExports.string,
+  /**
+   * If `true`, hitting escape will not fire the `onClose` callback.
+   * @default false
+   */
+  disableEscapeKeyDown: propTypesExports.bool,
+  /**
+   * If `true`, the dialog is full-screen.
+   * @default false
+   */
+  fullScreen: propTypesExports.bool,
+  /**
+   * If `true`, the dialog stretches to `maxWidth`.
+   *
+   * Notice that the dialog width grow is limited by the default margin.
+   * @default false
+   */
+  fullWidth: propTypesExports.bool,
+  /**
+   * Determine the max-width of the dialog.
+   * The dialog width grows with the size of the screen.
+   * Set to `false` to disable `maxWidth`.
+   * @default 'sm'
+   */
+  maxWidth: propTypesExports /* @typescript-to-proptypes-ignore */.oneOfType([propTypesExports.oneOf(['xs', 'sm', 'md', 'lg', 'xl', false]), propTypesExports.string]),
+  /**
+   * Callback fired when the backdrop is clicked.
+   * @deprecated Use the `onClose` prop with the `reason` argument to handle the `backdropClick` events.
+   */
+  onBackdropClick: propTypesExports.func,
+  /**
+   * Callback fired when the component requests to be closed.
+   *
+   * @param {object} event The event source of the callback.
+   * @param {string} reason Can be: `"escapeKeyDown"`, `"backdropClick"`.
+   */
+  onClose: propTypesExports.func,
+  /**
+   * If `true`, the component is shown.
+   */
+  open: propTypesExports.bool.isRequired,
+  /**
+   * The component used to render the body of the dialog.
+   * @default Paper
+   */
+  PaperComponent: propTypesExports.elementType,
+  /**
+   * Props applied to the [`Paper`](/material-ui/api/paper/) element.
+   * @default {}
+   */
+  PaperProps: propTypesExports.object,
+  /**
+   * Determine the container for scrolling the dialog.
+   * @default 'paper'
+   */
+  scroll: propTypesExports.oneOf(['body', 'paper']),
+  /**
+   * The system prop that allows defining system overrides as well as additional CSS styles.
+   */
+  sx: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.func, propTypesExports.object, propTypesExports.bool])), propTypesExports.func, propTypesExports.object]),
+  /**
+   * The component used for the transition.
+   * [Follow this guide](/material-ui/transitions/#transitioncomponent-prop) to learn more about the requirements for this component.
+   * @default Fade
+   */
+  TransitionComponent: propTypesExports.elementType,
+  /**
+   * The duration for the transition, in milliseconds.
+   * You may specify a single timeout for all transitions, or individually with an object.
+   * @default {
+   *   enter: theme.transitions.duration.enteringScreen,
+   *   exit: theme.transitions.duration.leavingScreen,
+   * }
+   */
+  transitionDuration: propTypesExports.oneOfType([propTypesExports.number, propTypesExports.shape({
+    appear: propTypesExports.number,
+    enter: propTypesExports.number,
+    exit: propTypesExports.number
+  })]),
+  /**
+   * Props applied to the transition element.
+   * By default, the element is based on this [`Transition`](http://reactcommunity.org/react-transition-group/transition/) component.
+   */
+  TransitionProps: propTypesExports.object
+} : void 0;
+var Dialog$1 = Dialog;
+
+function getDialogActionsUtilityClass(slot) {
+  return generateUtilityClass('MuiDialogActions', slot);
+}
+generateUtilityClasses('MuiDialogActions', ['root', 'spacing']);
+
+const _excluded$z = ["className", "disableSpacing"];
+const useUtilityClasses$z = ownerState => {
+  const {
+    classes,
+    disableSpacing
+  } = ownerState;
+  const slots = {
+    root: ['root', !disableSpacing && 'spacing']
+  };
+  return composeClasses(slots, getDialogActionsUtilityClass, classes);
+};
+const DialogActionsRoot = styled$1('div', {
+  name: 'MuiDialogActions',
+  slot: 'Root',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    return [styles.root, !ownerState.disableSpacing && styles.spacing];
+  }
+})(({
+  ownerState
+}) => _extends({
+  display: 'flex',
+  alignItems: 'center',
+  padding: 8,
+  justifyContent: 'flex-end',
+  flex: '0 0 auto'
+}, !ownerState.disableSpacing && {
+  '& > :not(:first-of-type)': {
+    marginLeft: 8
+  }
+}));
+const DialogActions = /*#__PURE__*/reactExports.forwardRef(function DialogActions(inProps, ref) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiDialogActions'
+  });
+  const {
+      className,
+      disableSpacing = false
+    } = props,
+    other = _objectWithoutPropertiesLoose(props, _excluded$z);
+  const ownerState = _extends({}, props, {
+    disableSpacing
+  });
+  const classes = useUtilityClasses$z(ownerState);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(DialogActionsRoot, _extends({
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    ref: ref
+  }, other));
+});
+process.env.NODE_ENV !== "production" ? DialogActions.propTypes /* remove-proptypes */ = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // |     To update them edit the d.ts file and run "yarn proptypes"     |
+  // ----------------------------------------------------------------------
+  /**
+   * The content of the component.
+   */
+  children: propTypesExports.node,
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+  /**
+   * @ignore
+   */
+  className: propTypesExports.string,
+  /**
+   * If `true`, the actions do not have additional margin.
+   * @default false
+   */
+  disableSpacing: propTypesExports.bool,
+  /**
+   * The system prop that allows defining system overrides as well as additional CSS styles.
+   */
+  sx: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.func, propTypesExports.object, propTypesExports.bool])), propTypesExports.func, propTypesExports.object])
+} : void 0;
+var DialogActions$1 = DialogActions;
+
+function getDialogContentUtilityClass(slot) {
+  return generateUtilityClass('MuiDialogContent', slot);
+}
+generateUtilityClasses('MuiDialogContent', ['root', 'dividers']);
+
+const dialogTitleClasses = generateUtilityClasses('MuiDialogTitle', ['root']);
+var dialogTitleClasses$1 = dialogTitleClasses;
+
+const _excluded$y = ["className", "dividers"];
+const useUtilityClasses$y = ownerState => {
+  const {
+    classes,
+    dividers
+  } = ownerState;
+  const slots = {
+    root: ['root', dividers && 'dividers']
+  };
+  return composeClasses(slots, getDialogContentUtilityClass, classes);
+};
+const DialogContentRoot = styled$1('div', {
+  name: 'MuiDialogContent',
+  slot: 'Root',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    return [styles.root, ownerState.dividers && styles.dividers];
+  }
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  flex: '1 1 auto',
+  // Add iOS momentum scrolling for iOS < 13.0
+  WebkitOverflowScrolling: 'touch',
+  overflowY: 'auto',
+  padding: '20px 24px'
+}, ownerState.dividers ? {
+  padding: '16px 24px',
+  borderTop: `1px solid ${(theme.vars || theme).palette.divider}`,
+  borderBottom: `1px solid ${(theme.vars || theme).palette.divider}`
+} : {
+  [`.${dialogTitleClasses$1.root} + &`]: {
+    paddingTop: 0
+  }
+}));
+const DialogContent = /*#__PURE__*/reactExports.forwardRef(function DialogContent(inProps, ref) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiDialogContent'
+  });
+  const {
+      className,
+      dividers = false
+    } = props,
+    other = _objectWithoutPropertiesLoose(props, _excluded$y);
+  const ownerState = _extends({}, props, {
+    dividers
+  });
+  const classes = useUtilityClasses$y(ownerState);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(DialogContentRoot, _extends({
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    ref: ref
+  }, other));
+});
+process.env.NODE_ENV !== "production" ? DialogContent.propTypes /* remove-proptypes */ = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // |     To update them edit the d.ts file and run "yarn proptypes"     |
+  // ----------------------------------------------------------------------
+  /**
+   * The content of the component.
+   */
+  children: propTypesExports.node,
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+  /**
+   * @ignore
+   */
+  className: propTypesExports.string,
+  /**
+   * Display the top and bottom dividers.
+   * @default false
+   */
+  dividers: propTypesExports.bool,
+  /**
+   * The system prop that allows defining system overrides as well as additional CSS styles.
+   */
+  sx: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.func, propTypesExports.object, propTypesExports.bool])), propTypesExports.func, propTypesExports.object])
+} : void 0;
+var DialogContent$1 = DialogContent;
+
+const _excluded$x = ["disableUnderline", "components", "componentsProps", "fullWidth", "hiddenLabel", "inputComponent", "multiline", "slotProps", "slots", "type"];
+const useUtilityClasses$x = ownerState => {
   const {
     classes,
     disableUnderline
@@ -45377,14 +46835,14 @@ const FilledInput = /*#__PURE__*/reactExports.forwardRef(function FilledInput(in
       slots = {},
       type = 'text'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$h);
+    other = _objectWithoutPropertiesLoose(props, _excluded$x);
   const ownerState = _extends({}, props, {
     fullWidth,
     inputComponent,
     multiline,
     type
   });
-  const classes = useUtilityClasses$e(props);
+  const classes = useUtilityClasses$x(props);
   const filledInputComponentsProps = {
     root: {
       ownerState
@@ -45612,8 +47070,8 @@ function getFormControlUtilityClasses(slot) {
 }
 generateUtilityClasses('MuiFormControl', ['root', 'marginNone', 'marginNormal', 'marginDense', 'fullWidth', 'disabled']);
 
-const _excluded$g = ["children", "className", "color", "component", "disabled", "error", "focused", "fullWidth", "hiddenLabel", "margin", "required", "size", "variant"];
-const useUtilityClasses$d = ownerState => {
+const _excluded$w = ["children", "className", "color", "component", "disabled", "error", "focused", "fullWidth", "hiddenLabel", "margin", "required", "size", "variant"];
+const useUtilityClasses$w = ownerState => {
   const {
     classes,
     margin,
@@ -45698,7 +47156,7 @@ const FormControl = /*#__PURE__*/reactExports.forwardRef(function FormControl(in
       size = 'medium',
       variant = 'outlined'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$g);
+    other = _objectWithoutPropertiesLoose(props, _excluded$w);
   const ownerState = _extends({}, props, {
     color,
     component,
@@ -45711,7 +47169,7 @@ const FormControl = /*#__PURE__*/reactExports.forwardRef(function FormControl(in
     size,
     variant
   });
-  const classes = useUtilityClasses$d(ownerState);
+  const classes = useUtilityClasses$w(ownerState);
   const [adornedStart, setAdornedStart] = reactExports.useState(() => {
     // We need to iterate through the children and find the Input in order
     // to fully support server-side rendering.
@@ -45894,8 +47352,8 @@ const formHelperTextClasses = generateUtilityClasses('MuiFormHelperText', ['root
 var formHelperTextClasses$1 = formHelperTextClasses;
 
 var _span$3;
-const _excluded$f = ["children", "className", "component", "disabled", "error", "filled", "focused", "margin", "required", "variant"];
-const useUtilityClasses$c = ownerState => {
+const _excluded$v = ["children", "className", "component", "disabled", "error", "filled", "focused", "margin", "required", "variant"];
+const useUtilityClasses$v = ownerState => {
   const {
     classes,
     contained,
@@ -45953,7 +47411,7 @@ const FormHelperText = /*#__PURE__*/reactExports.forwardRef(function FormHelperT
       className,
       component = 'p'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$f);
+    other = _objectWithoutPropertiesLoose(props, _excluded$v);
   const muiFormControl = useFormControl();
   const fcs = formControlState({
     props,
@@ -45971,7 +47429,7 @@ const FormHelperText = /*#__PURE__*/reactExports.forwardRef(function FormHelperT
     focused: fcs.focused,
     required: fcs.required
   });
-  const classes = useUtilityClasses$c(ownerState);
+  const classes = useUtilityClasses$v(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsx(FormHelperTextRoot, _extends({
     as: component,
     ownerState: ownerState,
@@ -46051,8 +47509,8 @@ function getFormLabelUtilityClasses(slot) {
 const formLabelClasses = generateUtilityClasses('MuiFormLabel', ['root', 'colorSecondary', 'focused', 'disabled', 'error', 'filled', 'required', 'asterisk']);
 var formLabelClasses$1 = formLabelClasses;
 
-const _excluded$e = ["children", "className", "color", "component", "disabled", "error", "filled", "focused", "required"];
-const useUtilityClasses$b = ownerState => {
+const _excluded$u = ["children", "className", "color", "component", "disabled", "error", "filled", "focused", "required"];
+const useUtilityClasses$u = ownerState => {
   const {
     classes,
     color,
@@ -46116,7 +47574,7 @@ const FormLabel = /*#__PURE__*/reactExports.forwardRef(function FormLabel(inProp
       className,
       component = 'label'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$e);
+    other = _objectWithoutPropertiesLoose(props, _excluded$u);
   const muiFormControl = useFormControl();
   const fcs = formControlState({
     props,
@@ -46132,7 +47590,7 @@ const FormLabel = /*#__PURE__*/reactExports.forwardRef(function FormLabel(inProp
     focused: fcs.focused,
     required: fcs.required
   });
-  const classes = useUtilityClasses$b(ownerState);
+  const classes = useUtilityClasses$u(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(FormLabelRoot, _extends({
     as: component,
     ownerState: ownerState,
@@ -46202,7 +47660,576 @@ process.env.NODE_ENV !== "production" ? FormLabel.propTypes /* remove-proptypes 
 } : void 0;
 var FormLabel$1 = FormLabel;
 
-const _excluded$d = ["addEndListener", "appear", "children", "easing", "in", "onEnter", "onEntered", "onEntering", "onExit", "onExited", "onExiting", "style", "timeout", "TransitionComponent"];
+/**
+ * @ignore - internal component.
+ */
+const GridContext = /*#__PURE__*/reactExports.createContext();
+if (process.env.NODE_ENV !== 'production') {
+  GridContext.displayName = 'GridContext';
+}
+var GridContext$1 = GridContext;
+
+function getGridUtilityClass(slot) {
+  return generateUtilityClass('MuiGrid', slot);
+}
+const SPACINGS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+const DIRECTIONS = ['column-reverse', 'column', 'row-reverse', 'row'];
+const WRAPS = ['nowrap', 'wrap-reverse', 'wrap'];
+const GRID_SIZES = ['auto', true, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+const gridClasses = generateUtilityClasses('MuiGrid', ['root', 'container', 'item', 'zeroMinWidth',
+// spacings
+...SPACINGS.map(spacing => `spacing-xs-${spacing}`),
+// direction values
+...DIRECTIONS.map(direction => `direction-xs-${direction}`),
+// wrap values
+...WRAPS.map(wrap => `wrap-xs-${wrap}`),
+// grid sizes for all breakpoints
+...GRID_SIZES.map(size => `grid-xs-${size}`), ...GRID_SIZES.map(size => `grid-sm-${size}`), ...GRID_SIZES.map(size => `grid-md-${size}`), ...GRID_SIZES.map(size => `grid-lg-${size}`), ...GRID_SIZES.map(size => `grid-xl-${size}`)]);
+
+const _excluded$t = ["className", "columns", "columnSpacing", "component", "container", "direction", "item", "rowSpacing", "spacing", "wrap", "zeroMinWidth"];
+function getOffset(val) {
+  const parse = parseFloat(val);
+  return `${parse}${String(val).replace(String(parse), '') || 'px'}`;
+}
+function generateGrid({
+  theme,
+  ownerState
+}) {
+  let size;
+  return theme.breakpoints.keys.reduce((globalStyles, breakpoint) => {
+    // Use side effect over immutability for better performance.
+    let styles = {};
+    if (ownerState[breakpoint]) {
+      size = ownerState[breakpoint];
+    }
+    if (!size) {
+      return globalStyles;
+    }
+    if (size === true) {
+      // For the auto layouting
+      styles = {
+        flexBasis: 0,
+        flexGrow: 1,
+        maxWidth: '100%'
+      };
+    } else if (size === 'auto') {
+      styles = {
+        flexBasis: 'auto',
+        flexGrow: 0,
+        flexShrink: 0,
+        maxWidth: 'none',
+        width: 'auto'
+      };
+    } else {
+      const columnsBreakpointValues = resolveBreakpointValues({
+        values: ownerState.columns,
+        breakpoints: theme.breakpoints.values
+      });
+      const columnValue = typeof columnsBreakpointValues === 'object' ? columnsBreakpointValues[breakpoint] : columnsBreakpointValues;
+      if (columnValue === undefined || columnValue === null) {
+        return globalStyles;
+      }
+      // Keep 7 significant numbers.
+      const width = `${Math.round(size / columnValue * 10e7) / 10e5}%`;
+      let more = {};
+      if (ownerState.container && ownerState.item && ownerState.columnSpacing !== 0) {
+        const themeSpacing = theme.spacing(ownerState.columnSpacing);
+        if (themeSpacing !== '0px') {
+          const fullWidth = `calc(${width} + ${getOffset(themeSpacing)})`;
+          more = {
+            flexBasis: fullWidth,
+            maxWidth: fullWidth
+          };
+        }
+      }
+
+      // Close to the bootstrap implementation:
+      // https://github.com/twbs/bootstrap/blob/8fccaa2439e97ec72a4b7dc42ccc1f649790adb0/scss/mixins/_grid.scss#L41
+      styles = _extends({
+        flexBasis: width,
+        flexGrow: 0,
+        maxWidth: width
+      }, more);
+    }
+
+    // No need for a media query for the first size.
+    if (theme.breakpoints.values[breakpoint] === 0) {
+      Object.assign(globalStyles, styles);
+    } else {
+      globalStyles[theme.breakpoints.up(breakpoint)] = styles;
+    }
+    return globalStyles;
+  }, {});
+}
+function generateDirection({
+  theme,
+  ownerState
+}) {
+  const directionValues = resolveBreakpointValues({
+    values: ownerState.direction,
+    breakpoints: theme.breakpoints.values
+  });
+  return handleBreakpoints({
+    theme
+  }, directionValues, propValue => {
+    const output = {
+      flexDirection: propValue
+    };
+    if (propValue.indexOf('column') === 0) {
+      output[`& > .${gridClasses.item}`] = {
+        maxWidth: 'none'
+      };
+    }
+    return output;
+  });
+}
+
+/**
+ * Extracts zero value breakpoint keys before a non-zero value breakpoint key.
+ * @example { xs: 0, sm: 0, md: 2, lg: 0, xl: 0 } or [0, 0, 2, 0, 0]
+ * @returns [xs, sm]
+ */
+function extractZeroValueBreakpointKeys({
+  breakpoints,
+  values
+}) {
+  let nonZeroKey = '';
+  Object.keys(values).forEach(key => {
+    if (nonZeroKey !== '') {
+      return;
+    }
+    if (values[key] !== 0) {
+      nonZeroKey = key;
+    }
+  });
+  const sortedBreakpointKeysByValue = Object.keys(breakpoints).sort((a, b) => {
+    return breakpoints[a] - breakpoints[b];
+  });
+  return sortedBreakpointKeysByValue.slice(0, sortedBreakpointKeysByValue.indexOf(nonZeroKey));
+}
+function generateRowGap({
+  theme,
+  ownerState
+}) {
+  const {
+    container,
+    rowSpacing
+  } = ownerState;
+  let styles = {};
+  if (container && rowSpacing !== 0) {
+    const rowSpacingValues = resolveBreakpointValues({
+      values: rowSpacing,
+      breakpoints: theme.breakpoints.values
+    });
+    let zeroValueBreakpointKeys;
+    if (typeof rowSpacingValues === 'object') {
+      zeroValueBreakpointKeys = extractZeroValueBreakpointKeys({
+        breakpoints: theme.breakpoints.values,
+        values: rowSpacingValues
+      });
+    }
+    styles = handleBreakpoints({
+      theme
+    }, rowSpacingValues, (propValue, breakpoint) => {
+      var _zeroValueBreakpointK;
+      const themeSpacing = theme.spacing(propValue);
+      if (themeSpacing !== '0px') {
+        return {
+          marginTop: `-${getOffset(themeSpacing)}`,
+          [`& > .${gridClasses.item}`]: {
+            paddingTop: getOffset(themeSpacing)
+          }
+        };
+      }
+      if ((_zeroValueBreakpointK = zeroValueBreakpointKeys) != null && _zeroValueBreakpointK.includes(breakpoint)) {
+        return {};
+      }
+      return {
+        marginTop: 0,
+        [`& > .${gridClasses.item}`]: {
+          paddingTop: 0
+        }
+      };
+    });
+  }
+  return styles;
+}
+function generateColumnGap({
+  theme,
+  ownerState
+}) {
+  const {
+    container,
+    columnSpacing
+  } = ownerState;
+  let styles = {};
+  if (container && columnSpacing !== 0) {
+    const columnSpacingValues = resolveBreakpointValues({
+      values: columnSpacing,
+      breakpoints: theme.breakpoints.values
+    });
+    let zeroValueBreakpointKeys;
+    if (typeof columnSpacingValues === 'object') {
+      zeroValueBreakpointKeys = extractZeroValueBreakpointKeys({
+        breakpoints: theme.breakpoints.values,
+        values: columnSpacingValues
+      });
+    }
+    styles = handleBreakpoints({
+      theme
+    }, columnSpacingValues, (propValue, breakpoint) => {
+      var _zeroValueBreakpointK2;
+      const themeSpacing = theme.spacing(propValue);
+      if (themeSpacing !== '0px') {
+        return {
+          width: `calc(100% + ${getOffset(themeSpacing)})`,
+          marginLeft: `-${getOffset(themeSpacing)}`,
+          [`& > .${gridClasses.item}`]: {
+            paddingLeft: getOffset(themeSpacing)
+          }
+        };
+      }
+      if ((_zeroValueBreakpointK2 = zeroValueBreakpointKeys) != null && _zeroValueBreakpointK2.includes(breakpoint)) {
+        return {};
+      }
+      return {
+        width: '100%',
+        marginLeft: 0,
+        [`& > .${gridClasses.item}`]: {
+          paddingLeft: 0
+        }
+      };
+    });
+  }
+  return styles;
+}
+function resolveSpacingStyles(spacing, breakpoints, styles = {}) {
+  // undefined/null or `spacing` <= 0
+  if (!spacing || spacing <= 0) {
+    return [];
+  }
+  // in case of string/number `spacing`
+  if (typeof spacing === 'string' && !Number.isNaN(Number(spacing)) || typeof spacing === 'number') {
+    return [styles[`spacing-xs-${String(spacing)}`]];
+  }
+  // in case of object `spacing`
+  const spacingStyles = [];
+  breakpoints.forEach(breakpoint => {
+    const value = spacing[breakpoint];
+    if (Number(value) > 0) {
+      spacingStyles.push(styles[`spacing-${breakpoint}-${String(value)}`]);
+    }
+  });
+  return spacingStyles;
+}
+
+// Default CSS values
+// flex: '0 1 auto',
+// flexDirection: 'row',
+// alignItems: 'flex-start',
+// flexWrap: 'nowrap',
+// justifyContent: 'flex-start',
+const GridRoot = styled$1('div', {
+  name: 'MuiGrid',
+  slot: 'Root',
+  overridesResolver: (props, styles) => {
+    const {
+      ownerState
+    } = props;
+    const {
+      container,
+      direction,
+      item,
+      spacing,
+      wrap,
+      zeroMinWidth,
+      breakpoints
+    } = ownerState;
+    let spacingStyles = [];
+
+    // in case of grid item
+    if (container) {
+      spacingStyles = resolveSpacingStyles(spacing, breakpoints, styles);
+    }
+    const breakpointsStyles = [];
+    breakpoints.forEach(breakpoint => {
+      const value = ownerState[breakpoint];
+      if (value) {
+        breakpointsStyles.push(styles[`grid-${breakpoint}-${String(value)}`]);
+      }
+    });
+    return [styles.root, container && styles.container, item && styles.item, zeroMinWidth && styles.zeroMinWidth, ...spacingStyles, direction !== 'row' && styles[`direction-xs-${String(direction)}`], wrap !== 'wrap' && styles[`wrap-xs-${String(wrap)}`], ...breakpointsStyles];
+  }
+})(({
+  ownerState
+}) => _extends({
+  boxSizing: 'border-box'
+}, ownerState.container && {
+  display: 'flex',
+  flexWrap: 'wrap',
+  width: '100%'
+}, ownerState.item && {
+  margin: 0 // For instance, it's useful when used with a `figure` element.
+}, ownerState.zeroMinWidth && {
+  minWidth: 0
+}, ownerState.wrap !== 'wrap' && {
+  flexWrap: ownerState.wrap
+}), generateDirection, generateRowGap, generateColumnGap, generateGrid);
+function resolveSpacingClasses(spacing, breakpoints) {
+  // undefined/null or `spacing` <= 0
+  if (!spacing || spacing <= 0) {
+    return [];
+  }
+  // in case of string/number `spacing`
+  if (typeof spacing === 'string' && !Number.isNaN(Number(spacing)) || typeof spacing === 'number') {
+    return [`spacing-xs-${String(spacing)}`];
+  }
+  // in case of object `spacing`
+  const classes = [];
+  breakpoints.forEach(breakpoint => {
+    const value = spacing[breakpoint];
+    if (Number(value) > 0) {
+      const className = `spacing-${breakpoint}-${String(value)}`;
+      classes.push(className);
+    }
+  });
+  return classes;
+}
+const useUtilityClasses$t = ownerState => {
+  const {
+    classes,
+    container,
+    direction,
+    item,
+    spacing,
+    wrap,
+    zeroMinWidth,
+    breakpoints
+  } = ownerState;
+  let spacingClasses = [];
+
+  // in case of grid item
+  if (container) {
+    spacingClasses = resolveSpacingClasses(spacing, breakpoints);
+  }
+  const breakpointsClasses = [];
+  breakpoints.forEach(breakpoint => {
+    const value = ownerState[breakpoint];
+    if (value) {
+      breakpointsClasses.push(`grid-${breakpoint}-${String(value)}`);
+    }
+  });
+  const slots = {
+    root: ['root', container && 'container', item && 'item', zeroMinWidth && 'zeroMinWidth', ...spacingClasses, direction !== 'row' && `direction-xs-${String(direction)}`, wrap !== 'wrap' && `wrap-xs-${String(wrap)}`, ...breakpointsClasses]
+  };
+  return composeClasses(slots, getGridUtilityClass, classes);
+};
+const Grid = /*#__PURE__*/reactExports.forwardRef(function Grid(inProps, ref) {
+  const themeProps = useThemeProps({
+    props: inProps,
+    name: 'MuiGrid'
+  });
+  const {
+    breakpoints
+  } = useTheme();
+  const props = extendSxProp(themeProps);
+  const {
+      className,
+      columns: columnsProp,
+      columnSpacing: columnSpacingProp,
+      component = 'div',
+      container = false,
+      direction = 'row',
+      item = false,
+      rowSpacing: rowSpacingProp,
+      spacing = 0,
+      wrap = 'wrap',
+      zeroMinWidth = false
+    } = props,
+    other = _objectWithoutPropertiesLoose(props, _excluded$t);
+  const rowSpacing = rowSpacingProp || spacing;
+  const columnSpacing = columnSpacingProp || spacing;
+  const columnsContext = reactExports.useContext(GridContext$1);
+
+  // columns set with default breakpoint unit of 12
+  const columns = container ? columnsProp || 12 : columnsContext;
+  const breakpointsValues = {};
+  const otherFiltered = _extends({}, other);
+  breakpoints.keys.forEach(breakpoint => {
+    if (other[breakpoint] != null) {
+      breakpointsValues[breakpoint] = other[breakpoint];
+      delete otherFiltered[breakpoint];
+    }
+  });
+  const ownerState = _extends({}, props, {
+    columns,
+    container,
+    direction,
+    item,
+    rowSpacing,
+    columnSpacing,
+    wrap,
+    zeroMinWidth,
+    spacing
+  }, breakpointsValues, {
+    breakpoints: breakpoints.keys
+  });
+  const classes = useUtilityClasses$t(ownerState);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(GridContext$1.Provider, {
+    value: columns,
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(GridRoot, _extends({
+      ownerState: ownerState,
+      className: clsx(classes.root, className),
+      as: component,
+      ref: ref
+    }, otherFiltered))
+  });
+});
+process.env.NODE_ENV !== "production" ? Grid.propTypes /* remove-proptypes */ = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // |     To update them edit the d.ts file and run "yarn proptypes"     |
+  // ----------------------------------------------------------------------
+  /**
+   * The content of the component.
+   */
+  children: propTypesExports.node,
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+  /**
+   * @ignore
+   */
+  className: propTypesExports.string,
+  /**
+   * The number of columns.
+   * @default 12
+   */
+  columns: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.number), propTypesExports.number, propTypesExports.object]),
+  /**
+   * Defines the horizontal space between the type `item` components.
+   * It overrides the value of the `spacing` prop.
+   */
+  columnSpacing: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.number, propTypesExports.string])), propTypesExports.number, propTypesExports.object, propTypesExports.string]),
+  /**
+   * The component used for the root node.
+   * Either a string to use a HTML element or a component.
+   */
+  component: propTypesExports.elementType,
+  /**
+   * If `true`, the component will have the flex *container* behavior.
+   * You should be wrapping *items* with a *container*.
+   * @default false
+   */
+  container: propTypesExports.bool,
+  /**
+   * Defines the `flex-direction` style property.
+   * It is applied for all screen sizes.
+   * @default 'row'
+   */
+  direction: propTypesExports.oneOfType([propTypesExports.oneOf(['column-reverse', 'column', 'row-reverse', 'row']), propTypesExports.arrayOf(propTypesExports.oneOf(['column-reverse', 'column', 'row-reverse', 'row'])), propTypesExports.object]),
+  /**
+   * If `true`, the component will have the flex *item* behavior.
+   * You should be wrapping *items* with a *container*.
+   * @default false
+   */
+  item: propTypesExports.bool,
+  /**
+   * If a number, it sets the number of columns the grid item uses.
+   * It can't be greater than the total number of columns of the container (12 by default).
+   * If 'auto', the grid item's width matches its content.
+   * If false, the prop is ignored.
+   * If true, the grid item's width grows to use the space available in the grid container.
+   * The value is applied for the `lg` breakpoint and wider screens if not overridden.
+   * @default false
+   */
+  lg: propTypesExports.oneOfType([propTypesExports.oneOf(['auto']), propTypesExports.number, propTypesExports.bool]),
+  /**
+   * If a number, it sets the number of columns the grid item uses.
+   * It can't be greater than the total number of columns of the container (12 by default).
+   * If 'auto', the grid item's width matches its content.
+   * If false, the prop is ignored.
+   * If true, the grid item's width grows to use the space available in the grid container.
+   * The value is applied for the `md` breakpoint and wider screens if not overridden.
+   * @default false
+   */
+  md: propTypesExports.oneOfType([propTypesExports.oneOf(['auto']), propTypesExports.number, propTypesExports.bool]),
+  /**
+   * Defines the vertical space between the type `item` components.
+   * It overrides the value of the `spacing` prop.
+   */
+  rowSpacing: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.number, propTypesExports.string])), propTypesExports.number, propTypesExports.object, propTypesExports.string]),
+  /**
+   * If a number, it sets the number of columns the grid item uses.
+   * It can't be greater than the total number of columns of the container (12 by default).
+   * If 'auto', the grid item's width matches its content.
+   * If false, the prop is ignored.
+   * If true, the grid item's width grows to use the space available in the grid container.
+   * The value is applied for the `sm` breakpoint and wider screens if not overridden.
+   * @default false
+   */
+  sm: propTypesExports.oneOfType([propTypesExports.oneOf(['auto']), propTypesExports.number, propTypesExports.bool]),
+  /**
+   * Defines the space between the type `item` components.
+   * It can only be used on a type `container` component.
+   * @default 0
+   */
+  spacing: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.number, propTypesExports.string])), propTypesExports.number, propTypesExports.object, propTypesExports.string]),
+  /**
+   * The system prop that allows defining system overrides as well as additional CSS styles.
+   */
+  sx: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.func, propTypesExports.object, propTypesExports.bool])), propTypesExports.func, propTypesExports.object]),
+  /**
+   * Defines the `flex-wrap` style property.
+   * It's applied for all screen sizes.
+   * @default 'wrap'
+   */
+  wrap: propTypesExports.oneOf(['nowrap', 'wrap-reverse', 'wrap']),
+  /**
+   * If a number, it sets the number of columns the grid item uses.
+   * It can't be greater than the total number of columns of the container (12 by default).
+   * If 'auto', the grid item's width matches its content.
+   * If false, the prop is ignored.
+   * If true, the grid item's width grows to use the space available in the grid container.
+   * The value is applied for the `xl` breakpoint and wider screens if not overridden.
+   * @default false
+   */
+  xl: propTypesExports.oneOfType([propTypesExports.oneOf(['auto']), propTypesExports.number, propTypesExports.bool]),
+  /**
+   * If a number, it sets the number of columns the grid item uses.
+   * It can't be greater than the total number of columns of the container (12 by default).
+   * If 'auto', the grid item's width matches its content.
+   * If false, the prop is ignored.
+   * If true, the grid item's width grows to use the space available in the grid container.
+   * The value is applied for all the screen sizes with the lowest priority.
+   * @default false
+   */
+  xs: propTypesExports.oneOfType([propTypesExports.oneOf(['auto']), propTypesExports.number, propTypesExports.bool]),
+  /**
+   * If `true`, it sets `min-width: 0` on the item.
+   * Refer to the limitations section of the documentation to better understand the use case.
+   * @default false
+   */
+  zeroMinWidth: propTypesExports.bool
+} : void 0;
+if (process.env.NODE_ENV !== 'production') {
+  const requireProp = requirePropFactory('Grid', Grid);
+  // eslint-disable-next-line no-useless-concat
+  Grid['propTypes' + ''] = _extends({}, Grid.propTypes, {
+    direction: requireProp('container'),
+    lg: requireProp('item'),
+    md: requireProp('item'),
+    sm: requireProp('item'),
+    spacing: requireProp('container'),
+    wrap: requireProp('container'),
+    xs: requireProp('item'),
+    zeroMinWidth: requireProp('item')
+  });
+}
+var Grid$1 = Grid;
+
+const _excluded$s = ["addEndListener", "appear", "children", "easing", "in", "onEnter", "onEntered", "onEntering", "onExit", "onExited", "onExiting", "style", "timeout", "TransitionComponent"];
 function getScale(value) {
   return `scale(${value}, ${value ** 2})`;
 }
@@ -46246,7 +48273,7 @@ const Grow = /*#__PURE__*/reactExports.forwardRef(function Grow(props, ref) {
       // eslint-disable-next-line react/prop-types
       TransitionComponent = Transition$1
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$d);
+    other = _objectWithoutPropertiesLoose(props, _excluded$s);
   const timer = reactExports.useRef();
   const autoTimeout = reactExports.useRef();
   const theme = useTheme();
@@ -46450,8 +48477,8 @@ process.env.NODE_ENV !== "production" ? Grow.propTypes /* remove-proptypes */ = 
 Grow.muiSupportAuto = true;
 var Grow$1 = Grow;
 
-const _excluded$c = ["disableUnderline", "components", "componentsProps", "fullWidth", "inputComponent", "multiline", "slotProps", "slots", "type"];
-const useUtilityClasses$a = ownerState => {
+const _excluded$r = ["disableUnderline", "components", "componentsProps", "fullWidth", "inputComponent", "multiline", "slotProps", "slots", "type"];
+const useUtilityClasses$s = ownerState => {
   const {
     classes,
     disableUnderline
@@ -46563,8 +48590,8 @@ const Input = /*#__PURE__*/reactExports.forwardRef(function Input(inProps, ref) 
       slots = {},
       type = 'text'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$c);
-  const classes = useUtilityClasses$a(props);
+    other = _objectWithoutPropertiesLoose(props, _excluded$r);
+  const classes = useUtilityClasses$s(props);
   const ownerState = {
     disableUnderline
   };
@@ -46787,14 +48814,14 @@ const inputAdornmentClasses = generateUtilityClasses('MuiInputAdornment', ['root
 var inputAdornmentClasses$1 = inputAdornmentClasses;
 
 var _span$2;
-const _excluded$b = ["children", "className", "component", "disablePointerEvents", "disableTypography", "position", "variant"];
-const overridesResolver = (props, styles) => {
+const _excluded$q = ["children", "className", "component", "disablePointerEvents", "disableTypography", "position", "variant"];
+const overridesResolver$1 = (props, styles) => {
   const {
     ownerState
   } = props;
   return [styles.root, styles[`position${capitalize(ownerState.position)}`], ownerState.disablePointerEvents === true && styles.disablePointerEvents, styles[ownerState.variant]];
 };
-const useUtilityClasses$9 = ownerState => {
+const useUtilityClasses$r = ownerState => {
   const {
     classes,
     disablePointerEvents,
@@ -46811,7 +48838,7 @@ const useUtilityClasses$9 = ownerState => {
 const InputAdornmentRoot = styled$1('div', {
   name: 'MuiInputAdornment',
   slot: 'Root',
-  overridesResolver
+  overridesResolver: overridesResolver$1
 })(({
   theme,
   ownerState
@@ -46852,7 +48879,7 @@ const InputAdornment = /*#__PURE__*/reactExports.forwardRef(function InputAdornm
       position,
       variant: variantProp
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$b);
+    other = _objectWithoutPropertiesLoose(props, _excluded$q);
   const muiFormControl = useFormControl() || {};
   let variant = variantProp;
   if (variantProp && muiFormControl.variant) {
@@ -46872,7 +48899,7 @@ const InputAdornment = /*#__PURE__*/reactExports.forwardRef(function InputAdornm
     position,
     variant
   });
-  const classes = useUtilityClasses$9(ownerState);
+  const classes = useUtilityClasses$r(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsx(FormControlContext$1.Provider, {
     value: null,
     children: /*#__PURE__*/jsxRuntimeExports.jsx(InputAdornmentRoot, _extends({
@@ -46948,8 +48975,8 @@ function getInputLabelUtilityClasses(slot) {
 }
 generateUtilityClasses('MuiInputLabel', ['root', 'focused', 'disabled', 'error', 'required', 'asterisk', 'formControl', 'sizeSmall', 'shrink', 'animated', 'standard', 'filled', 'outlined']);
 
-const _excluded$a = ["disableAnimation", "margin", "shrink", "variant", "className"];
-const useUtilityClasses$8 = ownerState => {
+const _excluded$p = ["disableAnimation", "margin", "shrink", "variant", "className"];
+const useUtilityClasses$q = ownerState => {
   const {
     classes,
     formControl,
@@ -47048,7 +49075,7 @@ const InputLabel = /*#__PURE__*/reactExports.forwardRef(function InputLabel(inPr
       shrink: shrinkProp,
       className
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$a);
+    other = _objectWithoutPropertiesLoose(props, _excluded$p);
   const muiFormControl = useFormControl();
   let shrink = shrinkProp;
   if (typeof shrink === 'undefined' && muiFormControl) {
@@ -47067,7 +49094,7 @@ const InputLabel = /*#__PURE__*/reactExports.forwardRef(function InputLabel(inPr
     variant: fcs.variant,
     required: fcs.required
   });
-  const classes = useUtilityClasses$8(ownerState);
+  const classes = useUtilityClasses$q(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsx(InputLabelRoot, _extends({
     "data-shrink": shrink,
     ownerState: ownerState,
@@ -47160,8 +49187,8 @@ function getListUtilityClass(slot) {
 }
 generateUtilityClasses('MuiList', ['root', 'padding', 'dense', 'subheader']);
 
-const _excluded$9 = ["children", "className", "component", "dense", "disablePadding", "subheader"];
-const useUtilityClasses$7 = ownerState => {
+const _excluded$o = ["children", "className", "component", "dense", "disablePadding", "subheader"];
+const useUtilityClasses$p = ownerState => {
   const {
     classes,
     disablePadding,
@@ -47208,7 +49235,7 @@ const List = /*#__PURE__*/reactExports.forwardRef(function List(inProps, ref) {
       disablePadding = false,
       subheader
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$9);
+    other = _objectWithoutPropertiesLoose(props, _excluded$o);
   const context = reactExports.useMemo(() => ({
     dense
   }), [dense]);
@@ -47217,7 +49244,7 @@ const List = /*#__PURE__*/reactExports.forwardRef(function List(inProps, ref) {
     dense,
     disablePadding
   });
-  const classes = useUtilityClasses$7(ownerState);
+  const classes = useUtilityClasses$p(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsx(ListContext$1.Provider, {
     value: context,
     children: /*#__PURE__*/jsxRuntimeExports.jsxs(ListRoot, _extends({
@@ -47275,7 +49302,7 @@ process.env.NODE_ENV !== "production" ? List.propTypes /* remove-proptypes */ = 
 } : void 0;
 var List$1 = List;
 
-const _excluded$8 = ["actions", "autoFocus", "autoFocusItem", "children", "className", "disabledItemsFocusable", "disableListWrap", "onKeyDown", "variant"];
+const _excluded$n = ["actions", "autoFocus", "autoFocusItem", "children", "className", "disabledItemsFocusable", "disableListWrap", "onKeyDown", "variant"];
 function nextItem(list, item, disableListWrap) {
   if (list === item) {
     return list.firstChild;
@@ -47357,7 +49384,7 @@ const MenuList = /*#__PURE__*/reactExports.forwardRef(function MenuList(props, r
       onKeyDown,
       variant = 'selectedMenu'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$8);
+    other = _objectWithoutPropertiesLoose(props, _excluded$n);
   const listRef = reactExports.useRef(null);
   const textCriteriaRef = reactExports.useRef({
     keys: [],
@@ -47536,7 +49563,7 @@ function getPopoverUtilityClass(slot) {
 }
 generateUtilityClasses('MuiPopover', ['root', 'paper']);
 
-const _excluded$7 = ["onEntering"],
+const _excluded$m = ["onEntering"],
   _excluded2$1 = ["action", "anchorEl", "anchorOrigin", "anchorPosition", "anchorReference", "children", "className", "container", "elevation", "marginThreshold", "open", "PaperProps", "transformOrigin", "TransitionComponent", "transitionDuration", "TransitionProps"];
 function getOffsetTop(rect, vertical) {
   let offset = 0;
@@ -47566,7 +49593,7 @@ function getTransformOriginValue(transformOrigin) {
 function resolveAnchorEl(anchorEl) {
   return typeof anchorEl === 'function' ? anchorEl() : anchorEl;
 }
-const useUtilityClasses$6 = ownerState => {
+const useUtilityClasses$o = ownerState => {
   const {
     classes
   } = ownerState;
@@ -47629,7 +49656,7 @@ const Popover = /*#__PURE__*/reactExports.forwardRef(function Popover(inProps, r
         onEntering
       } = {}
     } = props,
-    TransitionProps = _objectWithoutPropertiesLoose(props.TransitionProps, _excluded$7),
+    TransitionProps = _objectWithoutPropertiesLoose(props.TransitionProps, _excluded$m),
     other = _objectWithoutPropertiesLoose(props, _excluded2$1);
   const paperRef = reactExports.useRef();
   const handlePaperRef = useForkRef(paperRef, PaperProps.ref);
@@ -47644,7 +49671,7 @@ const Popover = /*#__PURE__*/reactExports.forwardRef(function Popover(inProps, r
     transitionDuration: transitionDurationProp,
     TransitionProps
   });
-  const classes = useUtilityClasses$6(ownerState);
+  const classes = useUtilityClasses$o(ownerState);
 
   // Returns the top/left offset of the position
   // to attach to on the anchor element (or body if none is provided)
@@ -47990,7 +50017,7 @@ function getMenuUtilityClass(slot) {
 }
 generateUtilityClasses('MuiMenu', ['root', 'paper', 'list']);
 
-const _excluded$6 = ["onEntering"],
+const _excluded$l = ["onEntering"],
   _excluded2 = ["autoFocus", "children", "disableAutoFocusItem", "MenuListProps", "onClose", "open", "PaperProps", "PopoverClasses", "transitionDuration", "TransitionProps", "variant"];
 const RTL_ORIGIN = {
   vertical: 'top',
@@ -48000,7 +50027,7 @@ const LTR_ORIGIN = {
   vertical: 'top',
   horizontal: 'left'
 };
-const useUtilityClasses$5 = ownerState => {
+const useUtilityClasses$n = ownerState => {
   const {
     classes
   } = ownerState;
@@ -48057,7 +50084,7 @@ const Menu = /*#__PURE__*/reactExports.forwardRef(function Menu(inProps, ref) {
       } = {},
       variant = 'selectedMenu'
     } = props,
-    TransitionProps = _objectWithoutPropertiesLoose(props.TransitionProps, _excluded$6),
+    TransitionProps = _objectWithoutPropertiesLoose(props.TransitionProps, _excluded$l),
     other = _objectWithoutPropertiesLoose(props, _excluded2);
   const theme = useTheme();
   const isRtl = theme.direction === 'rtl';
@@ -48071,7 +50098,7 @@ const Menu = /*#__PURE__*/reactExports.forwardRef(function Menu(inProps, ref) {
     TransitionProps,
     variant
   });
-  const classes = useUtilityClasses$5(ownerState);
+  const classes = useUtilityClasses$n(ownerState);
   const autoFocusItem = autoFocus && !disableAutoFocusItem && open;
   const menuListActionsRef = reactExports.useRef(null);
   const handleEntering = (element, isAppearing) => {
@@ -48244,8 +50271,8 @@ function getNativeSelectUtilityClasses(slot) {
 const nativeSelectClasses = generateUtilityClasses('MuiNativeSelect', ['root', 'select', 'multiple', 'filled', 'outlined', 'standard', 'disabled', 'icon', 'iconOpen', 'iconFilled', 'iconOutlined', 'iconStandard', 'nativeInput']);
 var nativeSelectClasses$1 = nativeSelectClasses;
 
-const _excluded$5 = ["className", "disabled", "IconComponent", "inputRef", "variant"];
-const useUtilityClasses$4 = ownerState => {
+const _excluded$k = ["className", "disabled", "IconComponent", "inputRef", "variant"];
+const useUtilityClasses$m = ownerState => {
   const {
     classes,
     variant,
@@ -48371,12 +50398,12 @@ const NativeSelectInput = /*#__PURE__*/reactExports.forwardRef(function NativeSe
       inputRef,
       variant = 'standard'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$5);
+    other = _objectWithoutPropertiesLoose(props, _excluded$k);
   const ownerState = _extends({}, props, {
     disabled,
     variant
   });
-  const classes = useUtilityClasses$4(ownerState);
+  const classes = useUtilityClasses$m(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(NativeSelectSelect, _extends({
       ownerState: ownerState,
@@ -48445,7 +50472,7 @@ process.env.NODE_ENV !== "production" ? NativeSelectInput.propTypes = {
 var NativeSelectInput$1 = NativeSelectInput;
 
 var _span$1;
-const _excluded$4 = ["children", "classes", "className", "label", "notched"];
+const _excluded$j = ["children", "classes", "className", "label", "notched"];
 const NotchedOutlineRoot$1 = styled$1('fieldset')({
   textAlign: 'left',
   position: 'absolute',
@@ -48518,7 +50545,7 @@ function NotchedOutline(props) {
       label,
       notched
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$4);
+    other = _objectWithoutPropertiesLoose(props, _excluded$j);
   const withLabel = label != null && label !== '';
   const ownerState = _extends({}, props, {
     notched,
@@ -48569,8 +50596,8 @@ process.env.NODE_ENV !== "production" ? NotchedOutline.propTypes = {
   style: propTypesExports.object
 } : void 0;
 
-const _excluded$3 = ["components", "fullWidth", "inputComponent", "label", "multiline", "notched", "slots", "type"];
-const useUtilityClasses$3 = ownerState => {
+const _excluded$i = ["components", "fullWidth", "inputComponent", "label", "multiline", "notched", "slots", "type"];
+const useUtilityClasses$l = ownerState => {
   const {
     classes
   } = ownerState;
@@ -48688,8 +50715,8 @@ const OutlinedInput = /*#__PURE__*/reactExports.forwardRef(function OutlinedInpu
       slots = {},
       type = 'text'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$3);
-  const classes = useUtilityClasses$3(props);
+    other = _objectWithoutPropertiesLoose(props, _excluded$i);
+  const classes = useUtilityClasses$l(props);
   const muiFormControl = useFormControl();
   const fcs = formControlState({
     props,
@@ -48910,7 +50937,7 @@ const selectClasses = generateUtilityClasses('MuiSelect', ['select', 'multiple',
 var selectClasses$1 = selectClasses;
 
 var _span;
-const _excluded$2 = ["aria-describedby", "aria-label", "autoFocus", "autoWidth", "children", "className", "defaultOpen", "defaultValue", "disabled", "displayEmpty", "IconComponent", "inputRef", "labelId", "MenuProps", "multiple", "name", "onBlur", "onChange", "onClose", "onFocus", "onOpen", "open", "readOnly", "renderValue", "SelectDisplayProps", "tabIndex", "type", "value", "variant"];
+const _excluded$h = ["aria-describedby", "aria-label", "autoFocus", "autoWidth", "children", "className", "defaultOpen", "defaultValue", "disabled", "displayEmpty", "IconComponent", "inputRef", "labelId", "MenuProps", "multiple", "name", "onBlur", "onChange", "onClose", "onFocus", "onOpen", "open", "readOnly", "renderValue", "SelectDisplayProps", "tabIndex", "type", "value", "variant"];
 const SelectSelect = styled$1('div', {
   name: 'MuiSelect',
   slot: 'Select',
@@ -48975,7 +51002,7 @@ function areEqualValues(a, b) {
 function isEmpty(display) {
   return display == null || typeof display === 'string' && !display.trim();
 }
-const useUtilityClasses$2 = ownerState => {
+const useUtilityClasses$k = ownerState => {
   const {
     classes,
     variant,
@@ -49025,7 +51052,7 @@ const SelectInput = /*#__PURE__*/reactExports.forwardRef(function SelectInput(pr
       value: valueProp,
       variant = 'standard'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$2);
+    other = _objectWithoutPropertiesLoose(props, _excluded$h);
   const [value, setValueState] = useControlled({
     controlled: valueProp,
     default: defaultValue,
@@ -49333,7 +51360,7 @@ const SelectInput = /*#__PURE__*/reactExports.forwardRef(function SelectInput(pr
     value,
     open
   });
-  const classes = useUtilityClasses$2(ownerState);
+  const classes = useUtilityClasses$k(ownerState);
   return /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
     children: [/*#__PURE__*/jsxRuntimeExports.jsx(SelectSelect, _extends({
       ref: handleDisplayRef,
@@ -49547,8 +51574,8 @@ process.env.NODE_ENV !== "production" ? SelectInput.propTypes = {
 var SelectInput$1 = SelectInput;
 
 var _StyledInput, _StyledFilledInput;
-const _excluded$1 = ["autoWidth", "children", "classes", "className", "defaultOpen", "displayEmpty", "IconComponent", "id", "input", "inputProps", "label", "labelId", "MenuProps", "multiple", "native", "onClose", "onOpen", "open", "renderValue", "SelectDisplayProps", "variant"];
-const useUtilityClasses$1 = ownerState => {
+const _excluded$g = ["autoWidth", "children", "classes", "className", "defaultOpen", "displayEmpty", "IconComponent", "id", "input", "inputProps", "label", "labelId", "MenuProps", "multiple", "native", "onClose", "onOpen", "open", "renderValue", "SelectDisplayProps", "variant"];
+const useUtilityClasses$j = ownerState => {
   const {
     classes
   } = ownerState;
@@ -49591,7 +51618,7 @@ const Select = /*#__PURE__*/reactExports.forwardRef(function Select(inProps, ref
       SelectDisplayProps,
       variant: variantProp = 'outlined'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded$1);
+    other = _objectWithoutPropertiesLoose(props, _excluded$g);
   const inputComponent = native ? NativeSelectInput$1 : SelectInput$1;
   const muiFormControl = useFormControl();
   const fcs = formControlState({
@@ -49611,7 +51638,7 @@ const Select = /*#__PURE__*/reactExports.forwardRef(function Select(inProps, ref
     variant,
     classes: classesProp
   });
-  const classes = useUtilityClasses$1(ownerState);
+  const classes = useUtilityClasses$j(ownerState);
   const inputComponentRef = useForkRef(ref, InputComponent.ref);
   return /*#__PURE__*/jsxRuntimeExports.jsx(reactExports.Fragment, {
     children: /*#__PURE__*/reactExports.cloneElement(InputComponent, _extends({
@@ -49808,13 +51835,13 @@ function getTextFieldUtilityClass(slot) {
 }
 generateUtilityClasses('MuiTextField', ['root']);
 
-const _excluded = ["autoComplete", "autoFocus", "children", "className", "color", "defaultValue", "disabled", "error", "FormHelperTextProps", "fullWidth", "helperText", "id", "InputLabelProps", "inputProps", "InputProps", "inputRef", "label", "maxRows", "minRows", "multiline", "name", "onBlur", "onChange", "onFocus", "placeholder", "required", "rows", "select", "SelectProps", "type", "value", "variant"];
+const _excluded$f = ["autoComplete", "autoFocus", "children", "className", "color", "defaultValue", "disabled", "error", "FormHelperTextProps", "fullWidth", "helperText", "id", "InputLabelProps", "inputProps", "InputProps", "inputRef", "label", "maxRows", "minRows", "multiline", "name", "onBlur", "onChange", "onFocus", "placeholder", "required", "rows", "select", "SelectProps", "type", "value", "variant"];
 const variantComponent = {
   standard: Input$1,
   filled: FilledInput$1,
   outlined: OutlinedInput$1
 };
-const useUtilityClasses = ownerState => {
+const useUtilityClasses$i = ownerState => {
   const {
     classes
   } = ownerState;
@@ -49900,7 +51927,7 @@ const TextField$1 = /*#__PURE__*/reactExports.forwardRef(function TextField(inPr
       value,
       variant = 'outlined'
     } = props,
-    other = _objectWithoutPropertiesLoose(props, _excluded);
+    other = _objectWithoutPropertiesLoose(props, _excluded$f);
   const ownerState = _extends({}, props, {
     autoFocus,
     color,
@@ -49912,7 +51939,7 @@ const TextField$1 = /*#__PURE__*/reactExports.forwardRef(function TextField(inPr
     select,
     variant
   });
-  const classes = useUtilityClasses(ownerState);
+  const classes = useUtilityClasses$i(ownerState);
   if (process.env.NODE_ENV !== 'production') {
     if (select && !children) {
       console.error('MUI: `children` must be passed when using the `TextField` component with `select`.');
@@ -50161,7 +52188,7 @@ process.env.NODE_ENV !== "production" ? TextField$1.propTypes /* remove-proptype
    */
   variant: propTypesExports.oneOf(['filled', 'outlined', 'standard'])
 } : void 0;
-var MuiTextField = TextField$1;
+var TextField$2 = TextField$1;
 
 var Visibility = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path", {
   d: "M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"
@@ -50192,7 +52219,7 @@ var TextField = function (_a) {
     };
     if (type === 'password') {
         return (React.createElement(FormControl$1, { color: setInputValidationColor(field), error: field.error ? true : false },
-            React.createElement(MuiTextField, { color: setInputValidationColor(field), error: field.error ? true : false, variant: "outlined", type: showPassword ? 'text' : 'password', id: id, name: name, onChange: onChange, disabled: disabled, "aria-describedby": id, label: label, title: label, InputProps: {
+            React.createElement(TextField$2, { color: setInputValidationColor(field), error: field.error ? true : false, variant: "outlined", type: showPassword ? 'text' : 'password', id: id, name: name, onChange: onChange, disabled: disabled, "aria-describedby": id, label: label, title: label, InputProps: {
                     endAdornment: (React.createElement(InputAdornment$1, { position: "end" },
                         React.createElement(IconButton$1, { "aria-label": "toggle password visibility", onClick: function () {
                                 return setShowPassword(!showPassword);
@@ -50201,10 +52228,14964 @@ var TextField = function (_a) {
             React.createElement(FormHelperText$1, { id: id }, field.error)));
     }
     return (React.createElement(FormControl$1, { color: setInputValidationColor(field), error: field.error ? true : false },
-        React.createElement(MuiTextField, { multiline: type === 'textarea', color: setInputValidationColor(field), error: field.error ? true : false, variant: "outlined", type: type === 'textarea' ? 'text' : type, id: id, name: name, onChange: onChange, disabled: disabled, "aria-describedby": id, label: label, title: label }),
+        React.createElement(TextField$2, { multiline: type === 'textarea', color: setInputValidationColor(field), error: field.error ? true : false, variant: "outlined", type: type === 'textarea' ? 'text' : type, id: id, name: name, onChange: onChange, disabled: disabled, "aria-describedby": id, label: label, title: label }),
         React.createElement(FormHelperText$1, { id: id }, field.error)));
 };
 
-exports.Button = Button;
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+
+var __assign = function() {
+    __assign = Object.assign || function __assign(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+/* Use it instead of .includes method for IE support */
+function arrayIncludes(array, itemOrItems) {
+  if (Array.isArray(itemOrItems)) {
+    return itemOrItems.every(item => array.indexOf(item) !== -1);
+  }
+
+  return array.indexOf(itemOrItems) !== -1;
+}
+const onSpaceOrEnter = (innerFn, onFocus) => event => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    innerFn(event); // prevent any side effects
+
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  if (onFocus) {
+    onFocus(event);
+  }
+};
+
+function getPickersMonthUtilityClass(slot) {
+  // TODO v6 Rename 'PrivatePickersMonth' to 'MuiPickersMonth' to follow convention
+  return generateUtilityClass('PrivatePickersMonth', slot);
+}
+const pickersMonthClasses = generateUtilityClasses( // TODO v6 Rename 'PrivatePickersMonth' to 'MuiPickersMonth' to follow convention
+'PrivatePickersMonth', ['root', 'selected']);
+
+const _excluded$e = ["disabled", "onSelect", "selected", "value", "tabIndex", "hasFocus", "onFocus", "onBlur"];
+
+const useUtilityClasses$h = ownerState => {
+  const {
+    classes,
+    selected
+  } = ownerState;
+  const slots = {
+    root: ['root', selected && 'selected']
+  };
+  return composeClasses(slots, getPickersMonthUtilityClass, classes);
+};
+
+const PickersMonthRoot = styled$1(Typography$1, {
+  name: 'PrivatePickersMonth',
+  slot: 'Root',
+  overridesResolver: (_, styles) => [styles.root, {
+    [`&.${pickersMonthClasses.selected}`]: styles.selected
+  }]
+})(({
+  theme
+}) => _extends({
+  flex: '1 0 33.33%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  color: 'unset',
+  backgroundColor: 'transparent',
+  border: 0,
+  outline: 0
+}, theme.typography.subtitle1, {
+  margin: '8px 0',
+  height: 36,
+  borderRadius: 18,
+  cursor: 'pointer',
+  '&:focus, &:hover': {
+    backgroundColor: alpha(theme.palette.action.active, theme.palette.action.hoverOpacity)
+  },
+  '&:disabled': {
+    pointerEvents: 'none',
+    color: theme.palette.text.secondary
+  },
+  [`&.${pickersMonthClasses.selected}`]: {
+    color: theme.palette.primary.contrastText,
+    backgroundColor: theme.palette.primary.main,
+    '&:focus, &:hover': {
+      backgroundColor: theme.palette.primary.dark
+    }
+  }
+}));
+
+const noop$2 = () => {};
+/**
+ * @ignore - do not document.
+ */
+
+
+const PickersMonth = props => {
+  // TODO v6 add 'useThemeProps' once the component class names are aligned
+  const {
+    disabled,
+    onSelect,
+    selected,
+    value,
+    tabIndex,
+    hasFocus,
+    onFocus = noop$2,
+    onBlur = noop$2
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$e);
+
+  const classes = useUtilityClasses$h(props);
+
+  const handleSelection = () => {
+    onSelect(value);
+  };
+
+  const ref = reactExports.useRef(null);
+  useEnhancedEffect$1(() => {
+    if (hasFocus) {
+      var _ref$current;
+
+      (_ref$current = ref.current) == null ? void 0 : _ref$current.focus();
+    }
+  }, [hasFocus]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(PickersMonthRoot, _extends({
+    ref: ref,
+    component: "button",
+    type: "button",
+    className: classes.root,
+    tabIndex: tabIndex,
+    onClick: handleSelection,
+    onKeyDown: onSpaceOrEnter(handleSelection),
+    color: selected ? 'primary' : undefined,
+    variant: selected ? 'h5' : 'subtitle1',
+    disabled: disabled,
+    onFocus: event => onFocus(event, value),
+    onBlur: event => onBlur(event, value)
+  }, other));
+};
+
+const getPickersLocalization = pickersTranslations => {
+  return {
+    components: {
+      MuiLocalizationProvider: {
+        defaultProps: {
+          localeText: _extends({}, pickersTranslations)
+        }
+      }
+    }
+  };
+};
+
+// This object is not Partial<PickersLocaleText> because it is the default values
+const enUSPickers = {
+  // Calendar navigation
+  previousMonth: 'Previous month',
+  nextMonth: 'Next month',
+  // View navigation
+  openPreviousView: 'open previous view',
+  openNextView: 'open next view',
+  calendarViewSwitchingButtonAriaLabel: view => view === 'year' ? 'year view is open, switch to calendar view' : 'calendar view is open, switch to year view',
+  inputModeToggleButtonAriaLabel: (isKeyboardInputOpen, viewType) => isKeyboardInputOpen ? `text input view is open, go to ${viewType} view` : `${viewType} view is open, go to text input view`,
+  // DateRange placeholders
+  start: 'Start',
+  end: 'End',
+  // Action bar
+  cancelButtonLabel: 'Cancel',
+  clearButtonLabel: 'Clear',
+  okButtonLabel: 'OK',
+  todayButtonLabel: 'Today',
+  // Toolbar titles
+  datePickerDefaultToolbarTitle: 'Select date',
+  dateTimePickerDefaultToolbarTitle: 'Select date & time',
+  timePickerDefaultToolbarTitle: 'Select time',
+  dateRangePickerDefaultToolbarTitle: 'Select date range',
+  // Clock labels
+  clockLabelText: (view, time, adapter) => `Select ${view}. ${time === null ? 'No time selected' : `Selected time is ${adapter.format(time, 'fullTime')}`}`,
+  hoursClockNumberText: hours => `${hours} hours`,
+  minutesClockNumberText: minutes => `${minutes} minutes`,
+  secondsClockNumberText: seconds => `${seconds} seconds`,
+  // Open picker labels
+  openDatePickerDialogue: (rawValue, utils) => rawValue && utils.isValid(utils.date(rawValue)) ? `Choose date, selected date is ${utils.format(utils.date(rawValue), 'fullDate')}` : 'Choose date',
+  openTimePickerDialogue: (rawValue, utils) => rawValue && utils.isValid(utils.date(rawValue)) ? `Choose time, selected time is ${utils.format(utils.date(rawValue), 'fullTime')}` : 'Choose time',
+  // Table labels
+  timeTableLabel: 'pick time',
+  dateTableLabel: 'pick date'
+};
+const DEFAULT_LOCALE = enUSPickers;
+getPickersLocalization(enUSPickers);
+
+const MuiPickersAdapterContext = /*#__PURE__*/reactExports.createContext(null);
+
+if (process.env.NODE_ENV !== 'production') {
+  MuiPickersAdapterContext.displayName = 'MuiPickersAdapterContext';
+}
+
+let warnedOnce = false;
+/**
+ * @ignore - do not document.
+ */
+
+function LocalizationProvider(inProps) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiLocalizationProvider'
+  });
+  const {
+    children,
+    dateAdapter: Utils,
+    dateFormats,
+    dateLibInstance,
+    locale,
+    adapterLocale,
+    localeText
+  } = props;
+
+  if (process.env.NODE_ENV !== 'production') {
+    if (!warnedOnce && locale !== undefined) {
+      warnedOnce = true;
+      console.warn("LocalizationProvider's prop `locale` is deprecated and replaced by `adapterLocale`");
+    }
+  }
+
+  const utils = reactExports.useMemo(() => new Utils({
+    locale: adapterLocale != null ? adapterLocale : locale,
+    formats: dateFormats,
+    instance: dateLibInstance
+  }), [Utils, locale, adapterLocale, dateFormats, dateLibInstance]);
+  const defaultDates = reactExports.useMemo(() => {
+    return {
+      minDate: utils.date('1900-01-01T00:00:00.000'),
+      maxDate: utils.date('2099-12-31T00:00:00.000')
+    };
+  }, [utils]);
+  const contextValue = reactExports.useMemo(() => {
+    return {
+      utils,
+      defaultDates,
+      localeText: _extends({}, DEFAULT_LOCALE, localeText != null ? localeText : {})
+    };
+  }, [defaultDates, utils, localeText]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(MuiPickersAdapterContext.Provider, {
+    value: contextValue,
+    children: children
+  });
+}
+process.env.NODE_ENV !== "production" ? LocalizationProvider.propTypes = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // | To update them edit the TypeScript types and run "yarn proptypes"  |
+  // ----------------------------------------------------------------------
+
+  /**
+   * Locale for the date library you are using
+   */
+  adapterLocale: propTypesExports.oneOfType([propTypesExports.object, propTypesExports.string]),
+  children: propTypesExports.node,
+
+  /**
+   * DateIO adapter class function
+   */
+  dateAdapter: propTypesExports.func.isRequired,
+
+  /**
+   * Formats that are used for any child pickers
+   */
+  dateFormats: propTypesExports.shape({
+    dayOfMonth: propTypesExports.string,
+    fullDate: propTypesExports.string,
+    fullDateTime: propTypesExports.string,
+    fullDateTime12h: propTypesExports.string,
+    fullDateTime24h: propTypesExports.string,
+    fullDateWithWeekday: propTypesExports.string,
+    fullTime: propTypesExports.string,
+    fullTime12h: propTypesExports.string,
+    fullTime24h: propTypesExports.string,
+    hours12h: propTypesExports.string,
+    hours24h: propTypesExports.string,
+    keyboardDate: propTypesExports.string,
+    keyboardDateTime: propTypesExports.string,
+    keyboardDateTime12h: propTypesExports.string,
+    keyboardDateTime24h: propTypesExports.string,
+    minutes: propTypesExports.string,
+    month: propTypesExports.string,
+    monthAndDate: propTypesExports.string,
+    monthAndYear: propTypesExports.string,
+    monthShort: propTypesExports.string,
+    normalDate: propTypesExports.string,
+    normalDateWithWeekday: propTypesExports.string,
+    seconds: propTypesExports.string,
+    shortDate: propTypesExports.string,
+    weekday: propTypesExports.string,
+    weekdayShort: propTypesExports.string,
+    year: propTypesExports.string
+  }),
+
+  /**
+   * Date library instance you are using, if it has some global overrides
+   * ```jsx
+   * dateLibInstance={momentTimeZone}
+   * ```
+   */
+  dateLibInstance: propTypesExports.any,
+
+  /**
+   * Locale for the date library you are using
+   * @deprecated Use `adapterLocale` instead
+   */
+  locale: propTypesExports.oneOfType([propTypesExports.object, propTypesExports.string]),
+
+  /**
+   * Locale for components texts
+   */
+  localeText: propTypesExports.object
+} : void 0;
+
+const useLocalizationContext = () => {
+  const localization = reactExports.useContext(MuiPickersAdapterContext);
+
+  if (localization === null) {
+    throw new Error('MUI: Can not find utils in context. It looks like you forgot to wrap your component in LocalizationProvider, or pass dateAdapter prop directly.');
+  }
+
+  return localization;
+};
+const useUtils = () => useLocalizationContext().utils;
+const useDefaultDates = () => useLocalizationContext().defaultDates;
+const useLocaleText = () => useLocalizationContext().localeText;
+const useNow = () => {
+  const utils = useUtils();
+  const now = reactExports.useRef(utils.date());
+  return now.current;
+};
+
+function getMonthPickerUtilityClass(slot) {
+  return generateUtilityClass('MuiMonthPicker', slot);
+}
+generateUtilityClasses('MuiMonthPicker', ['root']);
+
+const findClosestEnabledDate = ({
+  date,
+  disableFuture,
+  disablePast,
+  maxDate,
+  minDate,
+  isDateDisabled,
+  utils
+}) => {
+  const today = utils.startOfDay(utils.date());
+
+  if (disablePast && utils.isBefore(minDate, today)) {
+    minDate = today;
+  }
+
+  if (disableFuture && utils.isAfter(maxDate, today)) {
+    maxDate = today;
+  }
+
+  let forward = date;
+  let backward = date;
+
+  if (utils.isBefore(date, minDate)) {
+    forward = utils.date(minDate);
+    backward = null;
+  }
+
+  if (utils.isAfter(date, maxDate)) {
+    if (backward) {
+      backward = utils.date(maxDate);
+    }
+
+    forward = null;
+  }
+
+  while (forward || backward) {
+    if (forward && utils.isAfter(forward, maxDate)) {
+      forward = null;
+    }
+
+    if (backward && utils.isBefore(backward, minDate)) {
+      backward = null;
+    }
+
+    if (forward) {
+      if (!isDateDisabled(forward)) {
+        return forward;
+      }
+
+      forward = utils.addDays(forward, 1);
+    }
+
+    if (backward) {
+      if (!isDateDisabled(backward)) {
+        return backward;
+      }
+
+      backward = utils.addDays(backward, -1);
+    }
+  }
+
+  return null;
+};
+const parsePickerInputValue = (utils, value) => {
+  const parsedValue = utils.date(value);
+  return utils.isValid(parsedValue) ? parsedValue : null;
+};
+const parseNonNullablePickerDate = (utils, value, defaultValue) => {
+  if (value == null) {
+    return defaultValue;
+  }
+
+  const parsedValue = utils.date(value);
+  const isDateValid = utils.isValid(parsedValue);
+
+  if (isDateValid) {
+    return parsedValue;
+  }
+
+  return defaultValue;
+};
+
+const _excluded$d = ["className", "date", "disabled", "disableFuture", "disablePast", "maxDate", "minDate", "onChange", "shouldDisableMonth", "readOnly", "disableHighlightToday", "autoFocus", "onMonthFocus", "hasFocus", "onFocusedViewChange"];
+
+const useUtilityClasses$g = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root']
+  };
+  return composeClasses(slots, getMonthPickerUtilityClass, classes);
+};
+
+function useMonthPickerDefaultizedProps(props, name) {
+  const utils = useUtils();
+  const defaultDates = useDefaultDates();
+  const themeProps = useThemeProps({
+    props,
+    name
+  });
+  return _extends({
+    disableFuture: false,
+    disablePast: false
+  }, themeProps, {
+    minDate: parseNonNullablePickerDate(utils, themeProps.minDate, defaultDates.minDate),
+    maxDate: parseNonNullablePickerDate(utils, themeProps.maxDate, defaultDates.maxDate)
+  });
+}
+const MonthPickerRoot = styled$1('div', {
+  name: 'MuiMonthPicker',
+  slot: 'Root',
+  overridesResolver: (props, styles) => styles.root
+})({
+  width: 310,
+  display: 'flex',
+  flexWrap: 'wrap',
+  alignContent: 'stretch',
+  margin: '0 4px'
+});
+const MonthPicker = /*#__PURE__*/reactExports.forwardRef(function MonthPicker(inProps, ref) {
+  const utils = useUtils();
+  const now = useNow();
+  const props = useMonthPickerDefaultizedProps(inProps, 'MuiMonthPicker');
+
+  const {
+    className,
+    date,
+    disabled,
+    disableFuture,
+    disablePast,
+    maxDate,
+    minDate,
+    onChange,
+    shouldDisableMonth,
+    readOnly,
+    disableHighlightToday,
+    autoFocus = false,
+    onMonthFocus,
+    hasFocus,
+    onFocusedViewChange
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$d);
+
+  const ownerState = props;
+  const classes = useUtilityClasses$g(ownerState);
+  const theme = useTheme$1();
+  const selectedDateOrStartOfMonth = reactExports.useMemo(() => date != null ? date : utils.startOfMonth(now), [now, utils, date]);
+  const selectedMonth = reactExports.useMemo(() => {
+    if (date != null) {
+      return utils.getMonth(date);
+    }
+
+    if (disableHighlightToday) {
+      return null;
+    }
+
+    return utils.getMonth(now);
+  }, [now, date, utils, disableHighlightToday]);
+  const [focusedMonth, setFocusedMonth] = reactExports.useState(() => selectedMonth || utils.getMonth(now));
+  const isMonthDisabled = reactExports.useCallback(month => {
+    const firstEnabledMonth = utils.startOfMonth(disablePast && utils.isAfter(now, minDate) ? now : minDate);
+    const lastEnabledMonth = utils.startOfMonth(disableFuture && utils.isBefore(now, maxDate) ? now : maxDate);
+
+    if (utils.isBefore(month, firstEnabledMonth)) {
+      return true;
+    }
+
+    if (utils.isAfter(month, lastEnabledMonth)) {
+      return true;
+    }
+
+    if (!shouldDisableMonth) {
+      return false;
+    }
+
+    return shouldDisableMonth(month);
+  }, [disableFuture, disablePast, maxDate, minDate, now, shouldDisableMonth, utils]);
+
+  const onMonthSelect = month => {
+    if (readOnly) {
+      return;
+    }
+
+    const newDate = utils.setMonth(selectedDateOrStartOfMonth, month);
+    onChange(newDate, 'finish');
+  };
+
+  const [internalHasFocus, setInternalHasFocus] = useControlled({
+    name: 'MonthPicker',
+    state: 'hasFocus',
+    controlled: hasFocus,
+    default: autoFocus
+  });
+  const changeHasFocus = reactExports.useCallback(newHasFocus => {
+    setInternalHasFocus(newHasFocus);
+
+    if (onFocusedViewChange) {
+      onFocusedViewChange(newHasFocus);
+    }
+  }, [setInternalHasFocus, onFocusedViewChange]);
+  const focusMonth = reactExports.useCallback(month => {
+    if (!isMonthDisabled(utils.setMonth(selectedDateOrStartOfMonth, month))) {
+      setFocusedMonth(month);
+      changeHasFocus(true);
+
+      if (onMonthFocus) {
+        onMonthFocus(month);
+      }
+    }
+  }, [isMonthDisabled, utils, selectedDateOrStartOfMonth, changeHasFocus, onMonthFocus]);
+  reactExports.useEffect(() => {
+    setFocusedMonth(prevFocusedMonth => selectedMonth !== null && prevFocusedMonth !== selectedMonth ? selectedMonth : prevFocusedMonth);
+  }, [selectedMonth]);
+  const handleKeyDown = useEventCallback(event => {
+    const monthsInYear = 12;
+    const monthsInRow = 3;
+
+    switch (event.key) {
+      case 'ArrowUp':
+        focusMonth((monthsInYear + focusedMonth - monthsInRow) % monthsInYear);
+        event.preventDefault();
+        break;
+
+      case 'ArrowDown':
+        focusMonth((monthsInYear + focusedMonth + monthsInRow) % monthsInYear);
+        event.preventDefault();
+        break;
+
+      case 'ArrowLeft':
+        focusMonth((monthsInYear + focusedMonth + (theme.direction === 'ltr' ? -1 : 1)) % monthsInYear);
+        event.preventDefault();
+        break;
+
+      case 'ArrowRight':
+        focusMonth((monthsInYear + focusedMonth + (theme.direction === 'ltr' ? 1 : -1)) % monthsInYear);
+        event.preventDefault();
+        break;
+    }
+  });
+  const handleMonthFocus = reactExports.useCallback((event, month) => {
+    focusMonth(month);
+  }, [focusMonth]);
+  const handleMonthBlur = reactExports.useCallback(() => {
+    changeHasFocus(false);
+  }, [changeHasFocus]);
+  const currentMonthNumber = utils.getMonth(now);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(MonthPickerRoot, _extends({
+    ref: ref,
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    onKeyDown: handleKeyDown
+  }, other, {
+    children: utils.getMonthArray(selectedDateOrStartOfMonth).map(month => {
+      const monthNumber = utils.getMonth(month);
+      const monthText = utils.format(month, 'monthShort');
+      const isDisabled = disabled || isMonthDisabled(month);
+      return /*#__PURE__*/jsxRuntimeExports.jsx(PickersMonth, {
+        value: monthNumber,
+        selected: monthNumber === selectedMonth,
+        tabIndex: monthNumber === focusedMonth && !isDisabled ? 0 : -1,
+        hasFocus: internalHasFocus && monthNumber === focusedMonth,
+        onSelect: onMonthSelect,
+        onFocus: handleMonthFocus,
+        onBlur: handleMonthBlur,
+        disabled: isDisabled,
+        "aria-current": currentMonthNumber === monthNumber ? 'date' : undefined,
+        children: monthText
+      }, monthText);
+    })
+  }));
+});
+process.env.NODE_ENV !== "production" ? MonthPicker.propTypes = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // | To update them edit the TypeScript types and run "yarn proptypes"  |
+  // ----------------------------------------------------------------------
+  autoFocus: propTypesExports.bool,
+
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+
+  /**
+   * className applied to the root element.
+   */
+  className: propTypesExports.string,
+
+  /**
+   * Date value for the MonthPicker
+   */
+  date: propTypesExports.any,
+
+  /**
+   * If `true` picker is disabled
+   */
+  disabled: propTypesExports.bool,
+
+  /**
+   * If `true` future days are disabled.
+   * @default false
+   */
+  disableFuture: propTypesExports.bool,
+
+  /**
+   * If `true`, today's date is rendering without highlighting with circle.
+   * @default false
+   */
+  disableHighlightToday: propTypesExports.bool,
+
+  /**
+   * If `true` past days are disabled.
+   * @default false
+   */
+  disablePast: propTypesExports.bool,
+  hasFocus: propTypesExports.bool,
+
+  /**
+   * Maximal selectable date. @DateIOType
+   */
+  maxDate: propTypesExports.any,
+
+  /**
+   * Minimal selectable date. @DateIOType
+   */
+  minDate: propTypesExports.any,
+
+  /**
+   * Callback fired on date change.
+   */
+  onChange: propTypesExports.func.isRequired,
+  onFocusedViewChange: propTypesExports.func,
+  onMonthFocus: propTypesExports.func,
+
+  /**
+   * If `true` picker is readonly
+   */
+  readOnly: propTypesExports.bool,
+
+  /**
+   * Disable specific months dynamically.
+   * Works like `shouldDisableDate` but for month selection view @DateIOType.
+   * @template TDate
+   * @param {TDate} month The month to check.
+   * @returns {boolean} If `true` the month will be disabled.
+   */
+  shouldDisableMonth: propTypesExports.func,
+
+  /**
+   * The system prop that allows defining system overrides as well as additional CSS styles.
+   */
+  sx: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.func, propTypesExports.object, propTypesExports.bool])), propTypesExports.func, propTypesExports.object])
+} : void 0;
+
+function useValidation(props, validate, isSameError) {
+  const {
+    value,
+    onError
+  } = props;
+  const adapter = useLocalizationContext();
+  const previousValidationErrorRef = reactExports.useRef(null);
+  const validationError = validate({
+    adapter,
+    value,
+    props
+  });
+  reactExports.useEffect(() => {
+    if (onError && !isSameError(validationError, previousValidationErrorRef.current)) {
+      onError(validationError, value);
+    }
+
+    previousValidationErrorRef.current = validationError;
+  }, [isSameError, onError, previousValidationErrorRef, validationError, value]);
+  return validationError;
+}
+
+const validateDate$1 = ({
+  props,
+  value,
+  adapter
+}) => {
+  const now = adapter.utils.date();
+  const date = adapter.utils.date(value);
+  const minDate = parseNonNullablePickerDate(adapter.utils, props.minDate, adapter.defaultDates.minDate);
+  const maxDate = parseNonNullablePickerDate(adapter.utils, props.maxDate, adapter.defaultDates.maxDate);
+
+  if (date === null) {
+    return null;
+  }
+
+  switch (true) {
+    case !adapter.utils.isValid(value):
+      return 'invalidDate';
+
+    case Boolean(props.shouldDisableDate && props.shouldDisableDate(date)):
+      return 'shouldDisableDate';
+
+    case Boolean(props.disableFuture && adapter.utils.isAfterDay(date, now)):
+      return 'disableFuture';
+
+    case Boolean(props.disablePast && adapter.utils.isBeforeDay(date, now)):
+      return 'disablePast';
+
+    case Boolean(minDate && adapter.utils.isBeforeDay(date, minDate)):
+      return 'minDate';
+
+    case Boolean(maxDate && adapter.utils.isAfterDay(date, maxDate)):
+      return 'maxDate';
+
+    default:
+      return null;
+  }
+};
+const useIsDayDisabled = ({
+  shouldDisableDate,
+  minDate,
+  maxDate,
+  disableFuture,
+  disablePast
+}) => {
+  const adapter = useLocalizationContext();
+  return reactExports.useCallback(day => validateDate$1({
+    adapter,
+    value: day,
+    props: {
+      shouldDisableDate,
+      minDate,
+      maxDate,
+      disableFuture,
+      disablePast
+    }
+  }) !== null, [adapter, shouldDisableDate, minDate, maxDate, disableFuture, disablePast]);
+};
+const isSameDateError = (a, b) => a === b;
+const useDateValidation = props => useValidation(props, validateDate$1, isSameDateError);
+
+const createCalendarStateReducer = (reduceAnimations, disableSwitchToMonthOnDayFocus, utils) => (state, action) => {
+  switch (action.type) {
+    case 'changeMonth':
+      return _extends({}, state, {
+        slideDirection: action.direction,
+        currentMonth: action.newMonth,
+        isMonthSwitchingAnimating: !reduceAnimations
+      });
+
+    case 'finishMonthSwitchingAnimation':
+      return _extends({}, state, {
+        isMonthSwitchingAnimating: false
+      });
+
+    case 'changeFocusedDay':
+      {
+        if (state.focusedDay != null && action.focusedDay != null && utils.isSameDay(action.focusedDay, state.focusedDay)) {
+          return state;
+        }
+
+        const needMonthSwitch = action.focusedDay != null && !disableSwitchToMonthOnDayFocus && !utils.isSameMonth(state.currentMonth, action.focusedDay);
+        return _extends({}, state, {
+          focusedDay: action.focusedDay,
+          isMonthSwitchingAnimating: needMonthSwitch && !reduceAnimations && !action.withoutMonthSwitchingAnimation,
+          currentMonth: needMonthSwitch ? utils.startOfMonth(action.focusedDay) : state.currentMonth,
+          slideDirection: action.focusedDay != null && utils.isAfterDay(action.focusedDay, state.currentMonth) ? 'left' : 'right'
+        });
+      }
+
+    default:
+      throw new Error('missing support');
+  }
+};
+const useCalendarState = ({
+  date,
+  defaultCalendarMonth,
+  disableFuture,
+  disablePast,
+  disableSwitchToMonthOnDayFocus = false,
+  maxDate,
+  minDate,
+  onMonthChange,
+  reduceAnimations,
+  shouldDisableDate
+}) => {
+  var _ref;
+
+  const now = useNow();
+  const utils = useUtils();
+  const reducerFn = reactExports.useRef(createCalendarStateReducer(Boolean(reduceAnimations), disableSwitchToMonthOnDayFocus, utils)).current;
+  const [calendarState, dispatch] = reactExports.useReducer(reducerFn, {
+    isMonthSwitchingAnimating: false,
+    focusedDay: date || now,
+    currentMonth: utils.startOfMonth((_ref = date != null ? date : defaultCalendarMonth) != null ? _ref : now),
+    slideDirection: 'left'
+  });
+  const handleChangeMonth = reactExports.useCallback(payload => {
+    dispatch(_extends({
+      type: 'changeMonth'
+    }, payload));
+
+    if (onMonthChange) {
+      onMonthChange(payload.newMonth);
+    }
+  }, [onMonthChange]);
+  const changeMonth = reactExports.useCallback(newDate => {
+    const newDateRequested = newDate != null ? newDate : now;
+
+    if (utils.isSameMonth(newDateRequested, calendarState.currentMonth)) {
+      return;
+    }
+
+    handleChangeMonth({
+      newMonth: utils.startOfMonth(newDateRequested),
+      direction: utils.isAfterDay(newDateRequested, calendarState.currentMonth) ? 'left' : 'right'
+    });
+  }, [calendarState.currentMonth, handleChangeMonth, now, utils]);
+  const isDateDisabled = useIsDayDisabled({
+    shouldDisableDate,
+    minDate,
+    maxDate,
+    disableFuture,
+    disablePast
+  });
+  const onMonthSwitchingAnimationEnd = reactExports.useCallback(() => {
+    dispatch({
+      type: 'finishMonthSwitchingAnimation'
+    });
+  }, []);
+  const changeFocusedDay = reactExports.useCallback((newFocusedDate, withoutMonthSwitchingAnimation) => {
+    if (!isDateDisabled(newFocusedDate)) {
+      dispatch({
+        type: 'changeFocusedDay',
+        focusedDay: newFocusedDate,
+        withoutMonthSwitchingAnimation
+      });
+    }
+  }, [isDateDisabled]);
+  return {
+    calendarState,
+    changeMonth,
+    changeFocusedDay,
+    isDateDisabled,
+    onMonthSwitchingAnimationEnd,
+    handleChangeMonth
+  };
+};
+
+const getPickersFadeTransitionGroupUtilityClass = slot => generateUtilityClass('MuiPickersFadeTransitionGroup', slot);
+generateUtilityClasses('MuiPickersFadeTransitionGroup', ['root']);
+
+const useUtilityClasses$f = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root']
+  };
+  return composeClasses(slots, getPickersFadeTransitionGroupUtilityClass, classes);
+};
+
+const animationDuration = 500;
+const PickersFadeTransitionGroupRoot = styled$1(TransitionGroup$1, {
+  name: 'MuiPickersFadeTransitionGroup',
+  slot: 'Root',
+  overridesResolver: (_, styles) => styles.root
+})({
+  display: 'block',
+  position: 'relative'
+});
+/**
+ * @ignore - do not document.
+ */
+
+function PickersFadeTransitionGroup(inProps) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiPickersFadeTransitionGroup'
+  });
+  const {
+    children,
+    className,
+    reduceAnimations,
+    transKey
+  } = props;
+  const classes = useUtilityClasses$f(props);
+
+  if (reduceAnimations) {
+    return children;
+  }
+
+  return /*#__PURE__*/jsxRuntimeExports.jsx(PickersFadeTransitionGroupRoot, {
+    className: clsx(classes.root, className),
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(Fade$1, {
+      appear: false,
+      mountOnEnter: true,
+      unmountOnExit: true,
+      timeout: {
+        appear: animationDuration,
+        enter: animationDuration / 2,
+        exit: 0
+      },
+      children: children
+    }, transKey)
+  });
+}
+
+const DAY_SIZE = 36;
+const DAY_MARGIN = 2;
+const DIALOG_WIDTH = 320;
+const VIEW_HEIGHT = 358;
+
+function getPickersDayUtilityClass(slot) {
+  return generateUtilityClass('MuiPickersDay', slot);
+}
+const pickersDayClasses = generateUtilityClasses('MuiPickersDay', ['root', 'dayWithMargin', 'dayOutsideMonth', 'hiddenDaySpacingFiller', 'today', 'selected', 'disabled']);
+
+const _excluded$c = ["autoFocus", "className", "day", "disabled", "disableHighlightToday", "disableMargin", "hidden", "isAnimating", "onClick", "onDaySelect", "onFocus", "onBlur", "onKeyDown", "onMouseDown", "outsideCurrentMonth", "selected", "showDaysOutsideCurrentMonth", "children", "today"];
+
+const useUtilityClasses$e = ownerState => {
+  const {
+    selected,
+    disableMargin,
+    disableHighlightToday,
+    today,
+    disabled,
+    outsideCurrentMonth,
+    showDaysOutsideCurrentMonth,
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root', selected && 'selected', disabled && 'disabled', !disableMargin && 'dayWithMargin', !disableHighlightToday && today && 'today', outsideCurrentMonth && showDaysOutsideCurrentMonth && 'dayOutsideMonth', outsideCurrentMonth && !showDaysOutsideCurrentMonth && 'hiddenDaySpacingFiller'],
+    hiddenDaySpacingFiller: ['hiddenDaySpacingFiller']
+  };
+  return composeClasses(slots, getPickersDayUtilityClass, classes);
+};
+
+const styleArg = ({
+  theme,
+  ownerState
+}) => _extends({}, theme.typography.caption, {
+  width: DAY_SIZE,
+  height: DAY_SIZE,
+  borderRadius: '50%',
+  padding: 0,
+  // background required here to prevent collides with the other days when animating with transition group
+  backgroundColor: theme.palette.background.paper,
+  color: theme.palette.text.primary,
+  '&:hover': {
+    backgroundColor: alpha(theme.palette.action.active, theme.palette.action.hoverOpacity)
+  },
+  '&:focus': {
+    backgroundColor: alpha(theme.palette.action.active, theme.palette.action.hoverOpacity),
+    [`&.${pickersDayClasses.selected}`]: {
+      willChange: 'background-color',
+      backgroundColor: theme.palette.primary.dark
+    }
+  },
+  [`&.${pickersDayClasses.selected}`]: {
+    color: theme.palette.primary.contrastText,
+    backgroundColor: theme.palette.primary.main,
+    fontWeight: theme.typography.fontWeightMedium,
+    transition: theme.transitions.create('background-color', {
+      duration: theme.transitions.duration.short
+    }),
+    '&:hover': {
+      willChange: 'background-color',
+      backgroundColor: theme.palette.primary.dark
+    }
+  },
+  [`&.${pickersDayClasses.disabled}`]: {
+    color: theme.palette.text.disabled
+  }
+}, !ownerState.disableMargin && {
+  margin: `0 ${DAY_MARGIN}px`
+}, ownerState.outsideCurrentMonth && ownerState.showDaysOutsideCurrentMonth && {
+  color: theme.palette.text.secondary
+}, !ownerState.disableHighlightToday && ownerState.today && {
+  [`&:not(.${pickersDayClasses.selected})`]: {
+    border: `1px solid ${theme.palette.text.secondary}`
+  }
+});
+
+const overridesResolver = (props, styles) => {
+  const {
+    ownerState
+  } = props;
+  return [styles.root, !ownerState.disableMargin && styles.dayWithMargin, !ownerState.disableHighlightToday && ownerState.today && styles.today, !ownerState.outsideCurrentMonth && ownerState.showDaysOutsideCurrentMonth && styles.dayOutsideMonth, ownerState.outsideCurrentMonth && !ownerState.showDaysOutsideCurrentMonth && styles.hiddenDaySpacingFiller];
+};
+
+const PickersDayRoot = styled$1(ButtonBase$1, {
+  name: 'MuiPickersDay',
+  slot: 'Root',
+  overridesResolver
+})(styleArg);
+const PickersDayFiller = styled$1('div', {
+  name: 'MuiPickersDay',
+  slot: 'Root',
+  overridesResolver
+})(({
+  theme,
+  ownerState
+}) => _extends({}, styleArg({
+  theme,
+  ownerState
+}), {
+  // visibility: 'hidden' does not work here as it hides the element from screen readers as well
+  opacity: 0,
+  pointerEvents: 'none'
+}));
+
+const noop$1 = () => {};
+
+const PickersDayRaw = /*#__PURE__*/reactExports.forwardRef(function PickersDay(inProps, forwardedRef) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiPickersDay'
+  });
+
+  const {
+    autoFocus = false,
+    className,
+    day,
+    disabled = false,
+    disableHighlightToday = false,
+    disableMargin = false,
+    isAnimating,
+    onClick,
+    onDaySelect,
+    onFocus = noop$1,
+    onBlur = noop$1,
+    onKeyDown = noop$1,
+    onMouseDown,
+    outsideCurrentMonth,
+    selected = false,
+    showDaysOutsideCurrentMonth = false,
+    children,
+    today: isToday = false
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$c);
+
+  const ownerState = _extends({}, props, {
+    autoFocus,
+    disabled,
+    disableHighlightToday,
+    disableMargin,
+    selected,
+    showDaysOutsideCurrentMonth,
+    today: isToday
+  });
+
+  const classes = useUtilityClasses$e(ownerState);
+  const utils = useUtils();
+  const ref = reactExports.useRef(null);
+  const handleRef = useForkRef(ref, forwardedRef); // Since this is rendered when a Popper is opened we can't use passive effects.
+  // Focusing in passive effects in Popper causes scroll jump.
+
+  useEnhancedEffect$1(() => {
+    if (autoFocus && !disabled && !isAnimating && !outsideCurrentMonth) {
+      // ref.current being null would be a bug in MUI
+      ref.current.focus();
+    }
+  }, [autoFocus, disabled, isAnimating, outsideCurrentMonth]); // For day outside of current month, move focus from mouseDown to mouseUp
+  // Goal: have the onClick ends before sliding to the new month
+
+  const handleMouseDown = event => {
+    if (onMouseDown) {
+      onMouseDown(event);
+    }
+
+    if (outsideCurrentMonth) {
+      event.preventDefault();
+    }
+  };
+
+  const handleClick = event => {
+    if (!disabled) {
+      onDaySelect(day, 'finish');
+    }
+
+    if (outsideCurrentMonth) {
+      event.currentTarget.focus();
+    }
+
+    if (onClick) {
+      onClick(event);
+    }
+  };
+
+  if (outsideCurrentMonth && !showDaysOutsideCurrentMonth) {
+    return /*#__PURE__*/jsxRuntimeExports.jsx(PickersDayFiller, {
+      className: clsx(classes.root, classes.hiddenDaySpacingFiller, className),
+      ownerState: ownerState,
+      role: other.role
+    });
+  }
+
+  return /*#__PURE__*/jsxRuntimeExports.jsx(PickersDayRoot, _extends({
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    ref: handleRef,
+    centerRipple: true,
+    disabled: disabled,
+    tabIndex: selected ? 0 : -1,
+    onKeyDown: event => onKeyDown(event, day),
+    onFocus: event => onFocus(event, day),
+    onBlur: event => onBlur(event, day),
+    onClick: handleClick,
+    onMouseDown: handleMouseDown
+  }, other, {
+    children: !children ? utils.format(day, 'dayOfMonth') : children
+  }));
+});
+const areDayPropsEqual = (prevProps, nextProps) => {
+  return prevProps.autoFocus === nextProps.autoFocus && prevProps.isAnimating === nextProps.isAnimating && prevProps.today === nextProps.today && prevProps.disabled === nextProps.disabled && prevProps.selected === nextProps.selected && prevProps.disableMargin === nextProps.disableMargin && prevProps.showDaysOutsideCurrentMonth === nextProps.showDaysOutsideCurrentMonth && prevProps.disableHighlightToday === nextProps.disableHighlightToday && prevProps.className === nextProps.className && prevProps.sx === nextProps.sx && prevProps.outsideCurrentMonth === nextProps.outsideCurrentMonth && prevProps.onFocus === nextProps.onFocus && prevProps.onBlur === nextProps.onBlur && prevProps.onDaySelect === nextProps.onDaySelect;
+};
+process.env.NODE_ENV !== "production" ? PickersDayRaw.propTypes = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // | To update them edit the TypeScript types and run "yarn proptypes"  |
+  // ----------------------------------------------------------------------
+
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+
+  /**
+   * The date to show.
+   */
+  day: propTypesExports.any.isRequired,
+
+  /**
+   * If `true`, renders as disabled.
+   * @default false
+   */
+  disabled: propTypesExports.bool,
+
+  /**
+   * If `true`, today's date is rendering without highlighting with circle.
+   * @default false
+   */
+  disableHighlightToday: propTypesExports.bool,
+
+  /**
+   * If `true`, days are rendering without margin. Useful for displaying linked range of days.
+   * @default false
+   */
+  disableMargin: propTypesExports.bool,
+  isAnimating: propTypesExports.bool,
+  onBlur: propTypesExports.func,
+  onDaySelect: propTypesExports.func.isRequired,
+  onFocus: propTypesExports.func,
+  onKeyDown: propTypesExports.func,
+
+  /**
+   * If `true`, day is outside of month and will be hidden.
+   */
+  outsideCurrentMonth: propTypesExports.bool.isRequired,
+
+  /**
+   * If `true`, renders as selected.
+   * @default false
+   */
+  selected: propTypesExports.bool,
+
+  /**
+   * If `true`, days that have `outsideCurrentMonth={true}` are displayed.
+   * @default false
+   */
+  showDaysOutsideCurrentMonth: propTypesExports.bool,
+
+  /**
+   * The system prop that allows defining system overrides as well as additional CSS styles.
+   */
+  sx: propTypesExports.oneOfType([propTypesExports.arrayOf(propTypesExports.oneOfType([propTypesExports.func, propTypesExports.object, propTypesExports.bool])), propTypesExports.func, propTypesExports.object]),
+
+  /**
+   * If `true`, renders as today date.
+   * @default false
+   */
+  today: propTypesExports.bool
+} : void 0;
+/**
+ *
+ * Demos:
+ *
+ * - [Date Picker](https://mui.com/x/react-date-pickers/date-picker/)
+ *
+ * API:
+ *
+ * - [PickersDay API](https://mui.com/x/api/date-pickers/pickers-day/)
+ */
+
+const PickersDay = /*#__PURE__*/reactExports.memo(PickersDayRaw, areDayPropsEqual);
+
+const getPickersSlideTransitionUtilityClass = slot => // TODO v6: Rename 'PrivatePickersSlideTransition' to 'MuiPickersSlideTransition' to follow convention
+generateUtilityClass('PrivatePickersSlideTransition', slot);
+const pickersSlideTransitionClasses = generateUtilityClasses( // TODO v6: Rename 'PrivatePickersSlideTransition' to 'MuiPickersSlideTransition' to follow convention
+'PrivatePickersSlideTransition', ['root', 'slideEnter-left', 'slideEnter-right', 'slideEnterActive', 'slideExit', 'slideExitActiveLeft-left', 'slideExitActiveLeft-right']);
+
+const _excluded$b = ["children", "className", "reduceAnimations", "slideDirection", "transKey"];
+
+const useUtilityClasses$d = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root']
+  };
+  return composeClasses(slots, getPickersSlideTransitionUtilityClass, classes);
+};
+
+const slideAnimationDuration = 350;
+const PickersSlideTransitionRoot = styled$1(TransitionGroup$1, {
+  name: 'PrivatePickersSlideTransition',
+  slot: 'Root',
+  overridesResolver: (_, styles) => [styles.root, {
+    [`.${pickersSlideTransitionClasses['slideEnter-left']}`]: styles['slideEnter-left']
+  }, {
+    [`.${pickersSlideTransitionClasses['slideEnter-right']}`]: styles['slideEnter-right']
+  }, {
+    [`.${pickersSlideTransitionClasses.slideEnterActive}`]: styles.slideEnterActive
+  }, {
+    [`.${pickersSlideTransitionClasses.slideExit}`]: styles.slideExit
+  }, {
+    [`.${pickersSlideTransitionClasses['slideExitActiveLeft-left']}`]: styles['slideExitActiveLeft-left']
+  }, {
+    [`.${pickersSlideTransitionClasses['slideExitActiveLeft-right']}`]: styles['slideExitActiveLeft-right']
+  }]
+})(({
+  theme
+}) => {
+  const slideTransition = theme.transitions.create('transform', {
+    duration: slideAnimationDuration,
+    easing: 'cubic-bezier(0.35, 0.8, 0.4, 1)'
+  });
+  return {
+    display: 'block',
+    position: 'relative',
+    overflowX: 'hidden',
+    '& > *': {
+      position: 'absolute',
+      top: 0,
+      right: 0,
+      left: 0
+    },
+    [`& .${pickersSlideTransitionClasses['slideEnter-left']}`]: {
+      willChange: 'transform',
+      transform: 'translate(100%)',
+      zIndex: 1
+    },
+    [`& .${pickersSlideTransitionClasses['slideEnter-right']}`]: {
+      willChange: 'transform',
+      transform: 'translate(-100%)',
+      zIndex: 1
+    },
+    [`& .${pickersSlideTransitionClasses.slideEnterActive}`]: {
+      transform: 'translate(0%)',
+      transition: slideTransition
+    },
+    [`& .${pickersSlideTransitionClasses.slideExit}`]: {
+      transform: 'translate(0%)'
+    },
+    [`& .${pickersSlideTransitionClasses['slideExitActiveLeft-left']}`]: {
+      willChange: 'transform',
+      transform: 'translate(-100%)',
+      transition: slideTransition,
+      zIndex: 0
+    },
+    [`& .${pickersSlideTransitionClasses['slideExitActiveLeft-right']}`]: {
+      willChange: 'transform',
+      transform: 'translate(100%)',
+      transition: slideTransition,
+      zIndex: 0
+    }
+  };
+});
+/**
+ * @ignore - do not document.
+ */
+
+const PickersSlideTransition = props => {
+  // TODO v6: add 'useThemeProps' once the component class names are aligned
+  const {
+    children,
+    className,
+    reduceAnimations,
+    slideDirection,
+    transKey
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$b);
+
+  const classes = useUtilityClasses$d(props);
+
+  if (reduceAnimations) {
+    return /*#__PURE__*/jsxRuntimeExports.jsx("div", {
+      className: clsx(classes.root, className),
+      children: children
+    });
+  }
+
+  const transitionClasses = {
+    exit: pickersSlideTransitionClasses.slideExit,
+    enterActive: pickersSlideTransitionClasses.slideEnterActive,
+    enter: pickersSlideTransitionClasses[`slideEnter-${slideDirection}`],
+    exitActive: pickersSlideTransitionClasses[`slideExitActiveLeft-${slideDirection}`]
+  };
+  return /*#__PURE__*/jsxRuntimeExports.jsx(PickersSlideTransitionRoot, {
+    className: clsx(classes.root, className),
+    childFactory: element => /*#__PURE__*/reactExports.cloneElement(element, {
+      classNames: transitionClasses
+    }),
+    role: "presentation",
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(CSSTransition$1, _extends({
+      mountOnEnter: true,
+      unmountOnExit: true,
+      timeout: slideAnimationDuration,
+      classNames: transitionClasses
+    }, other, {
+      children: children
+    }), transKey)
+  });
+};
+
+const getDayPickerUtilityClass = slot => generateUtilityClass('MuiDayPicker', slot);
+generateUtilityClasses('MuiDayPicker', ['header', 'weekDayLabel', 'loadingContainer', 'slideTransition', 'monthContainer', 'weekContainer']);
+
+const useUtilityClasses$c = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    header: ['header'],
+    weekDayLabel: ['weekDayLabel'],
+    loadingContainer: ['loadingContainer'],
+    slideTransition: ['slideTransition'],
+    monthContainer: ['monthContainer'],
+    weekContainer: ['weekContainer']
+  };
+  return composeClasses(slots, getDayPickerUtilityClass, classes);
+};
+
+const defaultDayOfWeekFormatter = day => day.charAt(0).toUpperCase();
+
+const weeksContainerHeight = (DAY_SIZE + DAY_MARGIN * 2) * 6;
+const PickersCalendarDayHeader = styled$1('div', {
+  name: 'MuiDayPicker',
+  slot: 'Header',
+  overridesResolver: (_, styles) => styles.header
+})({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center'
+});
+const PickersCalendarWeekDayLabel = styled$1(Typography$1, {
+  name: 'MuiDayPicker',
+  slot: 'WeekDayLabel',
+  overridesResolver: (_, styles) => styles.weekDayLabel
+})(({
+  theme
+}) => ({
+  width: 36,
+  height: 40,
+  margin: '0 2px',
+  textAlign: 'center',
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  color: theme.palette.text.secondary
+}));
+const PickersCalendarLoadingContainer = styled$1('div', {
+  name: 'MuiDayPicker',
+  slot: 'LoadingContainer',
+  overridesResolver: (_, styles) => styles.loadingContainer
+})({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  minHeight: weeksContainerHeight
+});
+const PickersCalendarSlideTransition = styled$1(PickersSlideTransition, {
+  name: 'MuiDayPicker',
+  slot: 'SlideTransition',
+  overridesResolver: (_, styles) => styles.slideTransition
+})({
+  minHeight: weeksContainerHeight
+});
+const PickersCalendarWeekContainer = styled$1('div', {
+  name: 'MuiDayPicker',
+  slot: 'MonthContainer',
+  overridesResolver: (_, styles) => styles.monthContainer
+})({
+  overflow: 'hidden'
+});
+const PickersCalendarWeek = styled$1('div', {
+  name: 'MuiDayPicker',
+  slot: 'WeekContainer',
+  overridesResolver: (_, styles) => styles.weekContainer
+})({
+  margin: `${DAY_MARGIN}px 0`,
+  display: 'flex',
+  justifyContent: 'center'
+});
+/**
+ * @ignore - do not document.
+ */
+
+function DayPicker(inProps) {
+  const now = useNow();
+  const utils = useUtils();
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiDayPicker'
+  });
+  const classes = useUtilityClasses$c(props);
+  const {
+    onFocusedDayChange,
+    className,
+    currentMonth,
+    selectedDays,
+    disabled,
+    disableHighlightToday,
+    focusedDay,
+    isMonthSwitchingAnimating,
+    loading,
+    onSelectedDaysChange,
+    onMonthSwitchingAnimationEnd,
+    readOnly,
+    reduceAnimations,
+    renderDay,
+    renderLoading = () => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      children: "..."
+    }),
+    showDaysOutsideCurrentMonth,
+    slideDirection,
+    TransitionProps,
+    disablePast,
+    disableFuture,
+    minDate,
+    maxDate,
+    shouldDisableDate,
+    dayOfWeekFormatter = defaultDayOfWeekFormatter,
+    hasFocus,
+    onFocusedViewChange,
+    gridLabelId
+  } = props;
+  const isDateDisabled = useIsDayDisabled({
+    shouldDisableDate,
+    minDate,
+    maxDate,
+    disablePast,
+    disableFuture
+  });
+  const [internalFocusedDay, setInternalFocusedDay] = reactExports.useState(() => focusedDay || now);
+  const changeHasFocus = reactExports.useCallback(newHasFocus => {
+    if (onFocusedViewChange) {
+      onFocusedViewChange(newHasFocus);
+    }
+  }, [onFocusedViewChange]);
+  const handleDaySelect = reactExports.useCallback((day, isFinish = 'finish') => {
+    if (readOnly) {
+      return;
+    }
+
+    onSelectedDaysChange(day, isFinish);
+  }, [onSelectedDaysChange, readOnly]);
+  const focusDay = reactExports.useCallback(day => {
+    if (!isDateDisabled(day)) {
+      onFocusedDayChange(day);
+      setInternalFocusedDay(day);
+      changeHasFocus(true);
+    }
+  }, [isDateDisabled, onFocusedDayChange, changeHasFocus]);
+  const theme = useTheme();
+
+  function handleKeyDown(event, day) {
+    switch (event.key) {
+      case 'ArrowUp':
+        focusDay(utils.addDays(day, -7));
+        event.preventDefault();
+        break;
+
+      case 'ArrowDown':
+        focusDay(utils.addDays(day, 7));
+        event.preventDefault();
+        break;
+
+      case 'ArrowLeft':
+        {
+          const newFocusedDayDefault = utils.addDays(day, theme.direction === 'ltr' ? -1 : 1);
+          const nextAvailableMonth = theme.direction === 'ltr' ? utils.getPreviousMonth(day) : utils.getNextMonth(day);
+          const closestDayToFocus = findClosestEnabledDate({
+            utils,
+            date: newFocusedDayDefault,
+            minDate: theme.direction === 'ltr' ? utils.startOfMonth(nextAvailableMonth) : newFocusedDayDefault,
+            maxDate: theme.direction === 'ltr' ? newFocusedDayDefault : utils.endOfMonth(nextAvailableMonth),
+            isDateDisabled
+          });
+          focusDay(closestDayToFocus || newFocusedDayDefault);
+          event.preventDefault();
+          break;
+        }
+
+      case 'ArrowRight':
+        {
+          const newFocusedDayDefault = utils.addDays(day, theme.direction === 'ltr' ? 1 : -1);
+          const nextAvailableMonth = theme.direction === 'ltr' ? utils.getNextMonth(day) : utils.getPreviousMonth(day);
+          const closestDayToFocus = findClosestEnabledDate({
+            utils,
+            date: newFocusedDayDefault,
+            minDate: theme.direction === 'ltr' ? newFocusedDayDefault : utils.startOfMonth(nextAvailableMonth),
+            maxDate: theme.direction === 'ltr' ? utils.endOfMonth(nextAvailableMonth) : newFocusedDayDefault,
+            isDateDisabled
+          });
+          focusDay(closestDayToFocus || newFocusedDayDefault);
+          event.preventDefault();
+          break;
+        }
+
+      case 'Home':
+        focusDay(utils.startOfWeek(day));
+        event.preventDefault();
+        break;
+
+      case 'End':
+        focusDay(utils.endOfWeek(day));
+        event.preventDefault();
+        break;
+
+      case 'PageUp':
+        focusDay(utils.getNextMonth(day));
+        event.preventDefault();
+        break;
+
+      case 'PageDown':
+        focusDay(utils.getPreviousMonth(day));
+        event.preventDefault();
+        break;
+    }
+  }
+
+  function handleFocus(event, day) {
+    focusDay(day);
+  }
+
+  function handleBlur(event, day) {
+    if (hasFocus && utils.isSameDay(internalFocusedDay, day)) {
+      changeHasFocus(false);
+    }
+  }
+
+  const currentMonthNumber = utils.getMonth(currentMonth);
+  const validSelectedDays = selectedDays.filter(day => !!day).map(day => utils.startOfDay(day)); // need a new ref whenever the `key` of the transition changes: http://reactcommunity.org/react-transition-group/transition/#Transition-prop-nodeRef.
+
+  const transitionKey = currentMonthNumber; // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  const slideNodeRef = reactExports.useMemo(() => /*#__PURE__*/reactExports.createRef(), [transitionKey]);
+  const startOfCurrentWeek = utils.startOfWeek(now);
+  const focusableDay = reactExports.useMemo(() => {
+    const startOfMonth = utils.startOfMonth(currentMonth);
+    const endOfMonth = utils.endOfMonth(currentMonth);
+
+    if (isDateDisabled(internalFocusedDay) || utils.isAfterDay(internalFocusedDay, endOfMonth) || utils.isBeforeDay(internalFocusedDay, startOfMonth)) {
+      return findClosestEnabledDate({
+        utils,
+        date: internalFocusedDay,
+        minDate: startOfMonth,
+        maxDate: endOfMonth,
+        disablePast,
+        disableFuture,
+        isDateDisabled
+      });
+    }
+
+    return internalFocusedDay;
+  }, [currentMonth, disableFuture, disablePast, internalFocusedDay, isDateDisabled, utils]);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+    role: "grid",
+    "aria-labelledby": gridLabelId,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarDayHeader, {
+      role: "row",
+      className: classes.header,
+      children: utils.getWeekdays().map((day, i) => {
+        var _dayOfWeekFormatter;
+
+        return /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarWeekDayLabel, {
+          variant: "caption",
+          role: "columnheader",
+          "aria-label": utils.format(utils.addDays(startOfCurrentWeek, i), 'weekday'),
+          className: classes.weekDayLabel,
+          children: (_dayOfWeekFormatter = dayOfWeekFormatter == null ? void 0 : dayOfWeekFormatter(day)) != null ? _dayOfWeekFormatter : day
+        }, day + i.toString());
+      })
+    }), loading ? /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarLoadingContainer, {
+      className: classes.loadingContainer,
+      children: renderLoading()
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarSlideTransition, _extends({
+      transKey: transitionKey,
+      onExited: onMonthSwitchingAnimationEnd,
+      reduceAnimations: reduceAnimations,
+      slideDirection: slideDirection,
+      className: clsx(className, classes.slideTransition)
+    }, TransitionProps, {
+      nodeRef: slideNodeRef,
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarWeekContainer, {
+        ref: slideNodeRef,
+        role: "rowgroup",
+        className: classes.monthContainer,
+        children: utils.getWeekArray(currentMonth).map(week => /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarWeek, {
+          role: "row",
+          className: classes.weekContainer,
+          children: week.map(day => {
+            const isFocusableDay = focusableDay !== null && utils.isSameDay(day, focusableDay);
+            const isSelected = validSelectedDays.some(selectedDay => utils.isSameDay(selectedDay, day));
+            const isToday = utils.isSameDay(day, now);
+            const pickersDayProps = {
+              key: day == null ? void 0 : day.toString(),
+              day,
+              isAnimating: isMonthSwitchingAnimating,
+              disabled: disabled || isDateDisabled(day),
+              autoFocus: hasFocus && isFocusableDay,
+              today: isToday,
+              outsideCurrentMonth: utils.getMonth(day) !== currentMonthNumber,
+              selected: isSelected,
+              disableHighlightToday,
+              showDaysOutsideCurrentMonth,
+              onKeyDown: handleKeyDown,
+              onFocus: handleFocus,
+              onBlur: handleBlur,
+              onDaySelect: handleDaySelect,
+              tabIndex: isFocusableDay ? 0 : -1,
+              role: 'gridcell',
+              'aria-selected': isSelected
+            };
+
+            if (isToday) {
+              pickersDayProps['aria-current'] = 'date';
+            }
+
+            return renderDay ? renderDay(day, validSelectedDays, pickersDayProps) : /*#__PURE__*/reactExports.createElement(PickersDay, _extends({}, pickersDayProps, {
+              key: pickersDayProps.key
+            }));
+          })
+        }, `week-${week[0]}`))
+      })
+    }))]
+  });
+}
+
+function useViews({
+  onChange,
+  onViewChange,
+  openTo,
+  view,
+  views
+}) {
+  var _views, _views2;
+
+  const [openView, setOpenView] = useControlled({
+    name: 'Picker',
+    state: 'view',
+    controlled: view,
+    default: openTo && arrayIncludes(views, openTo) ? openTo : views[0]
+  });
+  const previousView = (_views = views[views.indexOf(openView) - 1]) != null ? _views : null;
+  const nextView = (_views2 = views[views.indexOf(openView) + 1]) != null ? _views2 : null;
+  const changeView = reactExports.useCallback(newView => {
+    setOpenView(newView);
+
+    if (onViewChange) {
+      onViewChange(newView);
+    }
+  }, [setOpenView, onViewChange]);
+  const openNext = reactExports.useCallback(() => {
+    if (nextView) {
+      changeView(nextView);
+    }
+  }, [nextView, changeView]);
+  const handleChangeAndOpenNext = reactExports.useCallback((date, currentViewSelectionState) => {
+    const isSelectionFinishedOnCurrentView = currentViewSelectionState === 'finish';
+    const globalSelectionState = isSelectionFinishedOnCurrentView && Boolean(nextView) ? 'partial' : currentViewSelectionState;
+    onChange(date, globalSelectionState);
+
+    if (isSelectionFinishedOnCurrentView) {
+      openNext();
+    }
+  }, [nextView, onChange, openNext]);
+  return {
+    handleChangeAndOpenNext,
+    nextView,
+    previousView,
+    openNext,
+    openView,
+    setOpenView: changeView
+  };
+}
+
+const ArrowDropDown = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+  d: "M7 10l5 5 5-5z"
+}), 'ArrowDropDown');
+/**
+ * @ignore - internal component.
+ */
+
+const ArrowLeft = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+  d: "M15.41 16.59L10.83 12l4.58-4.59L14 6l-6 6 6 6 1.41-1.41z"
+}), 'ArrowLeft');
+/**
+ * @ignore - internal component.
+ */
+
+const ArrowRight = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+  d: "M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z"
+}), 'ArrowRight');
+/**
+ * @ignore - internal component.
+ */
+
+const Calendar = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+  d: "M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"
+}), 'Calendar');
+/**
+ * @ignore - internal component.
+ */
+
+const Clock$1 = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+  children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"
+  }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"
+  })]
+}), 'Clock');
+/**
+ * @ignore - internal component.
+ */
+
+createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+  d: "M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11z"
+}), 'DateRange');
+/**
+ * @ignore - internal component.
+ */
+
+const Pen = createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+  d: "M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+}), 'Pen');
+/**
+ * @ignore - internal component.
+ */
+
+createSvgIcon( /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+  children: [/*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8z"
+  }), /*#__PURE__*/jsxRuntimeExports.jsx("path", {
+    d: "M12.5 7H11v6l5.25 3.15.75-1.23-4.5-2.67z"
+  })]
+}), 'Time');
+
+function getPickersArrowSwitcherUtilityClass(slot) {
+  return generateUtilityClass('MuiPickersArrowSwitcher', slot);
+}
+generateUtilityClasses('MuiPickersArrowSwitcher', ['root', 'spacer', 'button']);
+
+const _excluded$a = ["children", "className", "components", "componentsProps", "isLeftDisabled", "isLeftHidden", "isRightDisabled", "isRightHidden", "leftArrowButtonText", "onLeftClick", "onRightClick", "rightArrowButtonText"];
+
+const useUtilityClasses$b = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    spacer: ['spacer'],
+    button: ['button']
+  };
+  return composeClasses(slots, getPickersArrowSwitcherUtilityClass, classes);
+};
+
+const PickersArrowSwitcherRoot = styled$1('div', {
+  name: 'MuiPickersArrowSwitcher',
+  slot: 'Root',
+  overridesResolver: (props, styles) => styles.root
+})({
+  display: 'flex'
+});
+const PickersArrowSwitcherSpacer = styled$1('div', {
+  name: 'MuiPickersArrowSwitcher',
+  slot: 'Spacer',
+  overridesResolver: (props, styles) => styles.spacer
+})(({
+  theme
+}) => ({
+  width: theme.spacing(3)
+}));
+const PickersArrowSwitcherButton = styled$1(IconButton$1, {
+  name: 'MuiPickersArrowSwitcher',
+  slot: 'Button',
+  overridesResolver: (props, styles) => styles.button
+})(({
+  ownerState
+}) => _extends({}, ownerState.hidden && {
+  visibility: 'hidden'
+}));
+const PickersArrowSwitcher = /*#__PURE__*/reactExports.forwardRef(function PickersArrowSwitcher(inProps, ref) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiPickersArrowSwitcher'
+  });
+
+  const {
+    children,
+    className,
+    components,
+    componentsProps,
+    isLeftDisabled,
+    isLeftHidden,
+    isRightDisabled,
+    isRightHidden,
+    leftArrowButtonText,
+    onLeftClick,
+    onRightClick,
+    rightArrowButtonText
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$a);
+
+  const theme = useTheme();
+  const isRtl = theme.direction === 'rtl';
+  const leftArrowButtonProps = (componentsProps == null ? void 0 : componentsProps.leftArrowButton) || {};
+  const LeftArrowIcon = (components == null ? void 0 : components.LeftArrowIcon) || ArrowLeft;
+  const rightArrowButtonProps = (componentsProps == null ? void 0 : componentsProps.rightArrowButton) || {};
+  const RightArrowIcon = (components == null ? void 0 : components.RightArrowIcon) || ArrowRight;
+  const ownerState = props;
+  const classes = useUtilityClasses$b(ownerState);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(PickersArrowSwitcherRoot, _extends({
+    ref: ref,
+    className: clsx(classes.root, className),
+    ownerState: ownerState
+  }, other, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PickersArrowSwitcherButton, _extends({
+      as: components == null ? void 0 : components.LeftArrowButton,
+      size: "small",
+      "aria-label": leftArrowButtonText,
+      title: leftArrowButtonText,
+      disabled: isLeftDisabled,
+      edge: "end",
+      onClick: onLeftClick
+    }, leftArrowButtonProps, {
+      className: clsx(classes.button, leftArrowButtonProps.className),
+      ownerState: _extends({}, ownerState, leftArrowButtonProps, {
+        hidden: isLeftHidden
+      }),
+      children: isRtl ? /*#__PURE__*/jsxRuntimeExports.jsx(RightArrowIcon, {}) : /*#__PURE__*/jsxRuntimeExports.jsx(LeftArrowIcon, {})
+    })), children ? /*#__PURE__*/jsxRuntimeExports.jsx(Typography$1, {
+      variant: "subtitle1",
+      component: "span",
+      children: children
+    }) : /*#__PURE__*/jsxRuntimeExports.jsx(PickersArrowSwitcherSpacer, {
+      className: classes.spacer,
+      ownerState: ownerState
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(PickersArrowSwitcherButton, _extends({
+      as: components == null ? void 0 : components.RightArrowButton,
+      size: "small",
+      "aria-label": rightArrowButtonText,
+      title: rightArrowButtonText,
+      edge: "start",
+      disabled: isRightDisabled,
+      onClick: onRightClick
+    }, rightArrowButtonProps, {
+      className: clsx(classes.button, rightArrowButtonProps.className),
+      ownerState: _extends({}, ownerState, rightArrowButtonProps, {
+        hidden: isRightHidden
+      }),
+      children: isRtl ? /*#__PURE__*/jsxRuntimeExports.jsx(LeftArrowIcon, {}) : /*#__PURE__*/jsxRuntimeExports.jsx(RightArrowIcon, {})
+    }))]
+  }));
+});
+
+const getMeridiem = (date, utils) => {
+  if (!date) {
+    return null;
+  }
+
+  return utils.getHours(date) >= 12 ? 'pm' : 'am';
+};
+const convertValueToMeridiem = (value, meridiem, ampm) => {
+  if (ampm) {
+    const currentMeridiem = value >= 12 ? 'pm' : 'am';
+
+    if (currentMeridiem !== meridiem) {
+      return meridiem === 'am' ? value - 12 : value + 12;
+    }
+  }
+
+  return value;
+};
+const convertToMeridiem = (time, meridiem, ampm, utils) => {
+  const newHoursAmount = convertValueToMeridiem(utils.getHours(time), meridiem, ampm);
+  return utils.setHours(time, newHoursAmount);
+};
+const getSecondsInDay = (date, utils) => {
+  return utils.getHours(date) * 3600 + utils.getMinutes(date) * 60 + utils.getSeconds(date);
+};
+const createIsAfterIgnoreDatePart = (disableIgnoringDatePartForTimeValidation = false, utils) => (dateLeft, dateRight) => {
+  if (disableIgnoringDatePartForTimeValidation) {
+    return utils.isAfter(dateLeft, dateRight);
+  }
+
+  return getSecondsInDay(dateLeft, utils) > getSecondsInDay(dateRight, utils);
+};
+
+function useNextMonthDisabled(month, {
+  disableFuture,
+  maxDate
+}) {
+  const utils = useUtils();
+  return reactExports.useMemo(() => {
+    const now = utils.date();
+    const lastEnabledMonth = utils.startOfMonth(disableFuture && utils.isBefore(now, maxDate) ? now : maxDate);
+    return !utils.isAfter(lastEnabledMonth, month);
+  }, [disableFuture, maxDate, month, utils]);
+}
+function usePreviousMonthDisabled(month, {
+  disablePast,
+  minDate
+}) {
+  const utils = useUtils();
+  return reactExports.useMemo(() => {
+    const now = utils.date();
+    const firstEnabledMonth = utils.startOfMonth(disablePast && utils.isAfter(now, minDate) ? now : minDate);
+    return !utils.isBefore(firstEnabledMonth, month);
+  }, [disablePast, minDate, month, utils]);
+}
+function useMeridiemMode(date, ampm, onChange) {
+  const utils = useUtils();
+  const meridiemMode = getMeridiem(date, utils);
+  const handleMeridiemChange = reactExports.useCallback(mode => {
+    const timeWithMeridiem = date == null ? null : convertToMeridiem(date, mode, Boolean(ampm), utils);
+    onChange(timeWithMeridiem, 'partial');
+  }, [ampm, date, onChange, utils]);
+  return {
+    meridiemMode,
+    handleMeridiemChange
+  };
+}
+
+const buildDeprecatedPropsWarning = message => {
+  let alreadyWarned = false;
+
+  if (process.env.NODE_ENV === 'production') {
+    return () => {};
+  }
+
+  const cleanMessage = Array.isArray(message) ? message.join('\n') : message;
+  return deprecatedProps => {
+    const deprecatedKeys = Object.entries(deprecatedProps).filter(([, value]) => value !== undefined).map(([key]) => `- ${key}`);
+
+    if (!alreadyWarned && deprecatedKeys.length > 0) {
+      alreadyWarned = true;
+      console.warn([cleanMessage, 'deprecated props observed:', ...deprecatedKeys].join('\n'));
+    }
+  };
+};
+
+const getPickersCalendarHeaderUtilityClass = slot => generateUtilityClass('MuiPickersCalendarHeader', slot);
+generateUtilityClasses('MuiPickersCalendarHeader', ['root', 'labelContainer', 'label', 'switchViewButton', 'switchViewIcon']);
+
+const useUtilityClasses$a = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    labelContainer: ['labelContainer'],
+    label: ['label'],
+    switchViewButton: ['switchViewButton'],
+    switchViewIcon: ['switchViewIcon']
+  };
+  return composeClasses(slots, getPickersCalendarHeaderUtilityClass, classes);
+};
+
+const PickersCalendarHeaderRoot = styled$1('div', {
+  name: 'MuiPickersCalendarHeader',
+  slot: 'Root',
+  overridesResolver: (_, styles) => styles.root
+})({
+  display: 'flex',
+  alignItems: 'center',
+  marginTop: 16,
+  marginBottom: 8,
+  paddingLeft: 24,
+  paddingRight: 12,
+  // prevent jumping in safari
+  maxHeight: 30,
+  minHeight: 30
+});
+const PickersCalendarHeaderLabelContainer = styled$1('div', {
+  name: 'MuiPickersCalendarHeader',
+  slot: 'LabelContainer',
+  overridesResolver: (_, styles) => styles.labelContainer
+})(({
+  theme
+}) => _extends({
+  display: 'flex',
+  maxHeight: 30,
+  overflow: 'hidden',
+  alignItems: 'center',
+  cursor: 'pointer',
+  marginRight: 'auto'
+}, theme.typography.body1, {
+  fontWeight: theme.typography.fontWeightMedium
+}));
+const PickersCalendarHeaderLabel = styled$1('div', {
+  name: 'MuiPickersCalendarHeader',
+  slot: 'Label',
+  overridesResolver: (_, styles) => styles.label
+})({
+  marginRight: 6
+});
+const PickersCalendarHeaderSwitchViewButton = styled$1(IconButton$1, {
+  name: 'MuiPickersCalendarHeader',
+  slot: 'SwitchViewButton',
+  overridesResolver: (_, styles) => styles.switchViewButton
+})({
+  marginRight: 'auto'
+});
+const PickersCalendarHeaderSwitchViewIcon = styled$1(ArrowDropDown, {
+  name: 'MuiPickersCalendarHeader',
+  slot: 'SwitchViewIcon',
+  overridesResolver: (_, styles) => styles.switchViewIcon
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  willChange: 'transform',
+  transition: theme.transitions.create('transform'),
+  transform: 'rotate(0deg)'
+}, ownerState.openView === 'year' && {
+  transform: 'rotate(180deg)'
+}));
+const deprecatedPropsWarning$1 = buildDeprecatedPropsWarning('Props for translation are deprecated. See https://mui.com/x/react-date-pickers/localization for more information.');
+/**
+ * @ignore - do not document.
+ */
+
+function PickersCalendarHeader(inProps) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiPickersCalendarHeader'
+  });
+  const {
+    components = {},
+    componentsProps = {},
+    currentMonth: month,
+    disabled,
+    disableFuture,
+    disablePast,
+    getViewSwitchingButtonText: getViewSwitchingButtonTextProp,
+    leftArrowButtonText: leftArrowButtonTextProp,
+    maxDate,
+    minDate,
+    onMonthChange,
+    onViewChange,
+    openView: currentView,
+    reduceAnimations,
+    rightArrowButtonText: rightArrowButtonTextProp,
+    views,
+    labelId
+  } = props;
+  deprecatedPropsWarning$1({
+    leftArrowButtonText: leftArrowButtonTextProp,
+    rightArrowButtonText: rightArrowButtonTextProp,
+    getViewSwitchingButtonText: getViewSwitchingButtonTextProp
+  });
+  const localeText = useLocaleText();
+  const leftArrowButtonText = leftArrowButtonTextProp != null ? leftArrowButtonTextProp : localeText.previousMonth;
+  const rightArrowButtonText = rightArrowButtonTextProp != null ? rightArrowButtonTextProp : localeText.nextMonth;
+  const getViewSwitchingButtonText = getViewSwitchingButtonTextProp != null ? getViewSwitchingButtonTextProp : localeText.calendarViewSwitchingButtonAriaLabel;
+  const utils = useUtils();
+  const classes = useUtilityClasses$a(props);
+  const switchViewButtonProps = componentsProps.switchViewButton || {};
+
+  const selectNextMonth = () => onMonthChange(utils.getNextMonth(month), 'left');
+
+  const selectPreviousMonth = () => onMonthChange(utils.getPreviousMonth(month), 'right');
+
+  const isNextMonthDisabled = useNextMonthDisabled(month, {
+    disableFuture,
+    maxDate
+  });
+  const isPreviousMonthDisabled = usePreviousMonthDisabled(month, {
+    disablePast,
+    minDate
+  });
+
+  const handleToggleView = () => {
+    if (views.length === 1 || !onViewChange || disabled) {
+      return;
+    }
+
+    if (views.length === 2) {
+      onViewChange(views.find(view => view !== currentView) || views[0]);
+    } else {
+      // switching only between first 2
+      const nextIndexToOpen = views.indexOf(currentView) !== 0 ? 0 : 1;
+      onViewChange(views[nextIndexToOpen]);
+    }
+  }; // No need to display more information
+
+
+  if (views.length === 1 && views[0] === 'year') {
+    return null;
+  }
+
+  const ownerState = props;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(PickersCalendarHeaderRoot, {
+    ownerState: ownerState,
+    className: classes.root,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(PickersCalendarHeaderLabelContainer, {
+      role: "presentation",
+      onClick: handleToggleView,
+      ownerState: ownerState // putting this on the label item element below breaks when using transition
+      ,
+      "aria-live": "polite",
+      className: classes.labelContainer,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(PickersFadeTransitionGroup, {
+        reduceAnimations: reduceAnimations,
+        transKey: utils.format(month, 'monthAndYear'),
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarHeaderLabel, {
+          id: labelId,
+          ownerState: ownerState,
+          className: classes.label,
+          children: utils.format(month, 'monthAndYear')
+        })
+      }), views.length > 1 && !disabled && /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarHeaderSwitchViewButton, _extends({
+        size: "small",
+        as: components.SwitchViewButton,
+        "aria-label": getViewSwitchingButtonText(currentView),
+        className: classes.switchViewButton
+      }, switchViewButtonProps, {
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarHeaderSwitchViewIcon, {
+          as: components.SwitchViewIcon,
+          ownerState: ownerState,
+          className: classes.switchViewIcon
+        })
+      }))]
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Fade$1, {
+      in: currentView === 'day',
+      children: /*#__PURE__*/jsxRuntimeExports.jsx(PickersArrowSwitcher, {
+        leftArrowButtonText: leftArrowButtonText,
+        rightArrowButtonText: rightArrowButtonText,
+        components: components,
+        componentsProps: componentsProps,
+        onLeftClick: selectPreviousMonth,
+        onRightClick: selectNextMonth,
+        isLeftDisabled: isPreviousMonthDisabled,
+        isRightDisabled: isNextMonthDisabled
+      })
+    })]
+  });
+}
+
+/**
+ * TODO consider getting rid from wrapper variant
+ * @ignore - internal component.
+ */
+const WrapperVariantContext = /*#__PURE__*/reactExports.createContext(null);
+
+function getPickersYearUtilityClass(slot) {
+  // TODO v6: Rename 'PrivatePickersYear' to 'MuiPickersYear' to follow convention
+  return generateUtilityClass('PrivatePickersYear', slot);
+} // TODO v6: Rename 'PrivatePickersYear' to 'MuiPickersYear' to follow convention
+
+const pickersYearClasses = generateUtilityClasses('PrivatePickersYear', ['root', 'modeDesktop', 'modeMobile', 'yearButton', 'selected', 'disabled']);
+
+const _excluded$9 = ["autoFocus", "className", "children", "disabled", "onClick", "onKeyDown", "value", "tabIndex", "onFocus", "onBlur"];
+
+const useUtilityClasses$9 = ownerState => {
+  const {
+    wrapperVariant,
+    disabled,
+    selected,
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root', wrapperVariant && `mode${capitalize(wrapperVariant)}`],
+    yearButton: ['yearButton', disabled && 'disabled', selected && 'selected']
+  };
+  return composeClasses(slots, getPickersYearUtilityClass, classes);
+};
+
+const PickersYearRoot = styled$1('div', {
+  name: 'PrivatePickersYear',
+  slot: 'Root',
+  overridesResolver: (_, styles) => [styles.root, {
+    [`&.${pickersYearClasses.modeDesktop}`]: styles.modeDesktop
+  }, {
+    [`&.${pickersYearClasses.modeMobile}`]: styles.modeMobile
+  }]
+})(({
+  ownerState
+}) => _extends({
+  flexBasis: '33.3%',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center'
+}, (ownerState == null ? void 0 : ownerState.wrapperVariant) === 'desktop' && {
+  flexBasis: '25%'
+}));
+const PickersYearButton = styled$1('button', {
+  name: 'PrivatePickersYear',
+  slot: 'Button',
+  overridesResolver: (_, styles) => [styles.button, {
+    [`&.${pickersYearClasses.disabled}`]: styles.disabled
+  }, {
+    [`&.${pickersYearClasses.selected}`]: styles.selected
+  }]
+})(({
+  theme
+}) => _extends({
+  color: 'unset',
+  backgroundColor: 'transparent',
+  border: 0,
+  outline: 0
+}, theme.typography.subtitle1, {
+  margin: '8px 0',
+  height: 36,
+  width: 72,
+  borderRadius: 18,
+  cursor: 'pointer',
+  '&:focus, &:hover': {
+    backgroundColor: alpha(theme.palette.action.active, theme.palette.action.hoverOpacity)
+  },
+  [`&.${pickersYearClasses.disabled}`]: {
+    color: theme.palette.text.secondary
+  },
+  [`&.${pickersYearClasses.selected}`]: {
+    color: theme.palette.primary.contrastText,
+    backgroundColor: theme.palette.primary.main,
+    '&:focus, &:hover': {
+      backgroundColor: theme.palette.primary.dark
+    }
+  }
+}));
+
+const noop = () => {};
+/**
+ * @ignore - internal component.
+ */
+
+
+const PickersYear = /*#__PURE__*/reactExports.forwardRef(function PickersYear(props, forwardedRef) {
+  // TODO v6: add 'useThemeProps' once the component class names are aligned
+  const {
+    autoFocus,
+    className,
+    children,
+    disabled,
+    onClick,
+    onKeyDown,
+    value,
+    tabIndex,
+    onFocus = noop,
+    onBlur = noop
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$9);
+
+  const ref = reactExports.useRef(null);
+  const refHandle = useForkRef(ref, forwardedRef);
+  const wrapperVariant = reactExports.useContext(WrapperVariantContext);
+
+  const ownerState = _extends({}, props, {
+    wrapperVariant
+  });
+
+  const classes = useUtilityClasses$9(ownerState); // We can't forward the `autoFocus` to the button because it is a native button, not a MUI Button
+
+  reactExports.useEffect(() => {
+    if (autoFocus) {
+      // `ref.current` being `null` would be a bug in MUI.
+      ref.current.focus();
+    }
+  }, [autoFocus]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(PickersYearRoot, {
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(PickersYearButton, _extends({
+      ref: refHandle,
+      disabled: disabled,
+      type: "button",
+      tabIndex: disabled ? -1 : tabIndex,
+      onClick: event => onClick(event, value),
+      onKeyDown: event => onKeyDown(event, value),
+      onFocus: event => onFocus(event, value),
+      onBlur: event => onBlur(event, value),
+      className: classes.yearButton,
+      ownerState: ownerState
+    }, other, {
+      children: children
+    }))
+  });
+});
+
+function getYearPickerUtilityClass(slot) {
+  return generateUtilityClass('MuiYearPicker', slot);
+}
+generateUtilityClasses('MuiYearPicker', ['root']);
+
+const useUtilityClasses$8 = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root']
+  };
+  return composeClasses(slots, getYearPickerUtilityClass, classes);
+};
+
+function useYearPickerDefaultizedProps(props, name) {
+  const utils = useUtils();
+  const defaultDates = useDefaultDates();
+  const themeProps = useThemeProps({
+    props,
+    name
+  });
+  return _extends({
+    disablePast: false,
+    disableFuture: false
+  }, themeProps, {
+    minDate: parseNonNullablePickerDate(utils, themeProps.minDate, defaultDates.minDate),
+    maxDate: parseNonNullablePickerDate(utils, themeProps.maxDate, defaultDates.maxDate)
+  });
+}
+
+const YearPickerRoot = styled$1('div', {
+  name: 'MuiYearPicker',
+  slot: 'Root',
+  overridesResolver: (props, styles) => styles.root
+})({
+  display: 'flex',
+  flexDirection: 'row',
+  flexWrap: 'wrap',
+  overflowY: 'auto',
+  height: '100%',
+  padding: '0 4px',
+  maxHeight: '304px'
+});
+const YearPicker = /*#__PURE__*/reactExports.forwardRef(function YearPicker(inProps, ref) {
+  const now = useNow();
+  const theme = useTheme();
+  const utils = useUtils();
+  const props = useYearPickerDefaultizedProps(inProps, 'MuiYearPicker');
+  const {
+    autoFocus,
+    className,
+    date,
+    disabled,
+    disableFuture,
+    disablePast,
+    maxDate,
+    minDate,
+    onChange,
+    readOnly,
+    shouldDisableYear,
+    disableHighlightToday,
+    onYearFocus,
+    hasFocus,
+    onFocusedViewChange
+  } = props;
+  const ownerState = props;
+  const classes = useUtilityClasses$8(ownerState);
+  const selectedDateOrStartOfYear = reactExports.useMemo(() => date != null ? date : utils.startOfYear(now), [now, utils, date]);
+  const currentYear = reactExports.useMemo(() => {
+    if (date != null) {
+      return utils.getYear(date);
+    }
+
+    if (disableHighlightToday) {
+      return null;
+    }
+
+    return utils.getYear(now);
+  }, [now, date, utils, disableHighlightToday]);
+  const wrapperVariant = reactExports.useContext(WrapperVariantContext);
+  const selectedYearRef = reactExports.useRef(null);
+  const [focusedYear, setFocusedYear] = reactExports.useState(() => currentYear || utils.getYear(now));
+  const [internalHasFocus, setInternalHasFocus] = useControlled({
+    name: 'YearPicker',
+    state: 'hasFocus',
+    controlled: hasFocus,
+    default: autoFocus
+  });
+  const changeHasFocus = reactExports.useCallback(newHasFocus => {
+    setInternalHasFocus(newHasFocus);
+
+    if (onFocusedViewChange) {
+      onFocusedViewChange(newHasFocus);
+    }
+  }, [setInternalHasFocus, onFocusedViewChange]);
+  const isYearDisabled = reactExports.useCallback(dateToValidate => {
+    if (disablePast && utils.isBeforeYear(dateToValidate, now)) {
+      return true;
+    }
+
+    if (disableFuture && utils.isAfterYear(dateToValidate, now)) {
+      return true;
+    }
+
+    if (minDate && utils.isBeforeYear(dateToValidate, minDate)) {
+      return true;
+    }
+
+    if (maxDate && utils.isAfterYear(dateToValidate, maxDate)) {
+      return true;
+    }
+
+    if (shouldDisableYear && shouldDisableYear(dateToValidate)) {
+      return true;
+    }
+
+    return false;
+  }, [disableFuture, disablePast, maxDate, minDate, now, shouldDisableYear, utils]);
+
+  const handleYearSelection = (event, year, isFinish = 'finish') => {
+    if (readOnly) {
+      return;
+    }
+
+    const newDate = utils.setYear(selectedDateOrStartOfYear, year);
+    onChange(newDate, isFinish);
+  };
+
+  const focusYear = reactExports.useCallback(year => {
+    if (!isYearDisabled(utils.setYear(selectedDateOrStartOfYear, year))) {
+      setFocusedYear(year);
+      changeHasFocus(true);
+      onYearFocus == null ? void 0 : onYearFocus(year);
+    }
+  }, [isYearDisabled, utils, selectedDateOrStartOfYear, changeHasFocus, onYearFocus]);
+  reactExports.useEffect(() => {
+    setFocusedYear(prevFocusedYear => currentYear !== null && prevFocusedYear !== currentYear ? currentYear : prevFocusedYear);
+  }, [currentYear]);
+  const yearsInRow = wrapperVariant === 'desktop' ? 4 : 3;
+  const handleKeyDown = reactExports.useCallback((event, year) => {
+    switch (event.key) {
+      case 'ArrowUp':
+        focusYear(year - yearsInRow);
+        event.preventDefault();
+        break;
+
+      case 'ArrowDown':
+        focusYear(year + yearsInRow);
+        event.preventDefault();
+        break;
+
+      case 'ArrowLeft':
+        focusYear(year + (theme.direction === 'ltr' ? -1 : 1));
+        event.preventDefault();
+        break;
+
+      case 'ArrowRight':
+        focusYear(year + (theme.direction === 'ltr' ? 1 : -1));
+        event.preventDefault();
+        break;
+    }
+  }, [focusYear, theme.direction, yearsInRow]);
+  const handleFocus = reactExports.useCallback((event, year) => {
+    focusYear(year);
+  }, [focusYear]);
+  const handleBlur = reactExports.useCallback((event, year) => {
+    if (focusedYear === year) {
+      changeHasFocus(false);
+    }
+  }, [focusedYear, changeHasFocus]);
+  const nowYear = utils.getYear(now);
+  const scrollerRef = reactExports.useRef(null);
+  const handleRef = useForkRef(ref, scrollerRef);
+  reactExports.useEffect(() => {
+    if (autoFocus || scrollerRef.current === null) {
+      return;
+    }
+
+    const tabbableButton = scrollerRef.current.querySelector('[tabindex="0"]');
+
+    if (!tabbableButton) {
+      return;
+    } // Taken from useScroll in x-data-grid, but vertically centered
+
+
+    const offsetHeight = tabbableButton.offsetHeight;
+    const offsetTop = tabbableButton.offsetTop;
+    const clientHeight = scrollerRef.current.clientHeight;
+    const scrollTop = scrollerRef.current.scrollTop;
+    const elementBottom = offsetTop + offsetHeight;
+
+    if (offsetHeight > clientHeight || offsetTop < scrollTop) {
+      // Button already visible
+      return;
+    }
+
+    scrollerRef.current.scrollTop = elementBottom - clientHeight / 2 - offsetHeight / 2;
+  }, [autoFocus]);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(YearPickerRoot, {
+    ref: handleRef,
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    children: utils.getYearRange(minDate, maxDate).map(year => {
+      const yearNumber = utils.getYear(year);
+      const selected = yearNumber === currentYear;
+      return /*#__PURE__*/jsxRuntimeExports.jsx(PickersYear, {
+        selected: selected,
+        value: yearNumber,
+        onClick: handleYearSelection,
+        onKeyDown: handleKeyDown,
+        autoFocus: internalHasFocus && yearNumber === focusedYear,
+        ref: selected ? selectedYearRef : undefined,
+        disabled: disabled || isYearDisabled(year),
+        tabIndex: yearNumber === focusedYear ? 0 : -1,
+        onFocus: handleFocus,
+        onBlur: handleBlur,
+        "aria-current": nowYear === yearNumber ? 'date' : undefined,
+        children: utils.format(year, 'year')
+      }, utils.format(year, 'year'));
+    })
+  });
+});
+process.env.NODE_ENV !== "production" ? YearPicker.propTypes = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // | To update them edit the TypeScript types and run "yarn proptypes"  |
+  // ----------------------------------------------------------------------
+  autoFocus: propTypesExports.bool,
+  classes: propTypesExports.object,
+  className: propTypesExports.string,
+  date: propTypesExports.any,
+  disabled: propTypesExports.bool,
+
+  /**
+   * If `true` future days are disabled.
+   * @default false
+   */
+  disableFuture: propTypesExports.bool,
+
+  /**
+   * If `true`, today's date is rendering without highlighting with circle.
+   * @default false
+   */
+  disableHighlightToday: propTypesExports.bool,
+
+  /**
+   * If `true` past days are disabled.
+   * @default false
+   */
+  disablePast: propTypesExports.bool,
+  hasFocus: propTypesExports.bool,
+
+  /**
+   * Maximal selectable date. @DateIOType
+   */
+  maxDate: propTypesExports.any,
+
+  /**
+   * Minimal selectable date. @DateIOType
+   */
+  minDate: propTypesExports.any,
+  onChange: propTypesExports.func.isRequired,
+  onFocusedDayChange: propTypesExports.func,
+  onFocusedViewChange: propTypesExports.func,
+  onYearFocus: propTypesExports.func,
+  readOnly: propTypesExports.bool,
+
+  /**
+   * Disable specific years dynamically.
+   * Works like `shouldDisableDate` but for year selection view @DateIOType.
+   * @template TDate
+   * @param {TDate} year The year to test.
+   * @returns {boolean} Returns `true` if the year should be disabled.
+   */
+  shouldDisableYear: propTypesExports.func
+} : void 0;
+
+const PickerViewRoot = styled$1('div')({
+  overflowX: 'hidden',
+  width: DIALOG_WIDTH,
+  maxHeight: VIEW_HEIGHT,
+  display: 'flex',
+  flexDirection: 'column',
+  margin: '0 auto'
+});
+
+const defaultReduceAnimations = typeof navigator !== 'undefined' && /(android)/i.test(navigator.userAgent);
+
+const getCalendarPickerUtilityClass = slot => generateUtilityClass('MuiCalendarPicker', slot);
+generateUtilityClasses('MuiCalendarPicker', ['root', 'viewTransitionContainer']);
+
+const _excluded$8 = ["autoFocus", "onViewChange", "date", "disableFuture", "disablePast", "defaultCalendarMonth", "onChange", "onYearChange", "onMonthChange", "reduceAnimations", "shouldDisableDate", "shouldDisableMonth", "shouldDisableYear", "view", "views", "openTo", "className", "disabled", "readOnly", "minDate", "maxDate", "disableHighlightToday", "focusedView", "onFocusedViewChange", "classes"];
+
+const useUtilityClasses$7 = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    viewTransitionContainer: ['viewTransitionContainer']
+  };
+  return composeClasses(slots, getCalendarPickerUtilityClass, classes);
+};
+
+function useCalendarPickerDefaultizedProps(props, name) {
+  const utils = useUtils();
+  const defaultDates = useDefaultDates();
+  const themeProps = useThemeProps({
+    props,
+    name
+  });
+  return _extends({
+    loading: false,
+    disablePast: false,
+    disableFuture: false,
+    openTo: 'day',
+    views: ['year', 'day'],
+    reduceAnimations: defaultReduceAnimations,
+    renderLoading: () => /*#__PURE__*/jsxRuntimeExports.jsx("span", {
+      children: "..."
+    })
+  }, themeProps, {
+    minDate: parseNonNullablePickerDate(utils, themeProps.minDate, defaultDates.minDate),
+    maxDate: parseNonNullablePickerDate(utils, themeProps.maxDate, defaultDates.maxDate)
+  });
+}
+
+const CalendarPickerRoot = styled$1(PickerViewRoot, {
+  name: 'MuiCalendarPicker',
+  slot: 'Root',
+  overridesResolver: (props, styles) => styles.root
+})({
+  display: 'flex',
+  flexDirection: 'column'
+});
+const CalendarPickerViewTransitionContainer = styled$1(PickersFadeTransitionGroup, {
+  name: 'MuiCalendarPicker',
+  slot: 'ViewTransitionContainer',
+  overridesResolver: (props, styles) => styles.viewTransitionContainer
+})({});
+
+/**
+ *
+ * Demos:
+ *
+ * - [Date Picker](https://mui.com/x/react-date-pickers/date-picker/)
+ *
+ * API:
+ *
+ * - [CalendarPicker API](https://mui.com/x/api/date-pickers/calendar-picker/)
+ */
+const CalendarPicker = /*#__PURE__*/reactExports.forwardRef(function CalendarPicker(inProps, ref) {
+  const utils = useUtils();
+  const id = useId();
+  const props = useCalendarPickerDefaultizedProps(inProps, 'MuiCalendarPicker');
+
+  const {
+    autoFocus,
+    onViewChange,
+    date,
+    disableFuture,
+    disablePast,
+    defaultCalendarMonth,
+    onChange,
+    onYearChange,
+    onMonthChange,
+    reduceAnimations,
+    shouldDisableDate,
+    shouldDisableMonth,
+    shouldDisableYear,
+    view,
+    views,
+    openTo,
+    className,
+    disabled,
+    readOnly,
+    minDate,
+    maxDate,
+    disableHighlightToday,
+    focusedView,
+    onFocusedViewChange
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$8);
+
+  const {
+    openView,
+    setOpenView,
+    openNext
+  } = useViews({
+    view,
+    views,
+    openTo,
+    onChange,
+    onViewChange
+  });
+  const {
+    calendarState,
+    changeFocusedDay,
+    changeMonth,
+    handleChangeMonth,
+    isDateDisabled,
+    onMonthSwitchingAnimationEnd
+  } = useCalendarState({
+    date,
+    defaultCalendarMonth,
+    reduceAnimations,
+    onMonthChange,
+    minDate,
+    maxDate,
+    shouldDisableDate,
+    disablePast,
+    disableFuture
+  });
+  const handleDateMonthChange = reactExports.useCallback((newDate, selectionState) => {
+    const startOfMonth = utils.startOfMonth(newDate);
+    const endOfMonth = utils.endOfMonth(newDate);
+    const closestEnabledDate = isDateDisabled(newDate) ? findClosestEnabledDate({
+      utils,
+      date: newDate,
+      minDate: utils.isBefore(minDate, startOfMonth) ? startOfMonth : minDate,
+      maxDate: utils.isAfter(maxDate, endOfMonth) ? endOfMonth : maxDate,
+      disablePast,
+      disableFuture,
+      isDateDisabled
+    }) : newDate;
+
+    if (closestEnabledDate) {
+      onChange(closestEnabledDate, selectionState);
+      onMonthChange == null ? void 0 : onMonthChange(startOfMonth);
+    } else {
+      openNext();
+      changeMonth(startOfMonth);
+    }
+
+    changeFocusedDay(closestEnabledDate, true);
+  }, [changeFocusedDay, disableFuture, disablePast, isDateDisabled, maxDate, minDate, onChange, onMonthChange, changeMonth, openNext, utils]);
+  const handleDateYearChange = reactExports.useCallback((newDate, selectionState) => {
+    const startOfYear = utils.startOfYear(newDate);
+    const endOfYear = utils.endOfYear(newDate);
+    const closestEnabledDate = isDateDisabled(newDate) ? findClosestEnabledDate({
+      utils,
+      date: newDate,
+      minDate: utils.isBefore(minDate, startOfYear) ? startOfYear : minDate,
+      maxDate: utils.isAfter(maxDate, endOfYear) ? endOfYear : maxDate,
+      disablePast,
+      disableFuture,
+      isDateDisabled
+    }) : newDate;
+
+    if (closestEnabledDate) {
+      onChange(closestEnabledDate, selectionState);
+      onYearChange == null ? void 0 : onYearChange(closestEnabledDate);
+    } else {
+      openNext();
+      changeMonth(startOfYear);
+    }
+
+    changeFocusedDay(closestEnabledDate, true);
+  }, [changeFocusedDay, disableFuture, disablePast, isDateDisabled, maxDate, minDate, onChange, onYearChange, openNext, utils, changeMonth]);
+  const onSelectedDayChange = reactExports.useCallback((day, isFinish) => {
+    if (date && day) {
+      // If there is a date already selected, then we want to keep its time
+      return onChange(utils.mergeDateAndTime(day, date), isFinish);
+    }
+
+    return onChange(day, isFinish);
+  }, [utils, date, onChange]);
+  reactExports.useEffect(() => {
+    if (date) {
+      changeMonth(date);
+    }
+  }, [date]); // eslint-disable-line
+
+  const ownerState = props;
+  const classes = useUtilityClasses$7(ownerState);
+  const baseDateValidationProps = {
+    disablePast,
+    disableFuture,
+    maxDate,
+    minDate
+  }; // When disabled, limit the view to the selected date
+
+  const minDateWithDisabled = disabled && date || minDate;
+  const maxDateWithDisabled = disabled && date || maxDate;
+  const commonViewProps = {
+    disableHighlightToday,
+    readOnly,
+    disabled
+  };
+  const gridLabelId = `${id}-grid-label`;
+  const [internalFocusedView, setInternalFocusedView] = useControlled({
+    name: 'DayPicker',
+    state: 'focusedView',
+    controlled: focusedView,
+    default: autoFocus ? openView : null
+  });
+  const hasFocus = internalFocusedView !== null;
+  const handleFocusedViewChange = useEventCallback(eventView => newHasFocus => {
+    if (onFocusedViewChange) {
+      // Use the calendar or clock logic
+      onFocusedViewChange(eventView)(newHasFocus);
+      return;
+    } // If alone, do the local modifications
+
+
+    if (newHasFocus) {
+      setInternalFocusedView(eventView);
+    } else {
+      setInternalFocusedView(prevView => prevView === eventView ? null : prevView);
+    }
+  });
+  const prevOpenViewRef = reactExports.useRef(openView);
+  reactExports.useEffect(() => {
+    // Set focus to the button when switching from a view to another
+    if (prevOpenViewRef.current === openView) {
+      return;
+    }
+
+    prevOpenViewRef.current = openView;
+    handleFocusedViewChange(openView)(true);
+  }, [openView, handleFocusedViewChange]);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(CalendarPickerRoot, {
+    ref: ref,
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PickersCalendarHeader, _extends({}, other, {
+      views: views,
+      openView: openView,
+      currentMonth: calendarState.currentMonth,
+      onViewChange: setOpenView,
+      onMonthChange: (newMonth, direction) => handleChangeMonth({
+        newMonth,
+        direction
+      }),
+      minDate: minDateWithDisabled,
+      maxDate: maxDateWithDisabled,
+      disabled: disabled,
+      disablePast: disablePast,
+      disableFuture: disableFuture,
+      reduceAnimations: reduceAnimations,
+      labelId: gridLabelId
+    })), /*#__PURE__*/jsxRuntimeExports.jsx(CalendarPickerViewTransitionContainer, {
+      reduceAnimations: reduceAnimations,
+      className: classes.viewTransitionContainer,
+      transKey: openView,
+      ownerState: ownerState,
+      children: /*#__PURE__*/jsxRuntimeExports.jsxs("div", {
+        children: [openView === 'year' && /*#__PURE__*/jsxRuntimeExports.jsx(YearPicker, _extends({}, other, baseDateValidationProps, commonViewProps, {
+          autoFocus: autoFocus,
+          date: date,
+          onChange: handleDateYearChange,
+          shouldDisableYear: shouldDisableYear,
+          hasFocus: hasFocus,
+          onFocusedViewChange: handleFocusedViewChange('year')
+        })), openView === 'month' && /*#__PURE__*/jsxRuntimeExports.jsx(MonthPicker, _extends({}, baseDateValidationProps, commonViewProps, {
+          autoFocus: autoFocus,
+          hasFocus: hasFocus,
+          className: className,
+          date: date,
+          onChange: handleDateMonthChange,
+          shouldDisableMonth: shouldDisableMonth,
+          onFocusedViewChange: handleFocusedViewChange('month')
+        })), openView === 'day' && /*#__PURE__*/jsxRuntimeExports.jsx(DayPicker, _extends({}, other, calendarState, baseDateValidationProps, commonViewProps, {
+          autoFocus: autoFocus,
+          onMonthSwitchingAnimationEnd: onMonthSwitchingAnimationEnd,
+          onFocusedDayChange: changeFocusedDay,
+          reduceAnimations: reduceAnimations,
+          selectedDays: [date],
+          onSelectedDaysChange: onSelectedDayChange,
+          shouldDisableDate: shouldDisableDate,
+          hasFocus: hasFocus,
+          onFocusedViewChange: handleFocusedViewChange('day'),
+          gridLabelId: gridLabelId
+        }))]
+      })
+    })]
+  });
+});
+process.env.NODE_ENV !== "production" ? CalendarPicker.propTypes = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // | To update them edit the TypeScript types and run "yarn proptypes"  |
+  // ----------------------------------------------------------------------
+  autoFocus: propTypesExports.bool,
+  classes: propTypesExports.object,
+  className: propTypesExports.string,
+
+  /**
+   * Overrideable components.
+   * @default {}
+   */
+  components: propTypesExports.object,
+
+  /**
+   * The props used for each component slot.
+   * @default {}
+   */
+  componentsProps: propTypesExports.object,
+  date: propTypesExports.any,
+
+  /**
+   * Formats the day of week displayed in the calendar header.
+   * @param {string} day The day of week provided by the adapter's method `getWeekdays`.
+   * @returns {string} The name to display.
+   * @default (day) => day.charAt(0).toUpperCase()
+   */
+  dayOfWeekFormatter: propTypesExports.func,
+
+  /**
+   * Default calendar month displayed when `value={null}`.
+   */
+  defaultCalendarMonth: propTypesExports.any,
+
+  /**
+   * If `true`, the picker and text field are disabled.
+   * @default false
+   */
+  disabled: propTypesExports.bool,
+
+  /**
+   * If `true` future days are disabled.
+   * @default false
+   */
+  disableFuture: propTypesExports.bool,
+
+  /**
+   * If `true`, today's date is rendering without highlighting with circle.
+   * @default false
+   */
+  disableHighlightToday: propTypesExports.bool,
+
+  /**
+   * If `true` past days are disabled.
+   * @default false
+   */
+  disablePast: propTypesExports.bool,
+  focusedView: propTypesExports.oneOf(['day', 'month', 'year']),
+
+  /**
+   * Get aria-label text for switching between views button.
+   * @param {CalendarPickerView} currentView The view from which we want to get the button text.
+   * @returns {string} The label of the view.
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   */
+  getViewSwitchingButtonText: propTypesExports.func,
+
+  /**
+   * Left arrow icon aria-label text.
+   * @deprecated
+   */
+  leftArrowButtonText: propTypesExports.string,
+
+  /**
+   * If `true` renders `LoadingComponent` in calendar instead of calendar view.
+   * Can be used to preload information and show it in calendar.
+   * @default false
+   */
+  loading: propTypesExports.bool,
+
+  /**
+   * Maximal selectable date. @DateIOType
+   */
+  maxDate: propTypesExports.any,
+
+  /**
+   * Minimal selectable date. @DateIOType
+   */
+  minDate: propTypesExports.any,
+
+  /**
+   * Callback fired on date change
+   */
+  onChange: propTypesExports.func.isRequired,
+  onFocusedViewChange: propTypesExports.func,
+
+  /**
+   * Callback firing on month change @DateIOType.
+   * @template TDate
+   * @param {TDate} month The new month.
+   * @returns {void|Promise} -
+   */
+  onMonthChange: propTypesExports.func,
+
+  /**
+   * Callback fired on view change.
+   * @param {CalendarPickerView} view The new view.
+   */
+  onViewChange: propTypesExports.func,
+
+  /**
+   * Callback firing on year change @DateIOType.
+   * @template TDate
+   * @param {TDate} year The new year.
+   */
+  onYearChange: propTypesExports.func,
+
+  /**
+   * Initially open view.
+   * @default 'day'
+   */
+  openTo: propTypesExports.oneOf(['day', 'month', 'year']),
+
+  /**
+   * Make picker read only.
+   * @default false
+   */
+  readOnly: propTypesExports.bool,
+
+  /**
+   * Disable heavy animations.
+   * @default typeof navigator !== 'undefined' && /(android)/i.test(navigator.userAgent)
+   */
+  reduceAnimations: propTypesExports.bool,
+
+  /**
+   * Custom renderer for day. Check the [PickersDay](https://mui.com/x/api/date-pickers/pickers-day/) component.
+   * @template TDate
+   * @param {TDate} day The day to render.
+   * @param {Array<TDate | null>} selectedDays The days currently selected.
+   * @param {PickersDayProps<TDate>} pickersDayProps The props of the day to render.
+   * @returns {JSX.Element} The element representing the day.
+   */
+  renderDay: propTypesExports.func,
+
+  /**
+   * Component displaying when passed `loading` true.
+   * @returns {React.ReactNode} The node to render when loading.
+   * @default () => <span data-mui-test="loading-progress">...</span>
+   */
+  renderLoading: propTypesExports.func,
+
+  /**
+   * Right arrow icon aria-label text.
+   * @deprecated
+   */
+  rightArrowButtonText: propTypesExports.string,
+
+  /**
+   * Disable specific date. @DateIOType
+   * @template TDate
+   * @param {TDate} day The date to test.
+   * @returns {boolean} Returns `true` if the date should be disabled.
+   */
+  shouldDisableDate: propTypesExports.func,
+
+  /**
+   * Disable specific months dynamically.
+   * Works like `shouldDisableDate` but for month selection view @DateIOType.
+   * @template TDate
+   * @param {TDate} month The month to check.
+   * @returns {boolean} If `true` the month will be disabled.
+   */
+  shouldDisableMonth: propTypesExports.func,
+
+  /**
+   * Disable specific years dynamically.
+   * Works like `shouldDisableDate` but for year selection view @DateIOType.
+   * @template TDate
+   * @param {TDate} year The year to test.
+   * @returns {boolean} Returns `true` if the year should be disabled.
+   */
+  shouldDisableYear: propTypesExports.func,
+
+  /**
+   * If `true`, days that have `outsideCurrentMonth={true}` are displayed.
+   * @default false
+   */
+  showDaysOutsideCurrentMonth: propTypesExports.bool,
+
+  /**
+   * Controlled open view.
+   */
+  view: propTypesExports.oneOf(['day', 'month', 'year']),
+
+  /**
+   * Views for calendar picker.
+   * @default ['year', 'day']
+   */
+  views: propTypesExports.arrayOf(propTypesExports.oneOf(['day', 'month', 'year']).isRequired)
+} : void 0;
+
+const CLOCK_WIDTH = 220;
+const CLOCK_HOUR_WIDTH = 36;
+const clockCenter = {
+  x: CLOCK_WIDTH / 2,
+  y: CLOCK_WIDTH / 2
+};
+const baseClockPoint = {
+  x: clockCenter.x,
+  y: 0
+};
+const cx = baseClockPoint.x - clockCenter.x;
+const cy = baseClockPoint.y - clockCenter.y;
+
+const rad2deg = rad => rad * (180 / Math.PI);
+
+const getAngleValue = (step, offsetX, offsetY) => {
+  const x = offsetX - clockCenter.x;
+  const y = offsetY - clockCenter.y;
+  const atan = Math.atan2(cx, cy) - Math.atan2(x, y);
+  let deg = rad2deg(atan);
+  deg = Math.round(deg / step) * step;
+  deg %= 360;
+  const value = Math.floor(deg / step) || 0;
+  const delta = x ** 2 + y ** 2;
+  const distance = Math.sqrt(delta);
+  return {
+    value,
+    distance
+  };
+};
+
+const getMinutes$1 = (offsetX, offsetY, step = 1) => {
+  const angleStep = step * 6;
+  let {
+    value
+  } = getAngleValue(angleStep, offsetX, offsetY);
+  value = value * step % 60;
+  return value;
+};
+const getHours$1 = (offsetX, offsetY, ampm) => {
+  const {
+    value,
+    distance
+  } = getAngleValue(30, offsetX, offsetY);
+  let hour = value || 12;
+
+  if (!ampm) {
+    if (distance < CLOCK_WIDTH / 2 - CLOCK_HOUR_WIDTH) {
+      hour += 12;
+      hour %= 24;
+    }
+  } else {
+    hour %= 12;
+  }
+
+  return hour;
+};
+
+function getClockPointerUtilityClass(slot) {
+  return generateUtilityClass('MuiClockPointer', slot);
+}
+generateUtilityClasses('MuiClockPointer', ['root', 'thumb']);
+
+const _excluded$7 = ["className", "hasSelected", "isInner", "type", "value"];
+
+const useUtilityClasses$6 = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    thumb: ['thumb']
+  };
+  return composeClasses(slots, getClockPointerUtilityClass, classes);
+};
+
+const ClockPointerRoot = styled$1('div', {
+  name: 'MuiClockPointer',
+  slot: 'Root',
+  overridesResolver: (_, styles) => styles.root
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  width: 2,
+  backgroundColor: theme.palette.primary.main,
+  position: 'absolute',
+  left: 'calc(50% - 1px)',
+  bottom: '50%',
+  transformOrigin: 'center bottom 0px'
+}, ownerState.shouldAnimate && {
+  transition: theme.transitions.create(['transform', 'height'])
+}));
+const ClockPointerThumb = styled$1('div', {
+  name: 'MuiClockPointer',
+  slot: 'Thumb',
+  overridesResolver: (_, styles) => styles.thumb
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  width: 4,
+  height: 4,
+  backgroundColor: theme.palette.primary.contrastText,
+  borderRadius: '50%',
+  position: 'absolute',
+  top: -21,
+  left: `calc(50% - ${CLOCK_HOUR_WIDTH / 2}px)`,
+  border: `${(CLOCK_HOUR_WIDTH - 4) / 2}px solid ${theme.palette.primary.main}`,
+  boxSizing: 'content-box'
+}, ownerState.hasSelected && {
+  backgroundColor: theme.palette.primary.main
+}));
+/**
+ * @ignore - internal component.
+ */
+
+function ClockPointer(inProps) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiClockPointer'
+  });
+
+  const {
+    className,
+    isInner,
+    type,
+    value
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$7);
+
+  const previousType = reactExports.useRef(type);
+  reactExports.useEffect(() => {
+    previousType.current = type;
+  }, [type]);
+
+  const ownerState = _extends({}, props, {
+    shouldAnimate: previousType.current !== type
+  });
+
+  const classes = useUtilityClasses$6(ownerState);
+
+  const getAngleStyle = () => {
+    const max = type === 'hours' ? 12 : 60;
+    let angle = 360 / max * value;
+
+    if (type === 'hours' && value > 12) {
+      angle -= 360; // round up angle to max 360 degrees
+    }
+
+    return {
+      height: Math.round((isInner ? 0.26 : 0.4) * CLOCK_WIDTH),
+      transform: `rotateZ(${angle}deg)`
+    };
+  };
+
+  return /*#__PURE__*/jsxRuntimeExports.jsx(ClockPointerRoot, _extends({
+    style: getAngleStyle(),
+    className: clsx(className, classes.root),
+    ownerState: ownerState
+  }, other, {
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(ClockPointerThumb, {
+      ownerState: ownerState,
+      className: classes.thumb
+    })
+  }));
+}
+
+function getClockUtilityClass(slot) {
+  return generateUtilityClass('MuiClock', slot);
+}
+generateUtilityClasses('MuiClock', ['root', 'clock', 'wrapper', 'squareMask', 'pin', 'amButton', 'pmButton']);
+
+const useUtilityClasses$5 = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    clock: ['clock'],
+    wrapper: ['wrapper'],
+    squareMask: ['squareMask'],
+    pin: ['pin'],
+    amButton: ['amButton'],
+    pmButton: ['pmButton']
+  };
+  return composeClasses(slots, getClockUtilityClass, classes);
+};
+
+const ClockRoot = styled$1('div', {
+  name: 'MuiClock',
+  slot: 'Root',
+  overridesResolver: (_, styles) => styles.root
+})(({
+  theme
+}) => ({
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  margin: theme.spacing(2)
+}));
+const ClockClock = styled$1('div', {
+  name: 'MuiClock',
+  slot: 'Clock',
+  overridesResolver: (_, styles) => styles.clock
+})({
+  backgroundColor: 'rgba(0,0,0,.07)',
+  borderRadius: '50%',
+  height: 220,
+  width: 220,
+  flexShrink: 0,
+  position: 'relative',
+  pointerEvents: 'none'
+});
+const ClockWrapper = styled$1('div', {
+  name: 'MuiClock',
+  slot: 'Wrapper',
+  overridesResolver: (_, styles) => styles.wrapper
+})({
+  '&:focus': {
+    outline: 'none'
+  }
+});
+const ClockSquareMask = styled$1('div', {
+  name: 'MuiClock',
+  slot: 'SquareMask',
+  overridesResolver: (_, styles) => styles.squareMask
+})(({
+  ownerState
+}) => _extends({
+  width: '100%',
+  height: '100%',
+  position: 'absolute',
+  pointerEvents: 'auto',
+  outline: 0,
+  // Disable scroll capabilities.
+  touchAction: 'none',
+  userSelect: 'none'
+}, ownerState.disabled ? {} : {
+  '@media (pointer: fine)': {
+    cursor: 'pointer',
+    borderRadius: '50%'
+  },
+  '&:active': {
+    cursor: 'move'
+  }
+}));
+const ClockPin = styled$1('div', {
+  name: 'MuiClock',
+  slot: 'Pin',
+  overridesResolver: (_, styles) => styles.pin
+})(({
+  theme
+}) => ({
+  width: 6,
+  height: 6,
+  borderRadius: '50%',
+  backgroundColor: theme.palette.primary.main,
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)'
+}));
+const ClockAmButton = styled$1(IconButton$1, {
+  name: 'MuiClock',
+  slot: 'AmButton',
+  overridesResolver: (_, styles) => styles.amButton
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  zIndex: 1,
+  position: 'absolute',
+  bottom: ownerState.ampmInClock ? 64 : 8,
+  left: 8
+}, ownerState.meridiemMode === 'am' && {
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.light
+  }
+}));
+const ClockPmButton = styled$1(IconButton$1, {
+  name: 'MuiClock',
+  slot: 'PmButton',
+  overridesResolver: (_, styles) => styles.pmButton
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  zIndex: 1,
+  position: 'absolute',
+  bottom: ownerState.ampmInClock ? 64 : 8,
+  right: 8
+}, ownerState.meridiemMode === 'pm' && {
+  backgroundColor: theme.palette.primary.main,
+  color: theme.palette.primary.contrastText,
+  '&:hover': {
+    backgroundColor: theme.palette.primary.light
+  }
+}));
+/**
+ * @ignore - internal component.
+ */
+
+function Clock(inProps) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiClock'
+  });
+  const {
+    ampm,
+    ampmInClock,
+    autoFocus,
+    children,
+    date,
+    getClockLabelText,
+    handleMeridiemChange,
+    isTimeDisabled,
+    meridiemMode,
+    minutesStep = 1,
+    onChange,
+    selectedId,
+    type,
+    value,
+    disabled,
+    readOnly,
+    className
+  } = props;
+  const ownerState = props;
+  const utils = useUtils();
+  const wrapperVariant = reactExports.useContext(WrapperVariantContext);
+  const isMoving = reactExports.useRef(false);
+  const classes = useUtilityClasses$5(ownerState);
+  const isSelectedTimeDisabled = isTimeDisabled(value, type);
+  const isPointerInner = !ampm && type === 'hours' && (value < 1 || value > 12);
+
+  const handleValueChange = (newValue, isFinish) => {
+    if (disabled || readOnly) {
+      return;
+    }
+
+    if (isTimeDisabled(newValue, type)) {
+      return;
+    }
+
+    onChange(newValue, isFinish);
+  };
+
+  const setTime = (event, isFinish) => {
+    let {
+      offsetX,
+      offsetY
+    } = event;
+
+    if (offsetX === undefined) {
+      const rect = event.target.getBoundingClientRect();
+      offsetX = event.changedTouches[0].clientX - rect.left;
+      offsetY = event.changedTouches[0].clientY - rect.top;
+    }
+
+    const newSelectedValue = type === 'seconds' || type === 'minutes' ? getMinutes$1(offsetX, offsetY, minutesStep) : getHours$1(offsetX, offsetY, Boolean(ampm));
+    handleValueChange(newSelectedValue, isFinish);
+  };
+
+  const handleTouchMove = event => {
+    isMoving.current = true;
+    setTime(event, 'shallow');
+  };
+
+  const handleTouchEnd = event => {
+    if (isMoving.current) {
+      setTime(event, 'finish');
+      isMoving.current = false;
+    }
+  };
+
+  const handleMouseMove = event => {
+    // event.buttons & PRIMARY_MOUSE_BUTTON
+    if (event.buttons > 0) {
+      setTime(event.nativeEvent, 'shallow');
+    }
+  };
+
+  const handleMouseUp = event => {
+    if (isMoving.current) {
+      isMoving.current = false;
+    }
+
+    setTime(event.nativeEvent, 'finish');
+  };
+
+  const hasSelected = reactExports.useMemo(() => {
+    if (type === 'hours') {
+      return true;
+    }
+
+    return value % 5 === 0;
+  }, [type, value]);
+  const keyboardControlStep = type === 'minutes' ? minutesStep : 1;
+  const listboxRef = reactExports.useRef(null); // Since this is rendered when a Popper is opened we can't use passive effects.
+  // Focusing in passive effects in Popper causes scroll jump.
+
+  useEnhancedEffect$1(() => {
+    if (autoFocus) {
+      // The ref not being resolved would be a bug in MUI.
+      listboxRef.current.focus();
+    }
+  }, [autoFocus]);
+
+  const handleKeyDown = event => {
+    // TODO: Why this early exit?
+    if (isMoving.current) {
+      return;
+    }
+
+    switch (event.key) {
+      case 'Home':
+        // annulate both hours and minutes
+        handleValueChange(0, 'partial');
+        event.preventDefault();
+        break;
+
+      case 'End':
+        handleValueChange(type === 'minutes' ? 59 : 23, 'partial');
+        event.preventDefault();
+        break;
+
+      case 'ArrowUp':
+        handleValueChange(value + keyboardControlStep, 'partial');
+        event.preventDefault();
+        break;
+
+      case 'ArrowDown':
+        handleValueChange(value - keyboardControlStep, 'partial');
+        event.preventDefault();
+        break;
+
+    }
+  };
+
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(ClockRoot, {
+    className: clsx(className, classes.root),
+    children: [/*#__PURE__*/jsxRuntimeExports.jsxs(ClockClock, {
+      className: classes.clock,
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ClockSquareMask, {
+        onTouchMove: handleTouchMove,
+        onTouchEnd: handleTouchEnd,
+        onMouseUp: handleMouseUp,
+        onMouseMove: handleMouseMove,
+        ownerState: {
+          disabled
+        },
+        className: classes.squareMask
+      }), !isSelectedTimeDisabled && /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+        children: [/*#__PURE__*/jsxRuntimeExports.jsx(ClockPin, {
+          className: classes.pin
+        }), date && /*#__PURE__*/jsxRuntimeExports.jsx(ClockPointer, {
+          type: type,
+          value: value,
+          isInner: isPointerInner,
+          hasSelected: hasSelected
+        })]
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ClockWrapper, {
+        "aria-activedescendant": selectedId,
+        "aria-label": getClockLabelText(type, date, utils),
+        ref: listboxRef,
+        role: "listbox",
+        onKeyDown: handleKeyDown,
+        tabIndex: 0,
+        className: classes.wrapper,
+        children: children
+      })]
+    }), ampm && (wrapperVariant === 'desktop' || ampmInClock) && /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+      children: [/*#__PURE__*/jsxRuntimeExports.jsx(ClockAmButton, {
+        onClick: readOnly ? undefined : () => handleMeridiemChange('am'),
+        disabled: disabled || meridiemMode === null,
+        ownerState: ownerState,
+        className: classes.amButton,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Typography$1, {
+          variant: "caption",
+          children: "AM"
+        })
+      }), /*#__PURE__*/jsxRuntimeExports.jsx(ClockPmButton, {
+        disabled: disabled || meridiemMode === null,
+        onClick: readOnly ? undefined : () => handleMeridiemChange('pm'),
+        ownerState: ownerState,
+        className: classes.pmButton,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(Typography$1, {
+          variant: "caption",
+          children: "PM"
+        })
+      })]
+    })]
+  });
+}
+
+function getClockNumberUtilityClass(slot) {
+  return generateUtilityClass('MuiClockNumber', slot);
+}
+const clockNumberClasses = generateUtilityClasses('MuiClockNumber', ['root', 'selected', 'disabled']);
+
+const _excluded$6 = ["className", "disabled", "index", "inner", "label", "selected"];
+
+const useUtilityClasses$4 = ownerState => {
+  const {
+    classes,
+    selected,
+    disabled
+  } = ownerState;
+  const slots = {
+    root: ['root', selected && 'selected', disabled && 'disabled']
+  };
+  return composeClasses(slots, getClockNumberUtilityClass, classes);
+};
+
+const ClockNumberRoot = styled$1('span', {
+  name: 'MuiClockNumber',
+  slot: 'Root',
+  overridesResolver: (_, styles) => [styles.root, {
+    [`&.${clockNumberClasses.disabled}`]: styles.disabled
+  }, {
+    [`&.${clockNumberClasses.selected}`]: styles.selected
+  }]
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  height: CLOCK_HOUR_WIDTH,
+  width: CLOCK_HOUR_WIDTH,
+  position: 'absolute',
+  left: `calc((100% - ${CLOCK_HOUR_WIDTH}px) / 2)`,
+  display: 'inline-flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  borderRadius: '50%',
+  color: theme.palette.text.primary,
+  fontFamily: theme.typography.fontFamily,
+  '&:focused': {
+    backgroundColor: theme.palette.background.paper
+  },
+  [`&.${clockNumberClasses.selected}`]: {
+    color: theme.palette.primary.contrastText
+  },
+  [`&.${clockNumberClasses.disabled}`]: {
+    pointerEvents: 'none',
+    color: theme.palette.text.disabled
+  }
+}, ownerState.inner && _extends({}, theme.typography.body2, {
+  color: theme.palette.text.secondary
+})));
+/**
+ * @ignore - internal component.
+ */
+
+function ClockNumber(inProps) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiClockNumber'
+  });
+
+  const {
+    className,
+    disabled,
+    index,
+    inner,
+    label,
+    selected
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$6);
+
+  const ownerState = props;
+  const classes = useUtilityClasses$4(ownerState);
+  const angle = index % 12 / 12 * Math.PI * 2 - Math.PI / 2;
+  const length = (CLOCK_WIDTH - CLOCK_HOUR_WIDTH - 2) / 2 * (inner ? 0.65 : 1);
+  const x = Math.round(Math.cos(angle) * length);
+  const y = Math.round(Math.sin(angle) * length);
+  return /*#__PURE__*/jsxRuntimeExports.jsx(ClockNumberRoot, _extends({
+    className: clsx(className, classes.root),
+    "aria-disabled": disabled ? true : undefined,
+    "aria-selected": selected ? true : undefined,
+    role: "option",
+    style: {
+      transform: `translate(${x}px, ${y + (CLOCK_WIDTH - CLOCK_HOUR_WIDTH) / 2}px`
+    },
+    ownerState: ownerState
+  }, other, {
+    children: label
+  }));
+}
+
+/**
+ * @ignore - internal component.
+ */
+const getHourNumbers = ({
+  ampm,
+  date,
+  getClockNumberText,
+  isDisabled,
+  selectedId,
+  utils
+}) => {
+  const currentHours = date ? utils.getHours(date) : null;
+  const hourNumbers = [];
+  const startHour = ampm ? 1 : 0;
+  const endHour = ampm ? 12 : 23;
+
+  const isSelected = hour => {
+    if (currentHours === null) {
+      return false;
+    }
+
+    if (ampm) {
+      if (hour === 12) {
+        return currentHours === 12 || currentHours === 0;
+      }
+
+      return currentHours === hour || currentHours - 12 === hour;
+    }
+
+    return currentHours === hour;
+  };
+
+  for (let hour = startHour; hour <= endHour; hour += 1) {
+    let label = hour.toString();
+
+    if (hour === 0) {
+      label = '00';
+    }
+
+    const inner = !ampm && (hour === 0 || hour > 12);
+    label = utils.formatNumber(label);
+    const selected = isSelected(hour);
+    hourNumbers.push( /*#__PURE__*/jsxRuntimeExports.jsx(ClockNumber, {
+      id: selected ? selectedId : undefined,
+      index: hour,
+      inner: inner,
+      selected: selected,
+      disabled: isDisabled(hour),
+      label: label,
+      "aria-label": getClockNumberText(label)
+    }, hour));
+  }
+
+  return hourNumbers;
+};
+const getMinutesNumbers = ({
+  utils,
+  value,
+  isDisabled,
+  getClockNumberText,
+  selectedId
+}) => {
+  const f = utils.formatNumber;
+  return [[5, f('05')], [10, f('10')], [15, f('15')], [20, f('20')], [25, f('25')], [30, f('30')], [35, f('35')], [40, f('40')], [45, f('45')], [50, f('50')], [55, f('55')], [0, f('00')]].map(([numberValue, label], index) => {
+    const selected = numberValue === value;
+    return /*#__PURE__*/jsxRuntimeExports.jsx(ClockNumber, {
+      label: label,
+      id: selected ? selectedId : undefined,
+      index: index + 1,
+      inner: false,
+      disabled: isDisabled(numberValue),
+      selected: selected,
+      "aria-label": getClockNumberText(label)
+    }, numberValue);
+  });
+};
+
+function getClockPickerUtilityClass(slot) {
+  return generateUtilityClass('MuiClockPicker', slot);
+}
+generateUtilityClasses('MuiClockPicker', ['root', 'arrowSwitcher']);
+
+const useUtilityClasses$3 = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    arrowSwitcher: ['arrowSwitcher']
+  };
+  return composeClasses(slots, getClockPickerUtilityClass, classes);
+};
+
+const ClockPickerRoot = styled$1(PickerViewRoot, {
+  name: 'MuiClockPicker',
+  slot: 'Root',
+  overridesResolver: (props, styles) => styles.root
+})({
+  display: 'flex',
+  flexDirection: 'column'
+});
+const ClockPickerArrowSwitcher = styled$1(PickersArrowSwitcher, {
+  name: 'MuiClockPicker',
+  slot: 'ArrowSwitcher',
+  overridesResolver: (props, styles) => styles.arrowSwitcher
+})({
+  position: 'absolute',
+  right: 12,
+  top: 15
+});
+const deprecatedPropsWarning = buildDeprecatedPropsWarning('Props for translation are deprecated. See https://mui.com/x/react-date-pickers/localization for more information.');
+/**
+ *
+ * API:
+ *
+ * - [ClockPicker API](https://mui.com/x/api/date-pickers/clock-picker/)
+ */
+
+const ClockPicker = /*#__PURE__*/reactExports.forwardRef(function ClockPicker(inProps, ref) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiClockPicker'
+  });
+  const {
+    ampm = false,
+    ampmInClock = false,
+    autoFocus,
+    components,
+    componentsProps,
+    date,
+    disableIgnoringDatePartForTimeValidation,
+    getClockLabelText: getClockLabelTextProp,
+    getHoursClockNumberText: getHoursClockNumberTextProp,
+    getMinutesClockNumberText: getMinutesClockNumberTextProp,
+    getSecondsClockNumberText: getSecondsClockNumberTextProp,
+    leftArrowButtonText: leftArrowButtonTextProp,
+    maxTime,
+    minTime,
+    minutesStep = 1,
+    rightArrowButtonText: rightArrowButtonTextProp,
+    shouldDisableTime,
+    showViewSwitcher,
+    onChange,
+    view,
+    views = ['hours', 'minutes'],
+    openTo,
+    onViewChange,
+    className,
+    disabled,
+    readOnly
+  } = props;
+  deprecatedPropsWarning({
+    leftArrowButtonText: leftArrowButtonTextProp,
+    rightArrowButtonText: rightArrowButtonTextProp,
+    getClockLabelText: getClockLabelTextProp,
+    getHoursClockNumberText: getHoursClockNumberTextProp,
+    getMinutesClockNumberText: getMinutesClockNumberTextProp,
+    getSecondsClockNumberText: getSecondsClockNumberTextProp
+  });
+  const localeText = useLocaleText();
+  const leftArrowButtonText = leftArrowButtonTextProp != null ? leftArrowButtonTextProp : localeText.openPreviousView;
+  const rightArrowButtonText = rightArrowButtonTextProp != null ? rightArrowButtonTextProp : localeText.openNextView;
+  const getClockLabelText = getClockLabelTextProp != null ? getClockLabelTextProp : localeText.clockLabelText;
+  const getHoursClockNumberText = getHoursClockNumberTextProp != null ? getHoursClockNumberTextProp : localeText.hoursClockNumberText;
+  const getMinutesClockNumberText = getMinutesClockNumberTextProp != null ? getMinutesClockNumberTextProp : localeText.minutesClockNumberText;
+  const getSecondsClockNumberText = getSecondsClockNumberTextProp != null ? getSecondsClockNumberTextProp : localeText.secondsClockNumberText;
+  const {
+    openView,
+    setOpenView,
+    nextView,
+    previousView,
+    handleChangeAndOpenNext
+  } = useViews({
+    view,
+    views,
+    openTo,
+    onViewChange,
+    onChange
+  });
+  const now = useNow();
+  const utils = useUtils();
+  const dateOrMidnight = reactExports.useMemo(() => date || utils.setSeconds(utils.setMinutes(utils.setHours(now, 0), 0), 0), [date, now, utils]);
+  const {
+    meridiemMode,
+    handleMeridiemChange
+  } = useMeridiemMode(dateOrMidnight, ampm, handleChangeAndOpenNext);
+  const isTimeDisabled = reactExports.useCallback((rawValue, viewType) => {
+    const isAfter = createIsAfterIgnoreDatePart(disableIgnoringDatePartForTimeValidation, utils);
+
+    const containsValidTime = ({
+      start,
+      end
+    }) => {
+      if (minTime && isAfter(minTime, end)) {
+        return false;
+      }
+
+      if (maxTime && isAfter(start, maxTime)) {
+        return false;
+      }
+
+      return true;
+    };
+
+    const isValidValue = (value, step = 1) => {
+      if (value % step !== 0) {
+        return false;
+      }
+
+      if (shouldDisableTime) {
+        return !shouldDisableTime(value, viewType);
+      }
+
+      return true;
+    };
+
+    switch (viewType) {
+      case 'hours':
+        {
+          const value = convertValueToMeridiem(rawValue, meridiemMode, ampm);
+          const dateWithNewHours = utils.setHours(dateOrMidnight, value);
+          const start = utils.setSeconds(utils.setMinutes(dateWithNewHours, 0), 0);
+          const end = utils.setSeconds(utils.setMinutes(dateWithNewHours, 59), 59);
+          return !containsValidTime({
+            start,
+            end
+          }) || !isValidValue(value);
+        }
+
+      case 'minutes':
+        {
+          const dateWithNewMinutes = utils.setMinutes(dateOrMidnight, rawValue);
+          const start = utils.setSeconds(dateWithNewMinutes, 0);
+          const end = utils.setSeconds(dateWithNewMinutes, 59);
+          return !containsValidTime({
+            start,
+            end
+          }) || !isValidValue(rawValue, minutesStep);
+        }
+
+      case 'seconds':
+        {
+          const dateWithNewSeconds = utils.setSeconds(dateOrMidnight, rawValue);
+          const start = dateWithNewSeconds;
+          const end = dateWithNewSeconds;
+          return !containsValidTime({
+            start,
+            end
+          }) || !isValidValue(rawValue);
+        }
+
+      default:
+        throw new Error('not supported');
+    }
+  }, [ampm, dateOrMidnight, disableIgnoringDatePartForTimeValidation, maxTime, meridiemMode, minTime, minutesStep, shouldDisableTime, utils]);
+  const selectedId = useId();
+  const viewProps = reactExports.useMemo(() => {
+    switch (openView) {
+      case 'hours':
+        {
+          const handleHoursChange = (value, isFinish) => {
+            const valueWithMeridiem = convertValueToMeridiem(value, meridiemMode, ampm);
+            handleChangeAndOpenNext(utils.setHours(dateOrMidnight, valueWithMeridiem), isFinish);
+          };
+
+          return {
+            onChange: handleHoursChange,
+            value: utils.getHours(dateOrMidnight),
+            children: getHourNumbers({
+              date,
+              utils,
+              ampm,
+              onChange: handleHoursChange,
+              getClockNumberText: getHoursClockNumberText,
+              isDisabled: value => disabled || isTimeDisabled(value, 'hours'),
+              selectedId
+            })
+          };
+        }
+
+      case 'minutes':
+        {
+          const minutesValue = utils.getMinutes(dateOrMidnight);
+
+          const handleMinutesChange = (value, isFinish) => {
+            handleChangeAndOpenNext(utils.setMinutes(dateOrMidnight, value), isFinish);
+          };
+
+          return {
+            value: minutesValue,
+            onChange: handleMinutesChange,
+            children: getMinutesNumbers({
+              utils,
+              value: minutesValue,
+              onChange: handleMinutesChange,
+              getClockNumberText: getMinutesClockNumberText,
+              isDisabled: value => disabled || isTimeDisabled(value, 'minutes'),
+              selectedId
+            })
+          };
+        }
+
+      case 'seconds':
+        {
+          const secondsValue = utils.getSeconds(dateOrMidnight);
+
+          const handleSecondsChange = (value, isFinish) => {
+            handleChangeAndOpenNext(utils.setSeconds(dateOrMidnight, value), isFinish);
+          };
+
+          return {
+            value: secondsValue,
+            onChange: handleSecondsChange,
+            children: getMinutesNumbers({
+              utils,
+              value: secondsValue,
+              onChange: handleSecondsChange,
+              getClockNumberText: getSecondsClockNumberText,
+              isDisabled: value => disabled || isTimeDisabled(value, 'seconds'),
+              selectedId
+            })
+          };
+        }
+
+      default:
+        throw new Error('You must provide the type for ClockView');
+    }
+  }, [openView, utils, date, ampm, getHoursClockNumberText, getMinutesClockNumberText, getSecondsClockNumberText, meridiemMode, handleChangeAndOpenNext, dateOrMidnight, isTimeDisabled, selectedId, disabled]);
+  const ownerState = props;
+  const classes = useUtilityClasses$3(ownerState);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(ClockPickerRoot, {
+    ref: ref,
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    children: [showViewSwitcher && /*#__PURE__*/jsxRuntimeExports.jsx(ClockPickerArrowSwitcher, {
+      className: classes.arrowSwitcher,
+      leftArrowButtonText: leftArrowButtonText,
+      rightArrowButtonText: rightArrowButtonText,
+      components: components,
+      componentsProps: componentsProps,
+      onLeftClick: () => setOpenView(previousView),
+      onRightClick: () => setOpenView(nextView),
+      isLeftDisabled: !previousView,
+      isRightDisabled: !nextView,
+      ownerState: ownerState
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(Clock, _extends({
+      autoFocus: autoFocus,
+      date: date,
+      ampmInClock: ampmInClock,
+      type: openView,
+      ampm: ampm,
+      getClockLabelText: getClockLabelText,
+      minutesStep: minutesStep,
+      isTimeDisabled: isTimeDisabled,
+      meridiemMode: meridiemMode,
+      handleMeridiemChange: handleMeridiemChange,
+      selectedId: selectedId,
+      disabled: disabled,
+      readOnly: readOnly
+    }, viewProps))]
+  });
+});
+process.env.NODE_ENV !== "production" ? ClockPicker.propTypes = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // | To update them edit the TypeScript types and run "yarn proptypes"  |
+  // ----------------------------------------------------------------------
+
+  /**
+   * 12h/24h view for hour selection clock.
+   * @default false
+   */
+  ampm: propTypesExports.bool,
+
+  /**
+   * Display ampm controls under the clock (instead of in the toolbar).
+   * @default false
+   */
+  ampmInClock: propTypesExports.bool,
+
+  /**
+   * Set to `true` if focus should be moved to clock picker.
+   */
+  autoFocus: propTypesExports.bool,
+
+  /**
+   * Override or extend the styles applied to the component.
+   */
+  classes: propTypesExports.object,
+  className: propTypesExports.string,
+
+  /**
+   * Overrideable components.
+   * @default {}
+   */
+  components: propTypesExports.object,
+
+  /**
+   * The props used for each component slot.
+   * @default {}
+   */
+  componentsProps: propTypesExports.object,
+
+  /**
+   * Selected date @DateIOType.
+   */
+  date: propTypesExports.any,
+
+  /**
+   * If `true`, the picker and text field are disabled.
+   * @default false
+   */
+  disabled: propTypesExports.bool,
+
+  /**
+   * Do not ignore date part when validating min/max time.
+   * @default false
+   */
+  disableIgnoringDatePartForTimeValidation: propTypesExports.bool,
+
+  /**
+   * Accessible text that helps user to understand which time and view is selected.
+   * @template TDate
+   * @param {ClockPickerView} view The current view rendered.
+   * @param {TDate | null} time The current time.
+   * @param {MuiPickersAdapter<TDate>} adapter The current date adapter.
+   * @returns {string} The clock label.
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   * @default <TDate extends any>(
+   *   view: ClockView,
+   *   time: TDate | null,
+   *   adapter: MuiPickersAdapter<TDate>,
+   * ) =>
+   *   `Select ${view}. ${
+   *     time === null ? 'No time selected' : `Selected time is ${adapter.format(time, 'fullTime')}`
+   *   }`
+   */
+  getClockLabelText: propTypesExports.func,
+
+  /**
+   * Get clock number aria-text for hours.
+   * @param {string} hours The hours to format.
+   * @returns {string} the formatted hours text.
+   * @default (hours: string) => `${hours} hours`
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   */
+  getHoursClockNumberText: propTypesExports.func,
+
+  /**
+   * Get clock number aria-text for minutes.
+   * @param {string} minutes The minutes to format.
+   * @returns {string} the formatted minutes text.
+   * @default (minutes: string) => `${minutes} minutes`
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   */
+  getMinutesClockNumberText: propTypesExports.func,
+
+  /**
+   * Get clock number aria-text for seconds.
+   * @param {string} seconds The seconds to format.
+   * @returns {string} the formatted seconds text.
+   * @default (seconds: string) => `${seconds} seconds`
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   */
+  getSecondsClockNumberText: propTypesExports.func,
+
+  /**
+   * Left arrow icon aria-label text.
+   * @default 'open previous view'
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   */
+  leftArrowButtonText: propTypesExports.string,
+
+  /**
+   * Max time acceptable time.
+   * For input validation date part of passed object will be ignored if `disableIgnoringDatePartForTimeValidation` not specified.
+   */
+  maxTime: propTypesExports.any,
+
+  /**
+   * Min time acceptable time.
+   * For input validation date part of passed object will be ignored if `disableIgnoringDatePartForTimeValidation` not specified.
+   */
+  minTime: propTypesExports.any,
+
+  /**
+   * Step over minutes.
+   * @default 1
+   */
+  minutesStep: propTypesExports.number,
+
+  /**
+   * On change callback @DateIOType.
+   */
+  onChange: propTypesExports.func.isRequired,
+
+  /**
+   * Callback fired on view change.
+   * @param {ClockPickerView} view The new view.
+   */
+  onViewChange: propTypesExports.func,
+
+  /**
+   * Initially open view.
+   * @default 'hours'
+   */
+  openTo: propTypesExports.oneOf(['hours', 'minutes', 'seconds']),
+
+  /**
+   * Make picker read only.
+   * @default false
+   */
+  readOnly: propTypesExports.bool,
+
+  /**
+   * Right arrow icon aria-label text.
+   * @default 'open next view'
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   */
+  rightArrowButtonText: propTypesExports.string,
+
+  /**
+   * Dynamically check if time is disabled or not.
+   * If returns `false` appropriate time point will ot be acceptable.
+   * @param {number} timeValue The value to check.
+   * @param {ClockPickerView} clockType The clock type of the timeValue.
+   * @returns {boolean} Returns `true` if the time should be disabled
+   */
+  shouldDisableTime: propTypesExports.func,
+  showViewSwitcher: propTypesExports.bool,
+
+  /**
+   * Controlled open view.
+   */
+  view: propTypesExports.oneOf(['hours', 'minutes', 'seconds']),
+
+  /**
+   * Views for calendar picker.
+   * @default ['hours', 'minutes']
+   */
+  views: propTypesExports.arrayOf(propTypesExports.oneOf(['hours', 'minutes', 'seconds']).isRequired)
+} : void 0;
+
+const isYearOnlyView = views => views.length === 1 && views[0] === 'year';
+const isYearAndMonthViews = views => views.length === 2 && views.indexOf('month') !== -1 && views.indexOf('year') !== -1;
+
+const getFormatAndMaskByViews = (views, utils) => {
+  if (isYearOnlyView(views)) {
+    return {
+      inputFormat: utils.formats.year
+    };
+  }
+
+  if (isYearAndMonthViews(views)) {
+    return {
+      disableMaskedInput: true,
+      inputFormat: utils.formats.monthAndYear
+    };
+  }
+
+  return {
+    inputFormat: utils.formats.keyboardDate
+  };
+};
+
+function useDatePickerDefaultizedProps(props, name) {
+  var _themeProps$views;
+
+  const utils = useUtils();
+  const defaultDates = useDefaultDates(); // This is technically unsound if the type parameters appear in optional props.
+  // Optional props can be filled by `useThemeProps` with types that don't match the type parameters.
+
+  const themeProps = useThemeProps({
+    props,
+    name
+  });
+  const views = (_themeProps$views = themeProps.views) != null ? _themeProps$views : ['year', 'day'];
+  return _extends({
+    openTo: 'day',
+    disableFuture: false,
+    disablePast: false
+  }, getFormatAndMaskByViews(views, utils), themeProps, {
+    views,
+    minDate: parseNonNullablePickerDate(utils, themeProps.minDate, defaultDates.minDate),
+    maxDate: parseNonNullablePickerDate(utils, themeProps.maxDate, defaultDates.maxDate)
+  });
+}
+const datePickerValueManager = {
+  emptyValue: null,
+  getTodayValue: utils => utils.date(),
+  parseInput: parsePickerInputValue,
+  areValuesEqual: (utils, a, b) => utils.isEqual(a, b)
+};
+
+function getPickersToolbarUtilityClass(slot) {
+  return generateUtilityClass('MuiPickersToolbar', slot);
+}
+const pickersToolbarClasses = generateUtilityClasses('MuiPickersToolbar', ['root', 'content', 'penIconButton', 'penIconButtonLandscape']);
+
+const useUtilityClasses$2 = ownerState => {
+  const {
+    classes,
+    isLandscape
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    content: ['content'],
+    penIconButton: ['penIconButton', isLandscape && 'penIconButtonLandscape']
+  };
+  return composeClasses(slots, getPickersToolbarUtilityClass, classes);
+};
+
+const PickersToolbarRoot = styled$1('div', {
+  name: 'MuiPickersToolbar',
+  slot: 'Root',
+  overridesResolver: (props, styles) => styles.root
+})(({
+  theme,
+  ownerState
+}) => _extends({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  justifyContent: 'space-between',
+  padding: theme.spacing(2, 3)
+}, ownerState.isLandscape && {
+  height: 'auto',
+  maxWidth: 160,
+  padding: 16,
+  justifyContent: 'flex-start',
+  flexWrap: 'wrap'
+}));
+const PickersToolbarContent = styled$1(Grid$1, {
+  name: 'MuiPickersToolbar',
+  slot: 'Content',
+  overridesResolver: (props, styles) => styles.content
+})(({
+  ownerState
+}) => _extends({
+  flex: 1
+}, !ownerState.isLandscape && {
+  alignItems: 'center'
+}));
+const PickersToolbarPenIconButton = styled$1(IconButton$1, {
+  name: 'MuiPickersToolbar',
+  slot: 'PenIconButton',
+  overridesResolver: (props, styles) => [{
+    [`&.${pickersToolbarClasses.penIconButtonLandscape}`]: styles.penIconButtonLandscape
+  }, styles.penIconButton]
+})({});
+
+const getViewTypeIcon = viewType => viewType === 'clock' ? /*#__PURE__*/jsxRuntimeExports.jsx(Clock$1, {
+  color: "inherit"
+}) : /*#__PURE__*/jsxRuntimeExports.jsx(Calendar, {
+  color: "inherit"
+});
+
+const PickersToolbar = /*#__PURE__*/reactExports.forwardRef(function PickersToolbar(inProps, ref) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiPickersToolbar'
+  });
+  const {
+    children,
+    className,
+    getMobileKeyboardInputViewButtonText,
+    isLandscape,
+    isMobileKeyboardViewOpen,
+    landscapeDirection = 'column',
+    toggleMobileKeyboardView,
+    toolbarTitle,
+    viewType = 'calendar'
+  } = props;
+  const ownerState = props;
+  const localeText = useLocaleText();
+  const classes = useUtilityClasses$2(ownerState);
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(PickersToolbarRoot, {
+    ref: ref,
+    className: clsx(classes.root, className),
+    ownerState: ownerState,
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(Typography$1, {
+      color: "text.secondary",
+      variant: "overline",
+      children: toolbarTitle
+    }), /*#__PURE__*/jsxRuntimeExports.jsxs(PickersToolbarContent, {
+      container: true,
+      justifyContent: "space-between",
+      className: classes.content,
+      ownerState: ownerState,
+      direction: isLandscape ? landscapeDirection : 'row',
+      alignItems: isLandscape ? 'flex-start' : 'flex-end',
+      children: [children, /*#__PURE__*/jsxRuntimeExports.jsx(PickersToolbarPenIconButton, {
+        onClick: toggleMobileKeyboardView,
+        className: classes.penIconButton,
+        ownerState: ownerState,
+        color: "inherit",
+        "aria-label": getMobileKeyboardInputViewButtonText ? getMobileKeyboardInputViewButtonText(isMobileKeyboardViewOpen, viewType) : localeText.inputModeToggleButtonAriaLabel(isMobileKeyboardViewOpen, viewType),
+        children: isMobileKeyboardViewOpen ? getViewTypeIcon(viewType) : /*#__PURE__*/jsxRuntimeExports.jsx(Pen, {
+          color: "inherit"
+        })
+      })]
+    })]
+  });
+});
+
+function getDatePickerToolbarUtilityClass(slot) {
+  return generateUtilityClass('MuiDatePickerToolbar', slot);
+}
+generateUtilityClasses('MuiDatePickerToolbar', ['root', 'title']);
+
+const _excluded$5 = ["parsedValue", "isLandscape", "isMobileKeyboardViewOpen", "onChange", "toggleMobileKeyboardView", "toolbarFormat", "toolbarPlaceholder", "toolbarTitle", "views"];
+
+const useUtilityClasses$1 = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    title: ['title']
+  };
+  return composeClasses(slots, getDatePickerToolbarUtilityClass, classes);
+};
+
+const DatePickerToolbarRoot = styled$1(PickersToolbar, {
+  name: 'MuiDatePickerToolbar',
+  slot: 'Root',
+  overridesResolver: (_, styles) => styles.root
+})({});
+const DatePickerToolbarTitle = styled$1(Typography$1, {
+  name: 'MuiDatePickerToolbar',
+  slot: 'Title',
+  overridesResolver: (_, styles) => styles.title
+})(({
+  ownerState
+}) => _extends({}, ownerState.isLandscape && {
+  margin: 'auto 16px auto auto'
+}));
+
+/**
+ * @ignore - internal component.
+ */
+const DatePickerToolbar = /*#__PURE__*/reactExports.forwardRef(function DatePickerToolbar(inProps, ref) {
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiDatePickerToolbar'
+  });
+
+  const {
+    parsedValue,
+    isLandscape,
+    isMobileKeyboardViewOpen,
+    toggleMobileKeyboardView,
+    toolbarFormat,
+    toolbarPlaceholder = '––',
+    toolbarTitle: toolbarTitleProp,
+    views
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$5);
+
+  const utils = useUtils();
+  const localeText = useLocaleText();
+  const classes = useUtilityClasses$1(props);
+  const toolbarTitle = toolbarTitleProp != null ? toolbarTitleProp : localeText.datePickerDefaultToolbarTitle;
+  const dateText = reactExports.useMemo(() => {
+    if (!parsedValue) {
+      return toolbarPlaceholder;
+    }
+
+    if (toolbarFormat) {
+      return utils.formatByString(parsedValue, toolbarFormat);
+    }
+
+    if (isYearOnlyView(views)) {
+      return utils.format(parsedValue, 'year');
+    }
+
+    if (isYearAndMonthViews(views)) {
+      return utils.format(parsedValue, 'month');
+    } // Little localization hack (Google is doing the same for android native pickers):
+    // For english localization it is convenient to include weekday into the date "Mon, Jun 1".
+    // For other locales using strings like "June 1", without weekday.
+
+
+    return /en/.test(utils.getCurrentLocaleCode()) ? utils.format(parsedValue, 'normalDateWithWeekday') : utils.format(parsedValue, 'normalDate');
+  }, [parsedValue, toolbarFormat, toolbarPlaceholder, utils, views]);
+  const ownerState = props;
+  return /*#__PURE__*/jsxRuntimeExports.jsx(DatePickerToolbarRoot, _extends({
+    ref: ref,
+    toolbarTitle: toolbarTitle,
+    isMobileKeyboardViewOpen: isMobileKeyboardViewOpen,
+    toggleMobileKeyboardView: toggleMobileKeyboardView,
+    isLandscape: isLandscape,
+    className: classes.root
+  }, other, {
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(DatePickerToolbarTitle, {
+      variant: "h4",
+      align: isLandscape ? 'left' : 'center',
+      ownerState: ownerState,
+      className: classes.title,
+      children: dateText
+    })
+  }));
+});
+
+const _excluded$4 = ["onAccept", "onClear", "onCancel", "onSetToday", "actions"];
+const PickersActionBar = props => {
+  const {
+    onAccept,
+    onClear,
+    onCancel,
+    onSetToday,
+    actions
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$4);
+
+  const wrapperVariant = reactExports.useContext(WrapperVariantContext);
+  const localeText = useLocaleText();
+  const actionsArray = typeof actions === 'function' ? actions(wrapperVariant) : actions;
+
+  if (actionsArray == null || actionsArray.length === 0) {
+    return null;
+  }
+
+  const buttons = actionsArray == null ? void 0 : actionsArray.map(actionType => {
+    switch (actionType) {
+      case 'clear':
+        return /*#__PURE__*/jsxRuntimeExports.jsx(Button$1, {
+          onClick: onClear,
+          children: localeText.clearButtonLabel
+        }, actionType);
+
+      case 'cancel':
+        return /*#__PURE__*/jsxRuntimeExports.jsx(Button$1, {
+          onClick: onCancel,
+          children: localeText.cancelButtonLabel
+        }, actionType);
+
+      case 'accept':
+        return /*#__PURE__*/jsxRuntimeExports.jsx(Button$1, {
+          onClick: onAccept,
+          children: localeText.okButtonLabel
+        }, actionType);
+
+      case 'today':
+        return /*#__PURE__*/jsxRuntimeExports.jsx(Button$1, {
+          onClick: onSetToday,
+          children: localeText.todayButtonLabel
+        }, actionType);
+
+      default:
+        return null;
+    }
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsx(DialogActions$1, _extends({}, other, {
+    children: buttons
+  }));
+};
+
+const useRifm = props => {
+  const [, refresh] = reactExports.useReducer(c => c + 1, 0);
+  const valueRef = reactExports.useRef(null);
+  const {
+    replace,
+    append
+  } = props;
+  const userValue = replace ? replace(props.format(props.value)) : props.format(props.value); // state of delete button see comments below about inputType support
+
+  const isDeleleteButtonDownRef = reactExports.useRef(false);
+
+  const onChange = evt => {
+    if (process.env.NODE_ENV !== 'production') {
+      if (evt.target.type === 'number') {
+        console.error('Rifm does not support input type=number, use type=tel instead.');
+        return;
+      }
+
+      if (evt.target.type === 'date') {
+        console.error('Rifm does not support input type=date.');
+        return;
+      }
+    }
+
+    const eventValue = evt.target.value;
+    valueRef.current = [eventValue, // eventValue
+    evt.target, // input
+    eventValue.length > userValue.length, // isSizeIncreaseOperation
+    isDeleleteButtonDownRef.current, // isDeleleteButtonDown
+    userValue === props.format(eventValue) // isNoOperation
+    ];
+
+    if (process.env.NODE_ENV !== 'production') {
+      const formattedEventValue = props.format(eventValue);
+
+      if (eventValue !== formattedEventValue && eventValue.toLowerCase() === formattedEventValue.toLowerCase()) {
+        console.warn('Case enforcement does not work with format. Please use replace={value => value.toLowerCase()} instead');
+      }
+    } // The main trick is to update underlying input with non formatted value (= eventValue)
+    // that allows us to calculate right cursor position after formatting (see getCursorPosition)
+    // then we format new value and call props.onChange with masked/formatted value
+    // and finally we are able to set cursor position into right place
+
+
+    refresh();
+  }; // React prints warn on server in non production mode about useLayoutEffect usage
+  // in both cases it's noop
+
+
+  if (process.env.NODE_ENV === 'production' || typeof window !== 'undefined') {
+    reactExports.useLayoutEffect(() => {
+      if (valueRef.current == null) return;
+      let [eventValue, input, isSizeIncreaseOperation, isDeleleteButtonDown, // No operation means that value itself hasn't been changed, BTW cursor, selection etc can be changed
+      isNoOperation] = valueRef.current;
+      valueRef.current = null; // this usually occurs on deleting special symbols like ' here 123'123.00
+      // in case of isDeleleteButtonDown cursor should move differently vs backspace
+
+      const deleteWasNoOp = isDeleleteButtonDown && isNoOperation;
+      const valueAfterSelectionStart = eventValue.slice(input.selectionStart);
+      const acceptedCharIndexAfterDelete = valueAfterSelectionStart.search(props.accept || /\d/g);
+      const charsToSkipAfterDelete = acceptedCharIndexAfterDelete !== -1 ? acceptedCharIndexAfterDelete : 0; // Create string from only accepted symbols
+
+      const clean = str => (str.match(props.accept || /\d/g) || []).join('');
+
+      const valueBeforeSelectionStart = clean(eventValue.substr(0, input.selectionStart)); // trying to find cursor position in formatted value having knowledge about valueBeforeSelectionStart
+      // This works because we assume that format doesn't change the order of accepted symbols.
+      // Imagine we have formatter which adds ' symbol between numbers, and by default we refuse all non numeric symbols
+      // for example we had input = 1'2|'4 (| means cursor position) then user entered '3' symbol
+      // inputValue = 1'23'|4 so valueBeforeSelectionStart = 123 and formatted value = 1'2'3'4
+      // calling getCursorPosition("1'2'3'4") will give us position after 3, 1'2'3|'4
+      // so for formatting just this function to determine cursor position after formatting is enough
+      // with masking we need to do some additional checks see `mask` below
+
+      const getCursorPosition = val => {
+        let start = 0;
+        let cleanPos = 0;
+
+        for (let i = 0; i !== valueBeforeSelectionStart.length; ++i) {
+          let newPos = val.indexOf(valueBeforeSelectionStart[i], start) + 1;
+          let newCleanPos = clean(val).indexOf(valueBeforeSelectionStart[i], cleanPos) + 1; // this skips position change if accepted symbols order was broken
+          // For example fixes edge case with fixed point numbers:
+          // You have '0|.00', then press 1, it becomes 01|.00 and after format 1.00, this breaks our assumption
+          // that order of accepted symbols is not changed after format,
+          // so here we don't update start position if other accepted symbols was inbetween current and new position
+
+          if (newCleanPos - cleanPos > 1) {
+            newPos = start;
+            newCleanPos = cleanPos;
+          }
+
+          cleanPos = Math.max(newCleanPos, cleanPos);
+          start = Math.max(start, newPos);
+        }
+
+        return start;
+      }; // Masking part, for masks if size of mask is above some value
+      // we need to replace symbols instead of do nothing as like in format
+
+
+      if (props.mask === true && isSizeIncreaseOperation && !isNoOperation) {
+        let start = getCursorPosition(eventValue);
+        const c = clean(eventValue.substr(start))[0];
+        start = eventValue.indexOf(c, start);
+        eventValue = `${eventValue.substr(0, start)}${eventValue.substr(start + 1)}`;
+      }
+
+      let formattedValue = props.format(eventValue);
+
+      if (append != null && // cursor at the end
+      input.selectionStart === eventValue.length && !isNoOperation) {
+        if (isSizeIncreaseOperation) {
+          formattedValue = append(formattedValue);
+        } else {
+          // If after delete last char is special character and we use append
+          // delete it too
+          // was: "12-3|" backspace pressed, then should be "12|"
+          if (clean(formattedValue.slice(-1)) === '') {
+            formattedValue = formattedValue.slice(0, -1);
+          }
+        }
+      }
+
+      const replacedValue = replace ? replace(formattedValue) : formattedValue;
+
+      if (userValue === replacedValue) {
+        // if nothing changed for formatted value, just refresh so userValue will be used at render
+        refresh();
+      } else {
+        props.onChange(replacedValue);
+      }
+
+      return () => {
+        let start = getCursorPosition(formattedValue); // Visually improves working with masked values,
+        // like cursor jumping over refused symbols
+        // as an example date mask: was "5|1-24-3" then user pressed "6"
+        // it becomes "56-|12-43" with this code, and "56|-12-43" without
+
+        if (props.mask != null && (isSizeIncreaseOperation || isDeleleteButtonDown && !deleteWasNoOp)) {
+          while (formattedValue[start] && clean(formattedValue[start]) === '') {
+            start += 1;
+          }
+        }
+
+        input.selectionStart = input.selectionEnd = start + (deleteWasNoOp ? 1 + charsToSkipAfterDelete : 0);
+      };
+    });
+  }
+
+  reactExports.useEffect(() => {
+    // until https://developer.mozilla.org/en-US/docs/Web/API/InputEvent/inputType will be supported
+    // by all major browsers (now supported by: +chrome, +safari, ?edge, !firefox)
+    // there is no way I found to distinguish in onChange
+    // backspace or delete was called in some situations
+    // firefox track https://bugzilla.mozilla.org/show_bug.cgi?id=1447239
+    const handleKeyDown = evt => {
+      if (evt.code === 'Delete') {
+        isDeleleteButtonDownRef.current = true;
+      }
+    };
+
+    const handleKeyUp = evt => {
+      if (evt.code === 'Delete') {
+        isDeleleteButtonDownRef.current = false;
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('keyup', handleKeyUp);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+  return {
+    value: valueRef.current != null ? valueRef.current[0] : userValue,
+    onChange
+  };
+};
+
+const getDisplayDate = (utils, rawValue, inputFormat) => {
+  const date = utils.date(rawValue);
+  const isEmpty = rawValue === null;
+
+  if (isEmpty) {
+    return '';
+  }
+
+  return utils.isValid(date) ? utils.formatByString( // TODO: should `isValid` narrow `TDate | null` to `NonNullable<TDate>`?
+  // Either we allow `TDate | null` to be valid and guard against calling `formatByString` with `null`.
+  // Or we ensure `formatByString` is callable with `null`.
+  date, inputFormat) : '';
+};
+const MASK_USER_INPUT_SYMBOL = '_';
+const staticDateWith2DigitTokens = '2019-11-21T22:30:00.000';
+const staticDateWith1DigitTokens = '2019-01-01T09:00:00.000';
+function getMaskFromCurrentFormat(mask, format, acceptRegex, utils) {
+  if (mask) {
+    return mask;
+  }
+
+  const formattedDateWith1Digit = utils.formatByString(utils.date(staticDateWith1DigitTokens), format);
+  const inferredFormatPatternWith1Digits = formattedDateWith1Digit.replace(acceptRegex, MASK_USER_INPUT_SYMBOL);
+  const inferredFormatPatternWith2Digits = utils.formatByString(utils.date(staticDateWith2DigitTokens), format).replace(acceptRegex, '_');
+
+  if (inferredFormatPatternWith1Digits === inferredFormatPatternWith2Digits) {
+    return inferredFormatPatternWith1Digits;
+  }
+
+  if (process.env.NODE_ENV !== 'production') {
+    console.warn([`Mask does not support numbers with variable length such as 'M'.`, `Either use numbers with fix length or disable mask feature with 'disableMaskedInput' prop`, `Falling down to uncontrolled no-mask input.`].join('\n'));
+  }
+
+  return '';
+}
+function checkMaskIsValidForCurrentFormat(mask, format, acceptRegex, utils) {
+  if (!mask) {
+    return false;
+  }
+
+  const formattedDateWith1Digit = utils.formatByString(utils.date(staticDateWith1DigitTokens), format);
+  const inferredFormatPatternWith1Digits = formattedDateWith1Digit.replace(acceptRegex, MASK_USER_INPUT_SYMBOL);
+  const inferredFormatPatternWith2Digits = utils.formatByString(utils.date(staticDateWith2DigitTokens), format).replace(acceptRegex, '_');
+  const isMaskValid = inferredFormatPatternWith2Digits === inferredFormatPatternWith1Digits && mask === inferredFormatPatternWith2Digits;
+
+  if (!isMaskValid && utils.lib !== 'luxon' && process.env.NODE_ENV !== 'production') {
+    if (format.includes('MMM')) {
+      console.warn([`Mask does not support literals such as 'MMM'.`, `Either use numbers with fix length or disable mask feature with 'disableMaskedInput' prop`, `Falling down to uncontrolled no-mask input.`].join('\n'));
+    } else if (inferredFormatPatternWith2Digits && inferredFormatPatternWith2Digits !== inferredFormatPatternWith1Digits) {
+      console.warn([`Mask does not support numbers with variable length such as 'M'.`, `Either use numbers with fix length or disable mask feature with 'disableMaskedInput' prop`, `Falling down to uncontrolled no-mask input.`].join('\n'));
+    } else if (mask) {
+      console.warn([`The mask "${mask}" you passed is not valid for the format used ${format}.`, `Falling down to uncontrolled no-mask input.`].join('\n'));
+    }
+  }
+
+  return isMaskValid;
+}
+const maskedDateFormatter = (mask, acceptRegexp) => value => {
+  let outputCharIndex = 0;
+  return value.split('').map((char, inputCharIndex) => {
+    acceptRegexp.lastIndex = 0;
+
+    if (outputCharIndex > mask.length - 1) {
+      return '';
+    }
+
+    const maskChar = mask[outputCharIndex];
+    const nextMaskChar = mask[outputCharIndex + 1];
+    const acceptedChar = acceptRegexp.test(char) ? char : '';
+    const formattedChar = maskChar === MASK_USER_INPUT_SYMBOL ? acceptedChar : maskChar + acceptedChar;
+    outputCharIndex += formattedChar.length;
+    const isLastCharacter = inputCharIndex === value.length - 1;
+
+    if (isLastCharacter && nextMaskChar && nextMaskChar !== MASK_USER_INPUT_SYMBOL) {
+      // when cursor at the end of mask part (e.g. month) prerender next symbol "21" -> "21/"
+      return formattedChar ? formattedChar + nextMaskChar : '';
+    }
+
+    return formattedChar;
+  }).join('');
+};
+
+const useMaskedInput = ({
+  acceptRegex = /[\d]/gi,
+  disabled,
+  disableMaskedInput,
+  ignoreInvalidInputs,
+  inputFormat,
+  inputProps,
+  label,
+  mask,
+  onChange,
+  rawValue,
+  readOnly,
+  rifmFormatter,
+  TextFieldProps,
+  validationError
+}) => {
+  const utils = useUtils();
+  const formatHelperText = utils.getFormatHelperText(inputFormat);
+  const {
+    shouldUseMaskedInput,
+    maskToUse
+  } = reactExports.useMemo(() => {
+    // formatting of dates is a quite slow thing, so do not make useless .format calls
+    if (disableMaskedInput) {
+      return {
+        shouldUseMaskedInput: false,
+        maskToUse: ''
+      };
+    }
+
+    const computedMaskToUse = getMaskFromCurrentFormat(mask, inputFormat, acceptRegex, utils);
+    return {
+      shouldUseMaskedInput: checkMaskIsValidForCurrentFormat(computedMaskToUse, inputFormat, acceptRegex, utils),
+      maskToUse: computedMaskToUse
+    };
+  }, [acceptRegex, disableMaskedInput, inputFormat, mask, utils]);
+  const formatter = reactExports.useMemo(() => shouldUseMaskedInput && maskToUse ? maskedDateFormatter(maskToUse, acceptRegex) : st => st, [acceptRegex, maskToUse, shouldUseMaskedInput]); // TODO: Implement with controlled vs uncontrolled `rawValue`
+
+  const parsedValue = rawValue === null ? null : utils.date(rawValue); // Track the value of the input
+
+  const [innerInputValue, setInnerInputValue] = reactExports.useState(parsedValue); // control the input text
+
+  const [innerDisplayedInputValue, setInnerDisplayedInputValue] = reactExports.useState(getDisplayDate(utils, rawValue, inputFormat)); // Inspired from autocomplete: https://github.com/mui/material-ui/blob/2c89d036dc2e16f100528f161600dffc83241768/packages/mui-base/src/AutocompleteUnstyled/useAutocomplete.js#L185:L201
+
+  const prevRawValue = reactExports.useRef();
+  const prevLocale = reactExports.useRef(utils.locale);
+  const prevInputFormat = reactExports.useRef(inputFormat);
+  reactExports.useEffect(() => {
+    const rawValueHasChanged = rawValue !== prevRawValue.current;
+    const localeHasChanged = utils.locale !== prevLocale.current;
+    const inputFormatHasChanged = inputFormat !== prevInputFormat.current;
+    prevRawValue.current = rawValue;
+    prevLocale.current = utils.locale;
+    prevInputFormat.current = inputFormat;
+
+    if (!rawValueHasChanged && !localeHasChanged && !inputFormatHasChanged) {
+      return;
+    }
+
+    const newParsedValue = rawValue === null ? null : utils.date(rawValue);
+    const isAcceptedValue = rawValue === null || utils.isValid(newParsedValue);
+    const innerEqualsParsed = innerInputValue === null ? newParsedValue === null : newParsedValue !== null && Math.abs(utils.getDiff(innerInputValue, newParsedValue, 'seconds')) === 0;
+
+    if (!localeHasChanged && !inputFormatHasChanged && (!isAcceptedValue || innerEqualsParsed)) {
+      return;
+    } // When dev set a new valid value, we trust them
+
+
+    const newDisplayDate = getDisplayDate(utils, rawValue, inputFormat);
+    setInnerInputValue(newParsedValue);
+    setInnerDisplayedInputValue(newDisplayDate);
+  }, [utils, rawValue, inputFormat, innerInputValue]);
+
+  const handleChange = text => {
+    const finalString = text === '' || text === mask ? '' : text;
+    setInnerDisplayedInputValue(finalString);
+    const date = finalString === null ? null : utils.parse(finalString, inputFormat);
+
+    if (ignoreInvalidInputs && !utils.isValid(date)) {
+      return;
+    }
+
+    setInnerInputValue(date);
+    onChange(date, finalString || undefined);
+  };
+
+  const rifmProps = useRifm({
+    value: innerDisplayedInputValue,
+    onChange: handleChange,
+    format: rifmFormatter || formatter
+  });
+  const inputStateArgs = shouldUseMaskedInput ? rifmProps : {
+    value: innerDisplayedInputValue,
+    onChange: event => {
+      handleChange(event.currentTarget.value);
+    }
+  };
+  return _extends({
+    label,
+    disabled,
+    error: validationError,
+    inputProps: _extends({}, inputStateArgs, {
+      disabled,
+      placeholder: formatHelperText,
+      readOnly,
+      type: shouldUseMaskedInput ? 'tel' : 'text'
+    }, inputProps)
+  }, TextFieldProps);
+};
+
+const _excluded$3 = ["className", "components", "disableOpenPicker", "getOpenDialogAriaText", "InputAdornmentProps", "InputProps", "inputRef", "openPicker", "OpenPickerButtonProps", "renderInput"];
+const KeyboardDateInput = /*#__PURE__*/reactExports.forwardRef(function KeyboardDateInput(props, ref) {
+  const {
+    className,
+    components = {},
+    disableOpenPicker,
+    getOpenDialogAriaText: getOpenDialogAriaTextProp,
+    InputAdornmentProps,
+    InputProps,
+    inputRef,
+    openPicker,
+    OpenPickerButtonProps,
+    renderInput
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$3);
+
+  const localeText = useLocaleText();
+  const getOpenDialogAriaText = getOpenDialogAriaTextProp != null ? getOpenDialogAriaTextProp : localeText.openDatePickerDialogue;
+  const utils = useUtils();
+  const textFieldProps = useMaskedInput(other);
+  const adornmentPosition = (InputAdornmentProps == null ? void 0 : InputAdornmentProps.position) || 'end';
+  const OpenPickerIcon = components.OpenPickerIcon || Calendar;
+  return renderInput(_extends({
+    ref,
+    inputRef,
+    className
+  }, textFieldProps, {
+    InputProps: _extends({}, InputProps, {
+      [`${adornmentPosition}Adornment`]: disableOpenPicker ? undefined : /*#__PURE__*/jsxRuntimeExports.jsx(InputAdornment$1, _extends({
+        position: adornmentPosition
+      }, InputAdornmentProps, {
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(IconButton$1, _extends({
+          edge: adornmentPosition,
+          disabled: other.disabled || other.readOnly,
+          "aria-label": getOpenDialogAriaText(other.rawValue, utils)
+        }, OpenPickerButtonProps, {
+          onClick: openPicker,
+          children: /*#__PURE__*/jsxRuntimeExports.jsx(OpenPickerIcon, {})
+        }))
+      }))
+    })
+  }));
+});
+
+function getOrientation() {
+  if (typeof window === 'undefined') {
+    return 'portrait';
+  }
+
+  if (window.screen && window.screen.orientation && window.screen.orientation.angle) {
+    return Math.abs(window.screen.orientation.angle) === 90 ? 'landscape' : 'portrait';
+  } // Support IOS safari
+
+
+  if (window.orientation) {
+    return Math.abs(Number(window.orientation)) === 90 ? 'landscape' : 'portrait';
+  }
+
+  return 'portrait';
+}
+
+const useIsLandscape = (views, customOrientation) => {
+  const [orientation, setOrientation] = reactExports.useState(getOrientation);
+  useEnhancedEffect$1(() => {
+    const eventHandler = () => {
+      setOrientation(getOrientation());
+    };
+
+    window.addEventListener('orientationchange', eventHandler);
+    return () => {
+      window.removeEventListener('orientationchange', eventHandler);
+    };
+  }, []);
+
+  if (arrayIncludes(views, ['hours', 'minutes', 'seconds'])) {
+    // could not display 13:34:44 in landscape mode
+    return false;
+  }
+
+  const orientationToUse = customOrientation || orientation;
+  return orientationToUse === 'landscape';
+};
+
+const useFocusManagement = ({
+  autoFocus,
+  openView
+}) => {
+  const [focusedView, setFocusedView] = reactExports.useState(autoFocus ? openView : null);
+  const setFocusedViewCallback = reactExports.useCallback(view => newHasFocus => {
+    if (newHasFocus) {
+      setFocusedView(view);
+    } else {
+      setFocusedView(prevFocusedView => view === prevFocusedView ? null : prevFocusedView);
+    }
+  }, []);
+  return {
+    focusedView,
+    setFocusedView: setFocusedViewCallback
+  };
+};
+
+function getCalendarOrClockPickerUtilityClass(slot) {
+  return generateUtilityClass('MuiCalendarOrClockPicker', slot);
+}
+generateUtilityClasses('MuiCalendarOrClockPicker', ['root', 'mobileKeyboardInputView']);
+
+const _excluded$2 = ["autoFocus", "className", "parsedValue", "DateInputProps", "isMobileKeyboardViewOpen", "onDateChange", "onViewChange", "openTo", "orientation", "showToolbar", "toggleMobileKeyboardView", "ToolbarComponent", "toolbarFormat", "toolbarPlaceholder", "toolbarTitle", "views", "dateRangeIcon", "timeIcon", "hideTabs", "classes"];
+
+const useUtilityClasses = ownerState => {
+  const {
+    classes
+  } = ownerState;
+  const slots = {
+    root: ['root'],
+    mobileKeyboardInputView: ['mobileKeyboardInputView']
+  };
+  return composeClasses(slots, getCalendarOrClockPickerUtilityClass, classes);
+};
+
+const MobileKeyboardInputView = styled$1('div', {
+  name: 'MuiCalendarOrClockPicker',
+  slot: 'MobileKeyboardInputView',
+  overridesResolver: (_, styles) => styles.mobileKeyboardInputView
+})({
+  padding: '16px 24px'
+});
+const PickerRoot = styled$1('div', {
+  name: 'MuiCalendarOrClockPicker',
+  slot: 'Root',
+  overridesResolver: (_, styles) => styles.root
+})(({
+  ownerState
+}) => _extends({
+  display: 'flex',
+  flexDirection: 'column'
+}, ownerState.isLandscape && {
+  flexDirection: 'row'
+}));
+const MobileKeyboardTextFieldProps = {
+  fullWidth: true
+};
+
+const isDatePickerView = view => view === 'year' || view === 'month' || view === 'day';
+
+const isTimePickerView = view => view === 'hours' || view === 'minutes' || view === 'seconds';
+
+let warnedOnceNotValidOpenTo = false;
+function CalendarOrClockPicker(inProps) {
+  var _other$components, _other$componentsProp;
+
+  const props = useThemeProps({
+    props: inProps,
+    name: 'MuiCalendarOrClockPicker'
+  });
+
+  const {
+    autoFocus,
+    parsedValue,
+    DateInputProps,
+    isMobileKeyboardViewOpen,
+    onDateChange,
+    onViewChange,
+    openTo,
+    orientation,
+    showToolbar,
+    toggleMobileKeyboardView,
+    ToolbarComponent = () => null,
+    toolbarFormat,
+    toolbarPlaceholder,
+    toolbarTitle,
+    views,
+    dateRangeIcon,
+    timeIcon,
+    hideTabs
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$2);
+
+  const TabsComponent = (_other$components = other.components) == null ? void 0 : _other$components.Tabs;
+  const isLandscape = useIsLandscape(views, orientation);
+  const wrapperVariant = reactExports.useContext(WrapperVariantContext);
+  const classes = useUtilityClasses(props);
+  const toShowToolbar = showToolbar != null ? showToolbar : wrapperVariant !== 'desktop';
+  const showTabs = !hideTabs && typeof window !== 'undefined' && window.innerHeight > 667;
+  const handleDateChange = reactExports.useCallback((newDate, selectionState) => {
+    onDateChange(newDate, wrapperVariant, selectionState);
+  }, [onDateChange, wrapperVariant]);
+  const handleViewChange = reactExports.useCallback(newView => {
+    if (isMobileKeyboardViewOpen) {
+      toggleMobileKeyboardView();
+    }
+
+    if (onViewChange) {
+      onViewChange(newView);
+    }
+  }, [isMobileKeyboardViewOpen, onViewChange, toggleMobileKeyboardView]);
+
+  if (process.env.NODE_ENV !== 'production') {
+    if (!warnedOnceNotValidOpenTo && !views.includes(openTo)) {
+      console.warn(`MUI: \`openTo="${openTo}"\` is not a valid prop.`, `It must be an element of \`views=["${views.join('", "')}"]\`.`);
+      warnedOnceNotValidOpenTo = true;
+    }
+  }
+
+  const {
+    openView,
+    setOpenView,
+    handleChangeAndOpenNext
+  } = useViews({
+    view: undefined,
+    views,
+    openTo,
+    onChange: handleDateChange,
+    onViewChange: handleViewChange
+  });
+  const {
+    focusedView,
+    setFocusedView
+  } = useFocusManagement({
+    autoFocus,
+    openView
+  });
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(PickerRoot, {
+    ownerState: {
+      isLandscape
+    },
+    className: classes.root,
+    children: [toShowToolbar && /*#__PURE__*/jsxRuntimeExports.jsx(ToolbarComponent, _extends({}, other, {
+      views: views,
+      isLandscape: isLandscape,
+      parsedValue: parsedValue,
+      onChange: handleDateChange,
+      setOpenView: setOpenView,
+      openView: openView,
+      toolbarTitle: toolbarTitle,
+      toolbarFormat: toolbarFormat,
+      toolbarPlaceholder: toolbarPlaceholder,
+      isMobileKeyboardViewOpen: isMobileKeyboardViewOpen,
+      toggleMobileKeyboardView: toggleMobileKeyboardView
+    })), showTabs && !!TabsComponent && /*#__PURE__*/jsxRuntimeExports.jsx(TabsComponent, _extends({
+      dateRangeIcon: dateRangeIcon,
+      timeIcon: timeIcon,
+      view: openView,
+      onChange: setOpenView
+    }, (_other$componentsProp = other.componentsProps) == null ? void 0 : _other$componentsProp.tabs)), /*#__PURE__*/jsxRuntimeExports.jsx(PickerViewRoot, {
+      children: isMobileKeyboardViewOpen ? /*#__PURE__*/jsxRuntimeExports.jsx(MobileKeyboardInputView, {
+        className: classes.mobileKeyboardInputView,
+        children: /*#__PURE__*/jsxRuntimeExports.jsx(KeyboardDateInput, _extends({}, DateInputProps, {
+          ignoreInvalidInputs: true,
+          disableOpenPicker: true,
+          TextFieldProps: MobileKeyboardTextFieldProps
+        }))
+      }) : /*#__PURE__*/jsxRuntimeExports.jsxs(reactExports.Fragment, {
+        children: [isDatePickerView(openView) && /*#__PURE__*/jsxRuntimeExports.jsx(CalendarPicker, _extends({
+          autoFocus: autoFocus,
+          date: parsedValue,
+          onViewChange: setOpenView,
+          onChange: handleChangeAndOpenNext,
+          view: openView // Unclear why the predicate `isDatePickerView` does not imply the casted type
+          ,
+          views: views.filter(isDatePickerView),
+          focusedView: focusedView,
+          onFocusedViewChange: setFocusedView
+        }, other)), isTimePickerView(openView) && /*#__PURE__*/jsxRuntimeExports.jsx(ClockPicker, _extends({}, other, {
+          autoFocus: autoFocus,
+          date: parsedValue,
+          view: openView // Unclear why the predicate `isDatePickerView` does not imply the casted type
+          ,
+          views: views.filter(isTimePickerView),
+          onChange: handleChangeAndOpenNext,
+          onViewChange: setOpenView,
+          showViewSwitcher: wrapperVariant === 'desktop'
+        }))]
+      })
+    })]
+  });
+}
+
+const useOpenState = ({
+  open,
+  onOpen,
+  onClose
+}) => {
+  const isControllingOpenProp = reactExports.useRef(typeof open === 'boolean').current;
+  const [openState, setIsOpenState] = reactExports.useState(false); // It is required to update inner state in useEffect in order to avoid situation when
+  // Our component is not mounted yet, but `open` state is set to `true` (e.g. initially opened)
+
+  reactExports.useEffect(() => {
+    if (isControllingOpenProp) {
+      if (typeof open !== 'boolean') {
+        throw new Error('You must not mix controlling and uncontrolled mode for `open` prop');
+      }
+
+      setIsOpenState(open);
+    }
+  }, [isControllingOpenProp, open]);
+  const setIsOpen = reactExports.useCallback(newIsOpen => {
+    if (!isControllingOpenProp) {
+      setIsOpenState(newIsOpen);
+    }
+
+    if (newIsOpen && onOpen) {
+      onOpen();
+    }
+
+    if (!newIsOpen && onClose) {
+      onClose();
+    }
+  }, [isControllingOpenProp, onOpen, onClose]);
+  return {
+    isOpen: openState,
+    setIsOpen
+  };
+};
+
+const usePickerState = (props, valueManager) => {
+  const {
+    onAccept,
+    onChange,
+    value,
+    closeOnSelect
+  } = props;
+  const utils = useUtils();
+  const {
+    isOpen,
+    setIsOpen
+  } = useOpenState(props);
+  const parsedDateValue = reactExports.useMemo(() => valueManager.parseInput(utils, value), [valueManager, utils, value]);
+  const [lastValidDateValue, setLastValidDateValue] = reactExports.useState(parsedDateValue);
+  const [dateState, setDateState] = reactExports.useState(() => ({
+    committed: parsedDateValue,
+    draft: parsedDateValue,
+    resetFallback: parsedDateValue
+  }));
+  const setDate = reactExports.useCallback(params => {
+    setDateState(prev => {
+      switch (params.action) {
+        case 'setAll':
+        case 'acceptAndClose':
+          {
+            return {
+              draft: params.value,
+              committed: params.value,
+              resetFallback: params.value
+            };
+          }
+
+        case 'setCommitted':
+          {
+            return _extends({}, prev, {
+              draft: params.value,
+              committed: params.value
+            });
+          }
+
+        case 'setDraft':
+          {
+            return _extends({}, prev, {
+              draft: params.value
+            });
+          }
+
+        default:
+          {
+            return prev;
+          }
+      }
+    });
+
+    if (params.forceOnChangeCall || !params.skipOnChangeCall && !valueManager.areValuesEqual(utils, dateState.committed, params.value)) {
+      onChange(params.value);
+    }
+
+    if (params.action === 'acceptAndClose') {
+      setIsOpen(false);
+
+      if (onAccept && !valueManager.areValuesEqual(utils, dateState.resetFallback, params.value)) {
+        onAccept(params.value);
+      }
+    }
+  }, [onAccept, onChange, setIsOpen, dateState, utils, valueManager]);
+  reactExports.useEffect(() => {
+    if (utils.isValid(parsedDateValue)) {
+      setLastValidDateValue(parsedDateValue);
+    }
+  }, [utils, parsedDateValue]);
+  reactExports.useEffect(() => {
+    if (isOpen) {
+      // Update all dates in state to equal the current prop value
+      setDate({
+        action: 'setAll',
+        value: parsedDateValue,
+        skipOnChangeCall: true
+      });
+    }
+  }, [isOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Set the draft and committed date to equal the new prop value.
+
+  if (!valueManager.areValuesEqual(utils, dateState.committed, parsedDateValue)) {
+    setDate({
+      action: 'setCommitted',
+      value: parsedDateValue,
+      skipOnChangeCall: true
+    });
+  }
+
+  const wrapperProps = reactExports.useMemo(() => ({
+    open: isOpen,
+    onClear: () => {
+      // Reset all date in state to the empty value and close picker.
+      setDate({
+        value: valueManager.emptyValue,
+        action: 'acceptAndClose',
+        // force `onChange` in cases like input (value) === `Invalid date`
+        forceOnChangeCall: !valueManager.areValuesEqual(utils, value, valueManager.emptyValue)
+      });
+    },
+    onAccept: () => {
+      // Set all date in state to equal the current draft value and close picker.
+      setDate({
+        value: dateState.draft,
+        action: 'acceptAndClose',
+        // force `onChange` in cases like input (value) === `Invalid date`
+        forceOnChangeCall: !valueManager.areValuesEqual(utils, value, parsedDateValue)
+      });
+    },
+    onDismiss: () => {
+      // Set all dates in state to equal the last committed date.
+      // e.g. Reset the state to the last committed value.
+      setDate({
+        value: dateState.committed,
+        action: 'acceptAndClose'
+      });
+    },
+    onCancel: () => {
+      // Set all dates in state to equal the last accepted date and close picker.
+      // e.g. Reset the state to the last accepted value
+      setDate({
+        value: dateState.resetFallback,
+        action: 'acceptAndClose'
+      });
+    },
+    onSetToday: () => {
+      // Set all dates in state to equal today and close picker.
+      setDate({
+        value: valueManager.getTodayValue(utils),
+        action: 'acceptAndClose'
+      });
+    }
+  }), [setDate, isOpen, utils, dateState, valueManager, value, parsedDateValue]); // Mobile keyboard view is a special case.
+  // When it's open picker should work like closed, because we are just showing text field
+
+  const [isMobileKeyboardViewOpen, setMobileKeyboardViewOpen] = reactExports.useState(false);
+  const pickerProps = reactExports.useMemo(() => ({
+    parsedValue: dateState.draft,
+    isMobileKeyboardViewOpen,
+    toggleMobileKeyboardView: () => setMobileKeyboardViewOpen(!isMobileKeyboardViewOpen),
+    onDateChange: (newDate, wrapperVariant, selectionState = 'partial') => {
+      switch (selectionState) {
+        case 'shallow':
+          {
+            // Update the `draft` state but do not fire `onChange`
+            return setDate({
+              action: 'setDraft',
+              value: newDate,
+              skipOnChangeCall: true
+            });
+          }
+
+        case 'partial':
+          {
+            // Update the `draft` state and fire `onChange`
+            return setDate({
+              action: 'setDraft',
+              value: newDate
+            });
+          }
+
+        case 'finish':
+          {
+            if (closeOnSelect != null ? closeOnSelect : wrapperVariant === 'desktop') {
+              // Set all dates in state to equal the new date and close picker.
+              return setDate({
+                value: newDate,
+                action: 'acceptAndClose'
+              });
+            } // Updates the `committed` state and fire `onChange`
+
+
+            return setDate({
+              value: newDate,
+              action: 'setCommitted'
+            });
+          }
+
+        default:
+          {
+            throw new Error('MUI: Invalid selectionState passed to `onDateChange`');
+          }
+      }
+    }
+  }), [setDate, isMobileKeyboardViewOpen, dateState.draft, closeOnSelect]);
+  const handleInputChange = reactExports.useCallback((newParsedValue, keyboardInputValue) => {
+    const cleanParsedValue = valueManager.valueReducer ? valueManager.valueReducer(utils, lastValidDateValue, newParsedValue) : newParsedValue;
+    onChange(cleanParsedValue, keyboardInputValue);
+  }, [onChange, valueManager, lastValidDateValue, utils]);
+  const inputProps = reactExports.useMemo(() => ({
+    onChange: handleInputChange,
+    open: isOpen,
+    rawValue: value,
+    openPicker: () => setIsOpen(true)
+  }), [handleInputChange, isOpen, value, setIsOpen]);
+  const pickerState = {
+    pickerProps,
+    inputProps,
+    wrapperProps
+  };
+  reactExports.useDebugValue(pickerState, () => ({
+    MuiPickerState: {
+      dateState,
+      other: pickerState
+    }
+  }));
+  return pickerState;
+};
+
+const PickersModalDialogRoot = styled$1(Dialog$1)({
+  [`& .${dialogClasses$1.container}`]: {
+    outline: 0
+  },
+  [`& .${dialogClasses$1.paper}`]: {
+    outline: 0,
+    minWidth: DIALOG_WIDTH
+  }
+});
+const PickersModalDialogContent = styled$1(DialogContent$1)({
+  '&:first-of-type': {
+    padding: 0
+  }
+});
+const PickersModalDialog = props => {
+  var _components$ActionBar;
+
+  const {
+    children,
+    DialogProps = {},
+    onAccept,
+    onClear,
+    onDismiss,
+    onCancel,
+    onSetToday,
+    open,
+    components,
+    componentsProps
+  } = props;
+  const ActionBar = (_components$ActionBar = components == null ? void 0 : components.ActionBar) != null ? _components$ActionBar : PickersActionBar;
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(PickersModalDialogRoot, _extends({
+    open: open,
+    onClose: onDismiss
+  }, DialogProps, {
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PickersModalDialogContent, {
+      children: children
+    }), /*#__PURE__*/jsxRuntimeExports.jsx(ActionBar, _extends({
+      onAccept: onAccept,
+      onClear: onClear,
+      onCancel: onCancel,
+      onSetToday: onSetToday,
+      actions: ['cancel', 'accept']
+    }, componentsProps == null ? void 0 : componentsProps.actionBar))]
+  }));
+};
+
+const _excluded$1 = ["children", "DateInputProps", "DialogProps", "onAccept", "onClear", "onDismiss", "onCancel", "onSetToday", "open", "PureDateInputComponent", "components", "componentsProps"];
+function MobileWrapper(props) {
+  const {
+    children,
+    DateInputProps,
+    DialogProps,
+    onAccept,
+    onClear,
+    onDismiss,
+    onCancel,
+    onSetToday,
+    open,
+    PureDateInputComponent,
+    components,
+    componentsProps
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded$1);
+
+  return /*#__PURE__*/jsxRuntimeExports.jsxs(WrapperVariantContext.Provider, {
+    value: "mobile",
+    children: [/*#__PURE__*/jsxRuntimeExports.jsx(PureDateInputComponent, _extends({
+      components: components
+    }, other, DateInputProps)), /*#__PURE__*/jsxRuntimeExports.jsx(PickersModalDialog, {
+      DialogProps: DialogProps,
+      onAccept: onAccept,
+      onClear: onClear,
+      onDismiss: onDismiss,
+      onCancel: onCancel,
+      onSetToday: onSetToday,
+      open: open,
+      components: components,
+      componentsProps: componentsProps,
+      children: children
+    })]
+  });
+}
+
+// TODO: why is this called "Pure*" when it's not memoized? Does "Pure" mean "readonly"?
+const PureDateInput = /*#__PURE__*/reactExports.forwardRef(function PureDateInput(props, ref) {
+  const {
+    disabled,
+    getOpenDialogAriaText: getOpenDialogAriaTextProp,
+    inputFormat,
+    InputProps,
+    inputRef,
+    label,
+    openPicker: onOpen,
+    rawValue,
+    renderInput,
+    TextFieldProps = {},
+    validationError,
+    className
+  } = props;
+  const localeText = useLocaleText(); // The prop can not be deprecated
+  // Default is "Choose date, ...", but time pickers override it with "Choose time, ..."
+
+  const getOpenDialogAriaText = getOpenDialogAriaTextProp != null ? getOpenDialogAriaTextProp : localeText.openDatePickerDialogue;
+  const utils = useUtils();
+  const PureDateInputProps = reactExports.useMemo(() => _extends({}, InputProps, {
+    readOnly: true
+  }), [InputProps]);
+  const inputValue = getDisplayDate(utils, rawValue, inputFormat);
+  const handleOnClick = useEventCallback(event => {
+    event.stopPropagation();
+    onOpen();
+  });
+  return renderInput(_extends({
+    label,
+    disabled,
+    ref,
+    inputRef,
+    error: validationError,
+    InputProps: PureDateInputProps,
+    className
+  }, !props.readOnly && !props.disabled && {
+    onClick: handleOnClick
+  }, {
+    inputProps: _extends({
+      disabled,
+      readOnly: true,
+      'aria-readonly': true,
+      'aria-label': getOpenDialogAriaText(rawValue, utils),
+      value: inputValue
+    }, !props.readOnly && {
+      onClick: handleOnClick
+    }, {
+      onKeyDown: onSpaceOrEnter(onOpen)
+    })
+  }, TextFieldProps));
+});
+
+const _excluded = ["ToolbarComponent", "value", "onChange", "components", "componentsProps"];
+
+/**
+ *
+ * Demos:
+ *
+ * - [Date Picker](https://mui.com/x/react-date-pickers/date-picker/)
+ *
+ * API:
+ *
+ * - [MobileDatePicker API](https://mui.com/x/api/date-pickers/mobile-date-picker/)
+ */
+const MobileDatePicker = /*#__PURE__*/reactExports.forwardRef(function MobileDatePicker(inProps, ref) {
+  const props = useDatePickerDefaultizedProps(inProps, 'MuiMobileDatePicker');
+  const validationError = useDateValidation(props) !== null;
+  const {
+    pickerProps,
+    inputProps,
+    wrapperProps
+  } = usePickerState(props, datePickerValueManager); // Note that we are passing down all the value without spread.
+  // It saves us >1kb gzip and make any prop available automatically on any level down.
+
+  const {
+    ToolbarComponent = DatePickerToolbar,
+    components,
+    componentsProps
+  } = props,
+        other = _objectWithoutPropertiesLoose(props, _excluded);
+
+  const DateInputProps = _extends({}, inputProps, other, {
+    components,
+    componentsProps,
+    ref,
+    validationError
+  });
+
+  return /*#__PURE__*/jsxRuntimeExports.jsx(MobileWrapper, _extends({}, other, wrapperProps, {
+    DateInputProps: DateInputProps,
+    PureDateInputComponent: PureDateInput,
+    components: components,
+    componentsProps: componentsProps,
+    children: /*#__PURE__*/jsxRuntimeExports.jsx(CalendarOrClockPicker, _extends({}, pickerProps, {
+      autoFocus: true,
+      toolbarTitle: props.label || props.toolbarTitle,
+      ToolbarComponent: ToolbarComponent,
+      DateInputProps: DateInputProps,
+      components: components,
+      componentsProps: componentsProps
+    }, other))
+  }));
+});
+process.env.NODE_ENV !== "production" ? MobileDatePicker.propTypes = {
+  // ----------------------------- Warning --------------------------------
+  // | These PropTypes are generated from the TypeScript type definitions |
+  // | To update them edit the TypeScript types and run "yarn proptypes"  |
+  // ----------------------------------------------------------------------
+
+  /**
+   * Regular expression to detect "accepted" symbols.
+   * @default /\dap/gi
+   */
+  acceptRegex: propTypesExports.instanceOf(RegExp),
+  autoFocus: propTypesExports.bool,
+  children: propTypesExports.node,
+
+  /**
+   * className applied to the root component.
+   */
+  className: propTypesExports.string,
+
+  /**
+   * If `true` the popup or dialog will immediately close after submitting full date.
+   * @default `true` for Desktop, `false` for Mobile (based on the chosen wrapper and `desktopModeMediaQuery` prop).
+   */
+  closeOnSelect: propTypesExports.bool,
+
+  /**
+   * Overrideable components.
+   * @default {}
+   */
+  components: propTypesExports.object,
+
+  /**
+   * The props used for each component slot.
+   * @default {}
+   */
+  componentsProps: propTypesExports.object,
+
+  /**
+   * Formats the day of week displayed in the calendar header.
+   * @param {string} day The day of week provided by the adapter's method `getWeekdays`.
+   * @returns {string} The name to display.
+   * @default (day) => day.charAt(0).toUpperCase()
+   */
+  dayOfWeekFormatter: propTypesExports.func,
+
+  /**
+   * Default calendar month displayed when `value={null}`.
+   */
+  defaultCalendarMonth: propTypesExports.any,
+
+  /**
+   * Props applied to the [`Dialog`](https://mui.com/material-ui/api/dialog/) element.
+   */
+  DialogProps: propTypesExports.object,
+
+  /**
+   * If `true`, the picker and text field are disabled.
+   * @default false
+   */
+  disabled: propTypesExports.bool,
+
+  /**
+   * If `true` future days are disabled.
+   * @default false
+   */
+  disableFuture: propTypesExports.bool,
+
+  /**
+   * If `true`, today's date is rendering without highlighting with circle.
+   * @default false
+   */
+  disableHighlightToday: propTypesExports.bool,
+
+  /**
+   * Disable mask on the keyboard, this should be used rarely. Consider passing proper mask for your format.
+   * @default false
+   */
+  disableMaskedInput: propTypesExports.bool,
+
+  /**
+   * Do not render open picker button (renders only text field with validation).
+   * @default false
+   */
+  disableOpenPicker: propTypesExports.bool,
+
+  /**
+   * If `true` past days are disabled.
+   * @default false
+   */
+  disablePast: propTypesExports.bool,
+
+  /**
+   * Get aria-label text for control that opens picker dialog. Aria-label text must include selected date. @DateIOType
+   * @template TInputDate, TDate
+   * @param {TInputDate} date The date from which we want to add an aria-text.
+   * @param {MuiPickersAdapter<TDate>} utils The utils to manipulate the date.
+   * @returns {string} The aria-text to render inside the dialog.
+   * @default (date, utils) => `Choose date, selected date is ${utils.format(utils.date(date), 'fullDate')}`
+   */
+  getOpenDialogAriaText: propTypesExports.func,
+
+  /**
+   * Get aria-label text for switching between views button.
+   * @param {CalendarPickerView} currentView The view from which we want to get the button text.
+   * @returns {string} The label of the view.
+   * @deprecated Use the `localeText` prop of `LocalizationProvider` instead, see https://mui.com/x/react-date-pickers/localization/.
+   */
+  getViewSwitchingButtonText: propTypesExports.func,
+  ignoreInvalidInputs: propTypesExports.bool,
+
+  /**
+   * Props to pass to keyboard input adornment.
+   */
+  InputAdornmentProps: propTypesExports.object,
+
+  /**
+   * Format string.
+   */
+  inputFormat: propTypesExports.string,
+  InputProps: propTypesExports.object,
+
+  /**
+   * Pass a ref to the `input` element.
+   */
+  inputRef: propTypesExports.oneOfType([propTypesExports.func, propTypesExports.shape({
+    current: propTypesExports.object
+  })]),
+  label: propTypesExports.node,
+
+  /**
+   * Left arrow icon aria-label text.
+   * @deprecated
+   */
+  leftArrowButtonText: propTypesExports.string,
+
+  /**
+   * If `true` renders `LoadingComponent` in calendar instead of calendar view.
+   * Can be used to preload information and show it in calendar.
+   * @default false
+   */
+  loading: propTypesExports.bool,
+
+  /**
+   * Custom mask. Can be used to override generate from format. (e.g. `__/__/____ __:__` or `__/__/____ __:__ _M`).
+   */
+  mask: propTypesExports.string,
+
+  /**
+   * Maximal selectable date. @DateIOType
+   */
+  maxDate: propTypesExports.any,
+
+  /**
+   * Minimal selectable date. @DateIOType
+   */
+  minDate: propTypesExports.any,
+
+  /**
+   * Callback fired when date is accepted @DateIOType.
+   * @template TValue
+   * @param {TValue} value The value that was just accepted.
+   */
+  onAccept: propTypesExports.func,
+
+  /**
+   * Callback fired when the value (the selected date) changes @DateIOType.
+   * @template TValue
+   * @param {TValue} value The new parsed value.
+   * @param {string} keyboardInputValue The current value of the keyboard input.
+   */
+  onChange: propTypesExports.func.isRequired,
+
+  /**
+   * Callback fired when the popup requests to be closed.
+   * Use in controlled mode (see open).
+   */
+  onClose: propTypesExports.func,
+
+  /**
+   * Callback that fired when input value or new `value` prop validation returns **new** validation error (or value is valid after error).
+   * In case of validation error detected `reason` prop return non-null value and `TextField` must be displayed in `error` state.
+   * This can be used to render appropriate form error.
+   *
+   * [Read the guide](https://next.material-ui-pickers.dev/guides/forms) about form integration and error displaying.
+   * @DateIOType
+   *
+   * @template TError, TInputValue
+   * @param {TError} reason The reason why the current value is not valid.
+   * @param {TInputValue} value The invalid value.
+   */
+  onError: propTypesExports.func,
+
+  /**
+   * Callback firing on month change @DateIOType.
+   * @template TDate
+   * @param {TDate} month The new month.
+   * @returns {void|Promise} -
+   */
+  onMonthChange: propTypesExports.func,
+
+  /**
+   * Callback fired when the popup requests to be opened.
+   * Use in controlled mode (see open).
+   */
+  onOpen: propTypesExports.func,
+
+  /**
+   * Callback fired on view change.
+   * @param {CalendarPickerView} view The new view.
+   */
+  onViewChange: propTypesExports.func,
+
+  /**
+   * Callback firing on year change @DateIOType.
+   * @template TDate
+   * @param {TDate} year The new year.
+   */
+  onYearChange: propTypesExports.func,
+
+  /**
+   * Control the popup or dialog open state.
+   */
+  open: propTypesExports.bool,
+
+  /**
+   * Props to pass to keyboard adornment button.
+   */
+  OpenPickerButtonProps: propTypesExports.object,
+
+  /**
+   * First view to show.
+   * Must be a valid option from `views` list
+   * @default 'day'
+   */
+  openTo: propTypesExports.oneOf(['day', 'month', 'year']),
+
+  /**
+   * Force rendering in particular orientation.
+   */
+  orientation: propTypesExports.oneOf(['landscape', 'portrait']),
+
+  /**
+   * Make picker read only.
+   * @default false
+   */
+  readOnly: propTypesExports.bool,
+
+  /**
+   * Disable heavy animations.
+   * @default typeof navigator !== 'undefined' && /(android)/i.test(navigator.userAgent)
+   */
+  reduceAnimations: propTypesExports.bool,
+
+  /**
+   * Custom renderer for day. Check the [PickersDay](https://mui.com/x/api/date-pickers/pickers-day/) component.
+   * @template TDate
+   * @param {TDate} day The day to render.
+   * @param {Array<TDate | null>} selectedDays The days currently selected.
+   * @param {PickersDayProps<TDate>} pickersDayProps The props of the day to render.
+   * @returns {JSX.Element} The element representing the day.
+   */
+  renderDay: propTypesExports.func,
+
+  /**
+   * The `renderInput` prop allows you to customize the rendered input.
+   * The `props` argument of this render prop contains props of [TextField](https://mui.com/material-ui/api/text-field/#props) that you need to forward.
+   * Pay specific attention to the `ref` and `inputProps` keys.
+   * @example ```jsx
+   * renderInput={props => <TextField {...props} />}
+   * ````
+   * @param {MuiTextFieldPropsType} props The props of the input.
+   * @returns {React.ReactNode} The node to render as the input.
+   */
+  renderInput: propTypesExports.func.isRequired,
+
+  /**
+   * Component displaying when passed `loading` true.
+   * @returns {React.ReactNode} The node to render when loading.
+   * @default () => <span data-mui-test="loading-progress">...</span>
+   */
+  renderLoading: propTypesExports.func,
+
+  /**
+   * Custom formatter to be passed into Rifm component.
+   * @param {string} str The un-formatted string.
+   * @returns {string} The formatted string.
+   */
+  rifmFormatter: propTypesExports.func,
+
+  /**
+   * Right arrow icon aria-label text.
+   * @deprecated
+   */
+  rightArrowButtonText: propTypesExports.string,
+
+  /**
+   * Disable specific date. @DateIOType
+   * @template TDate
+   * @param {TDate} day The date to test.
+   * @returns {boolean} Returns `true` if the date should be disabled.
+   */
+  shouldDisableDate: propTypesExports.func,
+
+  /**
+   * Disable specific months dynamically.
+   * Works like `shouldDisableDate` but for month selection view @DateIOType.
+   * @template TDate
+   * @param {TDate} month The month to check.
+   * @returns {boolean} If `true` the month will be disabled.
+   */
+  shouldDisableMonth: propTypesExports.func,
+
+  /**
+   * Disable specific years dynamically.
+   * Works like `shouldDisableDate` but for year selection view @DateIOType.
+   * @template TDate
+   * @param {TDate} year The year to test.
+   * @returns {boolean} Returns `true` if the year should be disabled.
+   */
+  shouldDisableYear: propTypesExports.func,
+
+  /**
+   * If `true`, days that have `outsideCurrentMonth={true}` are displayed.
+   * @default false
+   */
+  showDaysOutsideCurrentMonth: propTypesExports.bool,
+
+  /**
+   * If `true`, show the toolbar even in desktop mode.
+   */
+  showToolbar: propTypesExports.bool,
+
+  /**
+   * Component that will replace default toolbar renderer.
+   * @default DatePickerToolbar
+   */
+  ToolbarComponent: propTypesExports.elementType,
+
+  /**
+   * Date format, that is displaying in toolbar.
+   */
+  toolbarFormat: propTypesExports.string,
+
+  /**
+   * Mobile picker date value placeholder, displaying if `value` === `null`.
+   * @default '–'
+   */
+  toolbarPlaceholder: propTypesExports.node,
+
+  /**
+   * Mobile picker title, displaying in the toolbar.
+   * @default 'Select date'
+   */
+  toolbarTitle: propTypesExports.node,
+
+  /**
+   * The value of the picker.
+   */
+  value: propTypesExports.any,
+
+  /**
+   * Array of views to show.
+   * @default ['year', 'day']
+   */
+  views: propTypesExports.arrayOf(propTypesExports.oneOf(['day', 'month', 'year']).isRequired)
+} : void 0;
+
+function toInteger(dirtyNumber) {
+  if (dirtyNumber === null || dirtyNumber === true || dirtyNumber === false) {
+    return NaN;
+  }
+
+  var number = Number(dirtyNumber);
+
+  if (isNaN(number)) {
+    return number;
+  }
+
+  return number < 0 ? Math.ceil(number) : Math.floor(number);
+}
+
+function requiredArgs(required, args) {
+  if (args.length < required) {
+    throw new TypeError(required + ' argument' + (required > 1 ? 's' : '') + ' required, but only ' + args.length + ' present');
+  }
+}
+
+function _typeof$y(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$y = function _typeof(obj) { return typeof obj; }; } else { _typeof$y = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$y(obj); }
+/**
+ * @name toDate
+ * @category Common Helpers
+ * @summary Convert the given argument to an instance of Date.
+ *
+ * @description
+ * Convert the given argument to an instance of Date.
+ *
+ * If the argument is an instance of Date, the function returns its clone.
+ *
+ * If the argument is a number, it is treated as a timestamp.
+ *
+ * If the argument is none of the above, the function returns Invalid Date.
+ *
+ * **Note**: *all* Date arguments passed to any *date-fns* function is processed by `toDate`.
+ *
+ * @param {Date|Number} argument - the value to convert
+ * @returns {Date} the parsed date in the local time zone
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Clone the date:
+ * const result = toDate(new Date(2014, 1, 11, 11, 30, 30))
+ * //=> Tue Feb 11 2014 11:30:30
+ *
+ * @example
+ * // Convert the timestamp to date:
+ * const result = toDate(1392098430000)
+ * //=> Tue Feb 11 2014 11:30:30
+ */
+
+function toDate(argument) {
+  requiredArgs(1, arguments);
+  var argStr = Object.prototype.toString.call(argument); // Clone the date
+
+  if (argument instanceof Date || _typeof$y(argument) === 'object' && argStr === '[object Date]') {
+    // Prevent the date to lose the milliseconds when passed to new Date() in IE10
+    return new Date(argument.getTime());
+  } else if (typeof argument === 'number' || argStr === '[object Number]') {
+    return new Date(argument);
+  } else {
+    if ((typeof argument === 'string' || argStr === '[object String]') && typeof console !== 'undefined') {
+      // eslint-disable-next-line no-console
+      console.warn("Starting with v2.0.0-beta.1 date-fns doesn't accept strings as date arguments. Please use `parseISO` to parse strings. See: https://github.com/date-fns/date-fns/blob/master/docs/upgradeGuide.md#string-arguments"); // eslint-disable-next-line no-console
+
+      console.warn(new Error().stack);
+    }
+
+    return new Date(NaN);
+  }
+}
+
+/**
+ * @name addDays
+ * @category Day Helpers
+ * @summary Add the specified number of days to the given date.
+ *
+ * @description
+ * Add the specified number of days to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of days to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} - the new date with the days added
+ * @throws {TypeError} - 2 arguments required
+ *
+ * @example
+ * // Add 10 days to 1 September 2014:
+ * const result = addDays(new Date(2014, 8, 1), 10)
+ * //=> Thu Sep 11 2014 00:00:00
+ */
+
+function addDays(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var amount = toInteger(dirtyAmount);
+
+  if (isNaN(amount)) {
+    return new Date(NaN);
+  }
+
+  if (!amount) {
+    // If 0 days, no-op to avoid changing times in the hour before end of DST
+    return date;
+  }
+
+  date.setDate(date.getDate() + amount);
+  return date;
+}
+
+/**
+ * @name addMilliseconds
+ * @category Millisecond Helpers
+ * @summary Add the specified number of milliseconds to the given date.
+ *
+ * @description
+ * Add the specified number of milliseconds to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of milliseconds to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the milliseconds added
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Add 750 milliseconds to 10 July 2014 12:45:30.000:
+ * const result = addMilliseconds(new Date(2014, 6, 10, 12, 45, 30, 0), 750)
+ * //=> Thu Jul 10 2014 12:45:30.750
+ */
+
+function addMilliseconds(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var timestamp = toDate(dirtyDate).getTime();
+  var amount = toInteger(dirtyAmount);
+  return new Date(timestamp + amount);
+}
+
+/**
+ * @name addSeconds
+ * @category Second Helpers
+ * @summary Add the specified number of seconds to the given date.
+ *
+ * @description
+ * Add the specified number of seconds to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of seconds to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the seconds added
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Add 30 seconds to 10 July 2014 12:45:00:
+ * const result = addSeconds(new Date(2014, 6, 10, 12, 45, 0), 30)
+ * //=> Thu Jul 10 2014 12:45:30
+ */
+
+function addSeconds(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var amount = toInteger(dirtyAmount);
+  return addMilliseconds(dirtyDate, amount * 1000);
+}
+
+var MILLISECONDS_IN_MINUTE = 60000;
+/**
+ * @name addMinutes
+ * @category Minute Helpers
+ * @summary Add the specified number of minutes to the given date.
+ *
+ * @description
+ * Add the specified number of minutes to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of minutes to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the minutes added
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Add 30 minutes to 10 July 2014 12:00:00:
+ * const result = addMinutes(new Date(2014, 6, 10, 12, 0), 30)
+ * //=> Thu Jul 10 2014 12:30:00
+ */
+
+function addMinutes(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var amount = toInteger(dirtyAmount);
+  return addMilliseconds(dirtyDate, amount * MILLISECONDS_IN_MINUTE);
+}
+
+var MILLISECONDS_IN_HOUR = 3600000;
+/**
+ * @name addHours
+ * @category Hour Helpers
+ * @summary Add the specified number of hours to the given date.
+ *
+ * @description
+ * Add the specified number of hours to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of hours to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the hours added
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Add 2 hours to 10 July 2014 23:00:00:
+ * const result = addHours(new Date(2014, 6, 10, 23, 0), 2)
+ * //=> Fri Jul 11 2014 01:00:00
+ */
+
+function addHours(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var amount = toInteger(dirtyAmount);
+  return addMilliseconds(dirtyDate, amount * MILLISECONDS_IN_HOUR);
+}
+
+/**
+ * @name addWeeks
+ * @category Week Helpers
+ * @summary Add the specified number of weeks to the given date.
+ *
+ * @description
+ * Add the specified number of week to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of weeks to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the weeks added
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Add 4 weeks to 1 September 2014:
+ * const result = addWeeks(new Date(2014, 8, 1), 4)
+ * //=> Mon Sep 29 2014 00:00:00
+ */
+
+function addWeeks(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var amount = toInteger(dirtyAmount);
+  var days = amount * 7;
+  return addDays(dirtyDate, days);
+}
+
+/**
+ * @name addMonths
+ * @category Month Helpers
+ * @summary Add the specified number of months to the given date.
+ *
+ * @description
+ * Add the specified number of months to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of months to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the months added
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Add 5 months to 1 September 2014:
+ * const result = addMonths(new Date(2014, 8, 1), 5)
+ * //=> Sun Feb 01 2015 00:00:00
+ */
+
+function addMonths(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var amount = toInteger(dirtyAmount);
+
+  if (isNaN(amount)) {
+    return new Date(NaN);
+  }
+
+  if (!amount) {
+    // If 0 months, no-op to avoid changing times in the hour before end of DST
+    return date;
+  }
+
+  var dayOfMonth = date.getDate(); // The JS Date object supports date math by accepting out-of-bounds values for
+  // month, day, etc. For example, new Date(2020, 0, 0) returns 31 Dec 2019 and
+  // new Date(2020, 13, 1) returns 1 Feb 2021.  This is *almost* the behavior we
+  // want except that dates will wrap around the end of a month, meaning that
+  // new Date(2020, 13, 31) will return 3 Mar 2021 not 28 Feb 2021 as desired. So
+  // we'll default to the end of the desired month by adding 1 to the desired
+  // month and using a date of 0 to back up one day to the end of the desired
+  // month.
+
+  var endOfDesiredMonth = new Date(date.getTime());
+  endOfDesiredMonth.setMonth(date.getMonth() + amount + 1, 0);
+  var daysInMonth = endOfDesiredMonth.getDate();
+
+  if (dayOfMonth >= daysInMonth) {
+    // If we're already at the end of the month, then this is the correct date
+    // and we're done.
+    return endOfDesiredMonth;
+  } else {
+    // Otherwise, we now know that setting the original day-of-month value won't
+    // cause an overflow, so set the desired day-of-month. Note that we can't
+    // just set the date of `endOfDesiredMonth` because that object may have had
+    // its time changed in the unusual case where where a DST transition was on
+    // the last day of the month and its local time was in the hour skipped or
+    // repeated next to a DST transition.  So we use `date` instead which is
+    // guaranteed to still have the original time.
+    date.setFullYear(endOfDesiredMonth.getFullYear(), endOfDesiredMonth.getMonth(), dayOfMonth);
+    return date;
+  }
+}
+
+/**
+ * @name addYears
+ * @category Year Helpers
+ * @summary Add the specified number of years to the given date.
+ *
+ * @description
+ * Add the specified number of years to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of years to be added. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the years added
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Add 5 years to 1 September 2014:
+ * const result = addYears(new Date(2014, 8, 1), 5)
+ * //=> Sun Sep 01 2019 00:00:00
+ */
+
+function addYears(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var amount = toInteger(dirtyAmount);
+  return addMonths(dirtyDate, amount * 12);
+}
+
+/**
+ * @name differenceInCalendarYears
+ * @category Year Helpers
+ * @summary Get the number of calendar years between the given dates.
+ *
+ * @description
+ * Get the number of calendar years between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @returns {Number} the number of calendar years
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many calendar years are between 31 December 2013 and 11 February 2015?
+ * const result = differenceInCalendarYears(
+ *   new Date(2015, 1, 11),
+ *   new Date(2013, 11, 31)
+ * )
+ * //=> 2
+ */
+
+function differenceInCalendarYears(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  return dateLeft.getFullYear() - dateRight.getFullYear();
+}
+
+/**
+ * @name compareAsc
+ * @category Common Helpers
+ * @summary Compare the two dates and return -1, 0 or 1.
+ *
+ * @description
+ * Compare the two dates and return 1 if the first date is after the second,
+ * -1 if the first date is before the second or 0 if dates are equal.
+ *
+ * @param {Date|Number} dateLeft - the first date to compare
+ * @param {Date|Number} dateRight - the second date to compare
+ * @returns {Number} the result of the comparison
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Compare 11 February 1987 and 10 July 1989:
+ * const result = compareAsc(new Date(1987, 1, 11), new Date(1989, 6, 10))
+ * //=> -1
+ *
+ * @example
+ * // Sort the array of dates:
+ * const result = [
+ *   new Date(1995, 6, 2),
+ *   new Date(1987, 1, 11),
+ *   new Date(1989, 6, 10)
+ * ].sort(compareAsc)
+ * //=> [
+ * //   Wed Feb 11 1987 00:00:00,
+ * //   Mon Jul 10 1989 00:00:00,
+ * //   Sun Jul 02 1995 00:00:00
+ * // ]
+ */
+
+function compareAsc(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  var diff = dateLeft.getTime() - dateRight.getTime();
+
+  if (diff < 0) {
+    return -1;
+  } else if (diff > 0) {
+    return 1; // Return 0 if diff is 0; return NaN if diff is NaN
+  } else {
+    return diff;
+  }
+}
+
+/**
+ * @name differenceInYears
+ * @category Year Helpers
+ * @summary Get the number of full years between the given dates.
+ *
+ * @description
+ * Get the number of full years between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @returns {Number} the number of full years
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many full years are between 31 December 2013 and 11 February 2015?
+ * const result = differenceInYears(new Date(2015, 1, 11), new Date(2013, 11, 31))
+ * //=> 1
+ */
+
+function differenceInYears(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  var sign = compareAsc(dateLeft, dateRight);
+  var difference = Math.abs(differenceInCalendarYears(dateLeft, dateRight)); // Set both dates to a valid leap year for accurate comparison when dealing
+  // with leap days
+
+  dateLeft.setFullYear(1584);
+  dateRight.setFullYear(1584); // Math.abs(diff in full years - diff in calendar years) === 1 if last calendar year is not full
+  // If so, result must be decreased by 1 in absolute value
+
+  var isLastYearNotFull = compareAsc(dateLeft, dateRight) === -sign;
+  var result = sign * (difference - Number(isLastYearNotFull)); // Prevent negative zero
+
+  return result === 0 ? 0 : result;
+}
+
+/**
+ * @name differenceInCalendarMonths
+ * @category Month Helpers
+ * @summary Get the number of calendar months between the given dates.
+ *
+ * @description
+ * Get the number of calendar months between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @returns {Number} the number of calendar months
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many calendar months are between 31 January 2014 and 1 September 2014?
+ * const result = differenceInCalendarMonths(
+ *   new Date(2014, 8, 1),
+ *   new Date(2014, 0, 31)
+ * )
+ * //=> 8
+ */
+
+function differenceInCalendarMonths(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  var yearDiff = dateLeft.getFullYear() - dateRight.getFullYear();
+  var monthDiff = dateLeft.getMonth() - dateRight.getMonth();
+  return yearDiff * 12 + monthDiff;
+}
+
+/**
+ * @name endOfDay
+ * @category Day Helpers
+ * @summary Return the end of a day for the given date.
+ *
+ * @description
+ * Return the end of a day for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @returns {Date} the end of a day
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // The end of a day for 2 September 2014 11:55:00:
+ * const result = endOfDay(new Date(2014, 8, 2, 11, 55, 0))
+ * //=> Tue Sep 02 2014 23:59:59.999
+ */
+
+function endOfDay(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+/**
+ * @name endOfMonth
+ * @category Month Helpers
+ * @summary Return the end of a month for the given date.
+ *
+ * @description
+ * Return the end of a month for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @returns {Date} the end of a month
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // The end of a month for 2 September 2014 11:55:00:
+ * const result = endOfMonth(new Date(2014, 8, 2, 11, 55, 0))
+ * //=> Tue Sep 30 2014 23:59:59.999
+ */
+
+function endOfMonth(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var month = date.getMonth();
+  date.setFullYear(date.getFullYear(), month + 1, 0);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+/**
+ * @name isLastDayOfMonth
+ * @category Month Helpers
+ * @summary Is the given date the last day of a month?
+ *
+ * @description
+ * Is the given date the last day of a month?
+ *
+ * @param {Date|Number} date - the date to check
+ * @returns {Boolean} the date is the last day of a month
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Is 28 February 2014 the last day of a month?
+ * const result = isLastDayOfMonth(new Date(2014, 1, 28))
+ * //=> true
+ */
+
+function isLastDayOfMonth(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  return endOfDay(date).getTime() === endOfMonth(date).getTime();
+}
+
+/**
+ * @name differenceInMonths
+ * @category Month Helpers
+ * @summary Get the number of full months between the given dates.
+ *
+ * @description
+ * Get the number of full months between the given dates using trunc as a default rounding method.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @returns {Number} the number of full months
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many full months are between 31 January 2014 and 1 September 2014?
+ * const result = differenceInMonths(new Date(2014, 8, 1), new Date(2014, 0, 31))
+ * //=> 7
+ */
+
+function differenceInMonths(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  var sign = compareAsc(dateLeft, dateRight);
+  var difference = Math.abs(differenceInCalendarMonths(dateLeft, dateRight));
+  var result; // Check for the difference of less than month
+
+  if (difference < 1) {
+    result = 0;
+  } else {
+    if (dateLeft.getMonth() === 1 && dateLeft.getDate() > 27) {
+      // This will check if the date is end of Feb and assign a higher end of month date
+      // to compare it with Jan
+      dateLeft.setDate(30);
+    }
+
+    dateLeft.setMonth(dateLeft.getMonth() - sign * difference); // Math.abs(diff in full months - diff in calendar months) === 1 if last calendar month is not full
+    // If so, result must be decreased by 1 in absolute value
+
+    var isLastMonthNotFull = compareAsc(dateLeft, dateRight) === -sign; // Check for cases of one full calendar month
+
+    if (isLastDayOfMonth(toDate(dirtyDateLeft)) && difference === 1 && compareAsc(dirtyDateLeft, dateRight) === 1) {
+      isLastMonthNotFull = false;
+    }
+
+    result = sign * (difference - Number(isLastMonthNotFull));
+  } // Prevent negative zero
+
+
+  return result === 0 ? 0 : result;
+}
+
+var roundingMap = {
+  ceil: Math.ceil,
+  round: Math.round,
+  floor: Math.floor,
+  trunc: function trunc(value) {
+    return value < 0 ? Math.ceil(value) : Math.floor(value);
+  } // Math.trunc is not supported by IE
+
+};
+var defaultRoundingMethod = 'trunc';
+function getRoundingMethod(method) {
+  return method ? roundingMap[method] : roundingMap[defaultRoundingMethod];
+}
+
+/**
+ * @name differenceInQuarters
+ * @category Quarter Helpers
+ * @summary Get the number of quarters between the given dates.
+ *
+ * @description
+ * Get the number of quarters between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @param {Object} [options] - an object with options.
+ * @param {String} [options.roundingMethod='trunc'] - a rounding method (`ceil`, `floor`, `round` or `trunc`)
+ * @returns {Number} the number of full quarters
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many full quarters are between 31 December 2013 and 2 July 2014?
+ * const result = differenceInQuarters(new Date(2014, 6, 2), new Date(2013, 11, 31))
+ * //=> 2
+ */
+
+function differenceInQuarters(dateLeft, dateRight, options) {
+  requiredArgs(2, arguments);
+  var diff = differenceInMonths(dateLeft, dateRight) / 3;
+  return getRoundingMethod(options === null || options === void 0 ? void 0 : options.roundingMethod)(diff);
+}
+
+/**
+ * Google Chrome as of 67.0.3396.87 introduced timezones with offset that includes seconds.
+ * They usually appear for dates that denote time before the timezones were introduced
+ * (e.g. for 'Europe/Prague' timezone the offset is GMT+00:57:44 before 1 October 1891
+ * and GMT+01:00:00 after that date)
+ *
+ * Date#getTimezoneOffset returns the offset in minutes and would return 57 for the example above,
+ * which would lead to incorrect calculations.
+ *
+ * This function returns the timezone offset in milliseconds that takes seconds in account.
+ */
+function getTimezoneOffsetInMilliseconds(date) {
+  var utcDate = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate(), date.getHours(), date.getMinutes(), date.getSeconds(), date.getMilliseconds()));
+  utcDate.setUTCFullYear(date.getFullYear());
+  return date.getTime() - utcDate.getTime();
+}
+
+/**
+ * @name startOfDay
+ * @category Day Helpers
+ * @summary Return the start of a day for the given date.
+ *
+ * @description
+ * Return the start of a day for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @returns {Date} the start of a day
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // The start of a day for 2 September 2014 11:55:00:
+ * const result = startOfDay(new Date(2014, 8, 2, 11, 55, 0))
+ * //=> Tue Sep 02 2014 00:00:00
+ */
+
+function startOfDay(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+var MILLISECONDS_IN_DAY$1 = 86400000;
+/**
+ * @name differenceInCalendarDays
+ * @category Day Helpers
+ * @summary Get the number of calendar days between the given dates.
+ *
+ * @description
+ * Get the number of calendar days between the given dates. This means that the times are removed
+ * from the dates and then the difference in days is calculated.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @returns {Number} the number of calendar days
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many calendar days are between
+ * // 2 July 2011 23:00:00 and 2 July 2012 00:00:00?
+ * const result = differenceInCalendarDays(
+ *   new Date(2012, 6, 2, 0, 0),
+ *   new Date(2011, 6, 2, 23, 0)
+ * )
+ * //=> 366
+ * // How many calendar days are between
+ * // 2 July 2011 23:59:00 and 3 July 2011 00:01:00?
+ * const result = differenceInCalendarDays(
+ *   new Date(2011, 6, 3, 0, 1),
+ *   new Date(2011, 6, 2, 23, 59)
+ * )
+ * //=> 1
+ */
+
+function differenceInCalendarDays(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var startOfDayLeft = startOfDay(dirtyDateLeft);
+  var startOfDayRight = startOfDay(dirtyDateRight);
+  var timestampLeft = startOfDayLeft.getTime() - getTimezoneOffsetInMilliseconds(startOfDayLeft);
+  var timestampRight = startOfDayRight.getTime() - getTimezoneOffsetInMilliseconds(startOfDayRight); // Round the number of days to the nearest integer
+  // because the number of milliseconds in a day is not constant
+  // (e.g. it's different in the day of the daylight saving time clock shift)
+
+  return Math.round((timestampLeft - timestampRight) / MILLISECONDS_IN_DAY$1);
+}
+
+// for accurate equality comparisons of UTC timestamps that end up
+// having the same representation in local time, e.g. one hour before
+// DST ends vs. the instant that DST ends.
+
+function compareLocalAsc(dateLeft, dateRight) {
+  var diff = dateLeft.getFullYear() - dateRight.getFullYear() || dateLeft.getMonth() - dateRight.getMonth() || dateLeft.getDate() - dateRight.getDate() || dateLeft.getHours() - dateRight.getHours() || dateLeft.getMinutes() - dateRight.getMinutes() || dateLeft.getSeconds() - dateRight.getSeconds() || dateLeft.getMilliseconds() - dateRight.getMilliseconds();
+
+  if (diff < 0) {
+    return -1;
+  } else if (diff > 0) {
+    return 1; // Return 0 if diff is 0; return NaN if diff is NaN
+  } else {
+    return diff;
+  }
+}
+/**
+ * @name differenceInDays
+ * @category Day Helpers
+ * @summary Get the number of full days between the given dates.
+ *
+ * @description
+ * Get the number of full day periods between two dates. Fractional days are
+ * truncated towards zero.
+ *
+ * One "full day" is the distance between a local time in one day to the same
+ * local time on the next or previous day. A full day can sometimes be less than
+ * or more than 24 hours if a daylight savings change happens between two dates.
+ *
+ * To ignore DST and only measure exact 24-hour periods, use this instead:
+ * `Math.floor(differenceInHours(dateLeft, dateRight)/24)|0`.
+ *
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @returns {Number} the number of full days according to the local timezone
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many full days are between
+ * // 2 July 2011 23:00:00 and 2 July 2012 00:00:00?
+ * const result = differenceInDays(
+ *   new Date(2012, 6, 2, 0, 0),
+ *   new Date(2011, 6, 2, 23, 0)
+ * )
+ * //=> 365
+ * // How many full days are between
+ * // 2 July 2011 23:59:00 and 3 July 2011 00:01:00?
+ * const result = differenceInDays(
+ *   new Date(2011, 6, 3, 0, 1),
+ *   new Date(2011, 6, 2, 23, 59)
+ * )
+ * //=> 0
+ * // How many full days are between
+ * // 1 March 2020 0:00 and 1 June 2020 0:00 ?
+ * // Note: because local time is used, the
+ * // result will always be 92 days, even in
+ * // time zones where DST starts and the
+ * // period has only 92*24-1 hours.
+ * const result = differenceInDays(
+ *   new Date(2020, 5, 1),
+ *   new Date(2020, 2, 1)
+ * )
+//=> 92
+ */
+
+
+function differenceInDays(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  var sign = compareLocalAsc(dateLeft, dateRight);
+  var difference = Math.abs(differenceInCalendarDays(dateLeft, dateRight));
+  dateLeft.setDate(dateLeft.getDate() - sign * difference); // Math.abs(diff in full days - diff in calendar days) === 1 if last calendar day is not full
+  // If so, result must be decreased by 1 in absolute value
+
+  var isLastDayNotFull = Number(compareLocalAsc(dateLeft, dateRight) === -sign);
+  var result = sign * (difference - isLastDayNotFull); // Prevent negative zero
+
+  return result === 0 ? 0 : result;
+}
+
+/**
+ * @name differenceInWeeks
+ * @category Week Helpers
+ * @summary Get the number of full weeks between the given dates.
+ *
+ * @description
+ * Get the number of full weeks between two dates. Fractional weeks are
+ * truncated towards zero by default.
+ *
+ * One "full week" is the distance between a local time in one day to the same
+ * local time 7 days earlier or later. A full week can sometimes be less than
+ * or more than 7*24 hours if a daylight savings change happens between two dates.
+ *
+ * To ignore DST and only measure exact 7*24-hour periods, use this instead:
+ * `Math.floor(differenceInHours(dateLeft, dateRight)/(7*24))|0`.
+ *
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @param {Object} [options] - an object with options.
+ * @param {String} [options.roundingMethod='trunc'] - a rounding method (`ceil`, `floor`, `round` or `trunc`)
+ * @returns {Number} the number of full weeks
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many full weeks are between 5 July 2014 and 20 July 2014?
+ * const result = differenceInWeeks(new Date(2014, 6, 20), new Date(2014, 6, 5))
+ * //=> 2
+ *
+ * // How many full weeks are between
+ * // 1 March 2020 0:00 and 6 June 2020 0:00 ?
+ * // Note: because local time is used, the
+ * // result will always be 8 weeks (54 days),
+ * // even if DST starts and the period has
+ * // only 54*24-1 hours.
+ * const result = differenceInWeeks(
+ *   new Date(2020, 5, 1),
+ *   new Date(2020, 2, 6)
+ * )
+ * //=> 8
+ */
+
+function differenceInWeeks(dateLeft, dateRight, options) {
+  requiredArgs(2, arguments);
+  var diff = differenceInDays(dateLeft, dateRight) / 7;
+  return getRoundingMethod(options === null || options === void 0 ? void 0 : options.roundingMethod)(diff);
+}
+
+/**
+ * Days in 1 week.
+ *
+ * @name daysInWeek
+ * @constant
+ * @type {number}
+ * @default
+ */
+/**
+ * Milliseconds in 1 minute
+ *
+ * @name millisecondsInMinute
+ * @constant
+ * @type {number}
+ * @default
+ */
+
+var millisecondsInMinute = 60000;
+/**
+ * Milliseconds in 1 hour
+ *
+ * @name millisecondsInHour
+ * @constant
+ * @type {number}
+ * @default
+ */
+
+var millisecondsInHour = 3600000;
+/**
+ * Milliseconds in 1 second
+ *
+ * @name millisecondsInSecond
+ * @constant
+ * @type {number}
+ * @default
+ */
+
+var millisecondsInSecond = 1000;
+
+/**
+ * @name differenceInMilliseconds
+ * @category Millisecond Helpers
+ * @summary Get the number of milliseconds between the given dates.
+ *
+ * @description
+ * Get the number of milliseconds between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @returns {Number} the number of milliseconds
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many milliseconds are between
+ * // 2 July 2014 12:30:20.600 and 2 July 2014 12:30:21.700?
+ * const result = differenceInMilliseconds(
+ *   new Date(2014, 6, 2, 12, 30, 21, 700),
+ *   new Date(2014, 6, 2, 12, 30, 20, 600)
+ * )
+ * //=> 1100
+ */
+
+function differenceInMilliseconds(dateLeft, dateRight) {
+  requiredArgs(2, arguments);
+  return toDate(dateLeft).getTime() - toDate(dateRight).getTime();
+}
+
+/**
+ * @name differenceInHours
+ * @category Hour Helpers
+ * @summary Get the number of hours between the given dates.
+ *
+ * @description
+ * Get the number of hours between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @param {Object} [options] - an object with options.
+ * @param {String} [options.roundingMethod='trunc'] - a rounding method (`ceil`, `floor`, `round` or `trunc`)
+ * @returns {Number} the number of hours
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many hours are between 2 July 2014 06:50:00 and 2 July 2014 19:00:00?
+ * const result = differenceInHours(
+ *   new Date(2014, 6, 2, 19, 0),
+ *   new Date(2014, 6, 2, 6, 50)
+ * )
+ * //=> 12
+ */
+
+function differenceInHours(dateLeft, dateRight, options) {
+  requiredArgs(2, arguments);
+  var diff = differenceInMilliseconds(dateLeft, dateRight) / millisecondsInHour;
+  return getRoundingMethod(options === null || options === void 0 ? void 0 : options.roundingMethod)(diff);
+}
+
+/**
+ * @name differenceInMinutes
+ * @category Minute Helpers
+ * @summary Get the number of minutes between the given dates.
+ *
+ * @description
+ * Get the signed number of full (rounded towards 0) minutes between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @param {Object} [options] - an object with options.
+ * @param {String} [options.roundingMethod='trunc'] - a rounding method (`ceil`, `floor`, `round` or `trunc`)
+ * @returns {Number} the number of minutes
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many minutes are between 2 July 2014 12:07:59 and 2 July 2014 12:20:00?
+ * const result = differenceInMinutes(
+ *   new Date(2014, 6, 2, 12, 20, 0),
+ *   new Date(2014, 6, 2, 12, 7, 59)
+ * )
+ * //=> 12
+ *
+ * @example
+ * // How many minutes are between 10:01:59 and 10:00:00
+ * const result = differenceInMinutes(
+ *   new Date(2000, 0, 1, 10, 0, 0),
+ *   new Date(2000, 0, 1, 10, 1, 59)
+ * )
+ * //=> -1
+ */
+
+function differenceInMinutes(dateLeft, dateRight, options) {
+  requiredArgs(2, arguments);
+  var diff = differenceInMilliseconds(dateLeft, dateRight) / millisecondsInMinute;
+  return getRoundingMethod(options === null || options === void 0 ? void 0 : options.roundingMethod)(diff);
+}
+
+/**
+ * @name differenceInSeconds
+ * @category Second Helpers
+ * @summary Get the number of seconds between the given dates.
+ *
+ * @description
+ * Get the number of seconds between the given dates.
+ *
+ * @param {Date|Number} dateLeft - the later date
+ * @param {Date|Number} dateRight - the earlier date
+ * @param {Object} [options] - an object with options.
+ * @param {String} [options.roundingMethod='trunc'] - a rounding method (`ceil`, `floor`, `round` or `trunc`)
+ * @returns {Number} the number of seconds
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // How many seconds are between
+ * // 2 July 2014 12:30:07.999 and 2 July 2014 12:30:20.000?
+ * const result = differenceInSeconds(
+ *   new Date(2014, 6, 2, 12, 30, 20, 0),
+ *   new Date(2014, 6, 2, 12, 30, 7, 999)
+ * )
+ * //=> 12
+ */
+
+function differenceInSeconds(dateLeft, dateRight, options) {
+  requiredArgs(2, arguments);
+  var diff = differenceInMilliseconds(dateLeft, dateRight) / 1000;
+  return getRoundingMethod(options === null || options === void 0 ? void 0 : options.roundingMethod)(diff);
+}
+
+/**
+ * @name eachDayOfInterval
+ * @category Interval Helpers
+ * @summary Return the array of dates within the specified time interval.
+ *
+ * @description
+ * Return the array of dates within the specified time interval.
+ *
+ * @param {Interval} interval - the interval. See [Interval]{@link https://date-fns.org/docs/Interval}
+ * @param {Object} [options] - an object with options.
+ * @param {Number} [options.step=1] - the step to increment by. The value should be more than 1.
+ * @returns {Date[]} the array with starts of days from the day of the interval start to the day of the interval end
+ * @throws {TypeError} 1 argument required
+ * @throws {RangeError} `options.step` must be a number greater than 1
+ * @throws {RangeError} The start of an interval cannot be after its end
+ * @throws {RangeError} Date in interval cannot be `Invalid Date`
+ *
+ * @example
+ * // Each day between 6 October 2014 and 10 October 2014:
+ * const result = eachDayOfInterval({
+ *   start: new Date(2014, 9, 6),
+ *   end: new Date(2014, 9, 10)
+ * })
+ * //=> [
+ * //   Mon Oct 06 2014 00:00:00,
+ * //   Tue Oct 07 2014 00:00:00,
+ * //   Wed Oct 08 2014 00:00:00,
+ * //   Thu Oct 09 2014 00:00:00,
+ * //   Fri Oct 10 2014 00:00:00
+ * // ]
+ */
+
+function eachDayOfInterval(dirtyInterval, options) {
+  var _options$step;
+
+  requiredArgs(1, arguments);
+  var interval = dirtyInterval || {};
+  var startDate = toDate(interval.start);
+  var endDate = toDate(interval.end);
+  var endTime = endDate.getTime(); // Throw an exception if start date is after end date or if any date is `Invalid Date`
+
+  if (!(startDate.getTime() <= endTime)) {
+    throw new RangeError('Invalid interval');
+  }
+
+  var dates = [];
+  var currentDate = startDate;
+  currentDate.setHours(0, 0, 0, 0);
+  var step = Number((_options$step = options === null || options === void 0 ? void 0 : options.step) !== null && _options$step !== void 0 ? _options$step : 1);
+  if (step < 1 || isNaN(step)) throw new RangeError('`options.step` must be a number greater than 1');
+
+  while (currentDate.getTime() <= endTime) {
+    dates.push(toDate(currentDate));
+    currentDate.setDate(currentDate.getDate() + step);
+    currentDate.setHours(0, 0, 0, 0);
+  }
+
+  return dates;
+}
+
+var defaultOptions = {};
+function getDefaultOptions() {
+  return defaultOptions;
+}
+
+/**
+ * @name endOfWeek
+ * @category Week Helpers
+ * @summary Return the end of a week for the given date.
+ *
+ * @description
+ * Return the end of a week for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @param {Object} [options] - an object with options.
+ * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
+ * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
+ * @returns {Date} the end of a week
+ * @throws {TypeError} 1 argument required
+ * @throws {RangeError} `options.weekStartsOn` must be between 0 and 6
+ *
+ * @example
+ * // The end of a week for 2 September 2014 11:55:00:
+ * const result = endOfWeek(new Date(2014, 8, 2, 11, 55, 0))
+ * //=> Sat Sep 06 2014 23:59:59.999
+ *
+ * @example
+ * // If the week starts on Monday, the end of the week for 2 September 2014 11:55:00:
+ * const result = endOfWeek(new Date(2014, 8, 2, 11, 55, 0), { weekStartsOn: 1 })
+ * //=> Sun Sep 07 2014 23:59:59.999
+ */
+function endOfWeek(dirtyDate, options) {
+  var _ref, _ref2, _ref3, _options$weekStartsOn, _options$locale, _options$locale$optio, _defaultOptions$local, _defaultOptions$local2;
+
+  requiredArgs(1, arguments);
+  var defaultOptions = getDefaultOptions();
+  var weekStartsOn = toInteger((_ref = (_ref2 = (_ref3 = (_options$weekStartsOn = options === null || options === void 0 ? void 0 : options.weekStartsOn) !== null && _options$weekStartsOn !== void 0 ? _options$weekStartsOn : options === null || options === void 0 ? void 0 : (_options$locale = options.locale) === null || _options$locale === void 0 ? void 0 : (_options$locale$optio = _options$locale.options) === null || _options$locale$optio === void 0 ? void 0 : _options$locale$optio.weekStartsOn) !== null && _ref3 !== void 0 ? _ref3 : defaultOptions.weekStartsOn) !== null && _ref2 !== void 0 ? _ref2 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.weekStartsOn) !== null && _ref !== void 0 ? _ref : 0); // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
+
+  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
+    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
+  }
+
+  var date = toDate(dirtyDate);
+  var day = date.getDay();
+  var diff = (day < weekStartsOn ? -7 : 0) + 6 - (day - weekStartsOn);
+  date.setDate(date.getDate() + diff);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+/**
+ * @name endOfYear
+ * @category Year Helpers
+ * @summary Return the end of a year for the given date.
+ *
+ * @description
+ * Return the end of a year for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @returns {Date} the end of a year
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // The end of a year for 2 September 2014 11:55:00:
+ * const result = endOfYear(new Date(2014, 8, 2, 11, 55, 00))
+ * //=> Wed Dec 31 2014 23:59:59.999
+ */
+
+function endOfYear(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var year = date.getFullYear();
+  date.setFullYear(year + 1, 0, 0);
+  date.setHours(23, 59, 59, 999);
+  return date;
+}
+
+function _typeof$x(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$x = function _typeof(obj) { return typeof obj; }; } else { _typeof$x = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$x(obj); }
+/**
+ * @name isDate
+ * @category Common Helpers
+ * @summary Is the given value a date?
+ *
+ * @description
+ * Returns true if the given value is an instance of Date. The function works for dates transferred across iframes.
+ *
+ * @param {*} value - the value to check
+ * @returns {boolean} true if the given value is a date
+ * @throws {TypeError} 1 arguments required
+ *
+ * @example
+ * // For a valid date:
+ * const result = isDate(new Date())
+ * //=> true
+ *
+ * @example
+ * // For an invalid date:
+ * const result = isDate(new Date(NaN))
+ * //=> true
+ *
+ * @example
+ * // For some value:
+ * const result = isDate('2014-02-31')
+ * //=> false
+ *
+ * @example
+ * // For an object:
+ * const result = isDate({})
+ * //=> false
+ */
+
+function isDate(value) {
+  requiredArgs(1, arguments);
+  return value instanceof Date || _typeof$x(value) === 'object' && Object.prototype.toString.call(value) === '[object Date]';
+}
+
+/**
+ * @name isValid
+ * @category Common Helpers
+ * @summary Is the given date valid?
+ *
+ * @description
+ * Returns false if argument is Invalid Date and true otherwise.
+ * Argument is converted to Date using `toDate`. See [toDate]{@link https://date-fns.org/docs/toDate}
+ * Invalid Date is a Date, whose time value is NaN.
+ *
+ * Time value of Date: http://es5.github.io/#x15.9.1.1
+ *
+ * @param {*} date - the date to check
+ * @returns {Boolean} the date is valid
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // For the valid date:
+ * const result = isValid(new Date(2014, 1, 31))
+ * //=> true
+ *
+ * @example
+ * // For the value, convertable into a date:
+ * const result = isValid(1393804800000)
+ * //=> true
+ *
+ * @example
+ * // For the invalid date:
+ * const result = isValid(new Date(''))
+ * //=> false
+ */
+
+function isValid(dirtyDate) {
+  requiredArgs(1, arguments);
+
+  if (!isDate(dirtyDate) && typeof dirtyDate !== 'number') {
+    return false;
+  }
+
+  var date = toDate(dirtyDate);
+  return !isNaN(Number(date));
+}
+
+/**
+ * @name subMilliseconds
+ * @category Millisecond Helpers
+ * @summary Subtract the specified number of milliseconds from the given date.
+ *
+ * @description
+ * Subtract the specified number of milliseconds from the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} amount - the amount of milliseconds to be subtracted. Positive decimals will be rounded using `Math.floor`, decimals less than zero will be rounded using `Math.ceil`.
+ * @returns {Date} the new date with the milliseconds subtracted
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Subtract 750 milliseconds from 10 July 2014 12:45:30.000:
+ * const result = subMilliseconds(new Date(2014, 6, 10, 12, 45, 30, 0), 750)
+ * //=> Thu Jul 10 2014 12:45:29.250
+ */
+
+function subMilliseconds(dirtyDate, dirtyAmount) {
+  requiredArgs(2, arguments);
+  var amount = toInteger(dirtyAmount);
+  return addMilliseconds(dirtyDate, -amount);
+}
+
+var MILLISECONDS_IN_DAY = 86400000;
+function getUTCDayOfYear(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var timestamp = date.getTime();
+  date.setUTCMonth(0, 1);
+  date.setUTCHours(0, 0, 0, 0);
+  var startOfYearTimestamp = date.getTime();
+  var difference = timestamp - startOfYearTimestamp;
+  return Math.floor(difference / MILLISECONDS_IN_DAY) + 1;
+}
+
+function startOfUTCISOWeek(dirtyDate) {
+  requiredArgs(1, arguments);
+  var weekStartsOn = 1;
+  var date = toDate(dirtyDate);
+  var day = date.getUTCDay();
+  var diff = (day < weekStartsOn ? 7 : 0) + day - weekStartsOn;
+  date.setUTCDate(date.getUTCDate() - diff);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
+function getUTCISOWeekYear(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var year = date.getUTCFullYear();
+  var fourthOfJanuaryOfNextYear = new Date(0);
+  fourthOfJanuaryOfNextYear.setUTCFullYear(year + 1, 0, 4);
+  fourthOfJanuaryOfNextYear.setUTCHours(0, 0, 0, 0);
+  var startOfNextYear = startOfUTCISOWeek(fourthOfJanuaryOfNextYear);
+  var fourthOfJanuaryOfThisYear = new Date(0);
+  fourthOfJanuaryOfThisYear.setUTCFullYear(year, 0, 4);
+  fourthOfJanuaryOfThisYear.setUTCHours(0, 0, 0, 0);
+  var startOfThisYear = startOfUTCISOWeek(fourthOfJanuaryOfThisYear);
+
+  if (date.getTime() >= startOfNextYear.getTime()) {
+    return year + 1;
+  } else if (date.getTime() >= startOfThisYear.getTime()) {
+    return year;
+  } else {
+    return year - 1;
+  }
+}
+
+function startOfUTCISOWeekYear(dirtyDate) {
+  requiredArgs(1, arguments);
+  var year = getUTCISOWeekYear(dirtyDate);
+  var fourthOfJanuary = new Date(0);
+  fourthOfJanuary.setUTCFullYear(year, 0, 4);
+  fourthOfJanuary.setUTCHours(0, 0, 0, 0);
+  var date = startOfUTCISOWeek(fourthOfJanuary);
+  return date;
+}
+
+var MILLISECONDS_IN_WEEK$1 = 604800000;
+function getUTCISOWeek(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var diff = startOfUTCISOWeek(date).getTime() - startOfUTCISOWeekYear(date).getTime(); // Round the number of days to the nearest integer
+  // because the number of milliseconds in a week is not constant
+  // (e.g. it's different in the week of the daylight saving time clock shift)
+
+  return Math.round(diff / MILLISECONDS_IN_WEEK$1) + 1;
+}
+
+function startOfUTCWeek(dirtyDate, options) {
+  var _ref, _ref2, _ref3, _options$weekStartsOn, _options$locale, _options$locale$optio, _defaultOptions$local, _defaultOptions$local2;
+
+  requiredArgs(1, arguments);
+  var defaultOptions = getDefaultOptions();
+  var weekStartsOn = toInteger((_ref = (_ref2 = (_ref3 = (_options$weekStartsOn = options === null || options === void 0 ? void 0 : options.weekStartsOn) !== null && _options$weekStartsOn !== void 0 ? _options$weekStartsOn : options === null || options === void 0 ? void 0 : (_options$locale = options.locale) === null || _options$locale === void 0 ? void 0 : (_options$locale$optio = _options$locale.options) === null || _options$locale$optio === void 0 ? void 0 : _options$locale$optio.weekStartsOn) !== null && _ref3 !== void 0 ? _ref3 : defaultOptions.weekStartsOn) !== null && _ref2 !== void 0 ? _ref2 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.weekStartsOn) !== null && _ref !== void 0 ? _ref : 0); // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
+
+  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
+    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
+  }
+
+  var date = toDate(dirtyDate);
+  var day = date.getUTCDay();
+  var diff = (day < weekStartsOn ? 7 : 0) + day - weekStartsOn;
+  date.setUTCDate(date.getUTCDate() - diff);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
+}
+
+function getUTCWeekYear(dirtyDate, options) {
+  var _ref, _ref2, _ref3, _options$firstWeekCon, _options$locale, _options$locale$optio, _defaultOptions$local, _defaultOptions$local2;
+
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var year = date.getUTCFullYear();
+  var defaultOptions = getDefaultOptions();
+  var firstWeekContainsDate = toInteger((_ref = (_ref2 = (_ref3 = (_options$firstWeekCon = options === null || options === void 0 ? void 0 : options.firstWeekContainsDate) !== null && _options$firstWeekCon !== void 0 ? _options$firstWeekCon : options === null || options === void 0 ? void 0 : (_options$locale = options.locale) === null || _options$locale === void 0 ? void 0 : (_options$locale$optio = _options$locale.options) === null || _options$locale$optio === void 0 ? void 0 : _options$locale$optio.firstWeekContainsDate) !== null && _ref3 !== void 0 ? _ref3 : defaultOptions.firstWeekContainsDate) !== null && _ref2 !== void 0 ? _ref2 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.firstWeekContainsDate) !== null && _ref !== void 0 ? _ref : 1); // Test if weekStartsOn is between 1 and 7 _and_ is not NaN
+
+  if (!(firstWeekContainsDate >= 1 && firstWeekContainsDate <= 7)) {
+    throw new RangeError('firstWeekContainsDate must be between 1 and 7 inclusively');
+  }
+
+  var firstWeekOfNextYear = new Date(0);
+  firstWeekOfNextYear.setUTCFullYear(year + 1, 0, firstWeekContainsDate);
+  firstWeekOfNextYear.setUTCHours(0, 0, 0, 0);
+  var startOfNextYear = startOfUTCWeek(firstWeekOfNextYear, options);
+  var firstWeekOfThisYear = new Date(0);
+  firstWeekOfThisYear.setUTCFullYear(year, 0, firstWeekContainsDate);
+  firstWeekOfThisYear.setUTCHours(0, 0, 0, 0);
+  var startOfThisYear = startOfUTCWeek(firstWeekOfThisYear, options);
+
+  if (date.getTime() >= startOfNextYear.getTime()) {
+    return year + 1;
+  } else if (date.getTime() >= startOfThisYear.getTime()) {
+    return year;
+  } else {
+    return year - 1;
+  }
+}
+
+function startOfUTCWeekYear(dirtyDate, options) {
+  var _ref, _ref2, _ref3, _options$firstWeekCon, _options$locale, _options$locale$optio, _defaultOptions$local, _defaultOptions$local2;
+
+  requiredArgs(1, arguments);
+  var defaultOptions = getDefaultOptions();
+  var firstWeekContainsDate = toInteger((_ref = (_ref2 = (_ref3 = (_options$firstWeekCon = options === null || options === void 0 ? void 0 : options.firstWeekContainsDate) !== null && _options$firstWeekCon !== void 0 ? _options$firstWeekCon : options === null || options === void 0 ? void 0 : (_options$locale = options.locale) === null || _options$locale === void 0 ? void 0 : (_options$locale$optio = _options$locale.options) === null || _options$locale$optio === void 0 ? void 0 : _options$locale$optio.firstWeekContainsDate) !== null && _ref3 !== void 0 ? _ref3 : defaultOptions.firstWeekContainsDate) !== null && _ref2 !== void 0 ? _ref2 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.firstWeekContainsDate) !== null && _ref !== void 0 ? _ref : 1);
+  var year = getUTCWeekYear(dirtyDate, options);
+  var firstWeek = new Date(0);
+  firstWeek.setUTCFullYear(year, 0, firstWeekContainsDate);
+  firstWeek.setUTCHours(0, 0, 0, 0);
+  var date = startOfUTCWeek(firstWeek, options);
+  return date;
+}
+
+var MILLISECONDS_IN_WEEK = 604800000;
+function getUTCWeek(dirtyDate, options) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var diff = startOfUTCWeek(date, options).getTime() - startOfUTCWeekYear(date, options).getTime(); // Round the number of days to the nearest integer
+  // because the number of milliseconds in a week is not constant
+  // (e.g. it's different in the week of the daylight saving time clock shift)
+
+  return Math.round(diff / MILLISECONDS_IN_WEEK) + 1;
+}
+
+function addLeadingZeros(number, targetLength) {
+  var sign = number < 0 ? '-' : '';
+  var output = Math.abs(number).toString();
+
+  while (output.length < targetLength) {
+    output = '0' + output;
+  }
+
+  return sign + output;
+}
+
+/*
+ * |     | Unit                           |     | Unit                           |
+ * |-----|--------------------------------|-----|--------------------------------|
+ * |  a  | AM, PM                         |  A* |                                |
+ * |  d  | Day of month                   |  D  |                                |
+ * |  h  | Hour [1-12]                    |  H  | Hour [0-23]                    |
+ * |  m  | Minute                         |  M  | Month                          |
+ * |  s  | Second                         |  S  | Fraction of second             |
+ * |  y  | Year (abs)                     |  Y  |                                |
+ *
+ * Letters marked by * are not implemented but reserved by Unicode standard.
+ */
+
+var formatters$2 = {
+  // Year
+  y: function y(date, token) {
+    // From http://www.unicode.org/reports/tr35/tr35-31/tr35-dates.html#Date_Format_tokens
+    // | Year     |     y | yy |   yyy |  yyyy | yyyyy |
+    // |----------|-------|----|-------|-------|-------|
+    // | AD 1     |     1 | 01 |   001 |  0001 | 00001 |
+    // | AD 12    |    12 | 12 |   012 |  0012 | 00012 |
+    // | AD 123   |   123 | 23 |   123 |  0123 | 00123 |
+    // | AD 1234  |  1234 | 34 |  1234 |  1234 | 01234 |
+    // | AD 12345 | 12345 | 45 | 12345 | 12345 | 12345 |
+    var signedYear = date.getUTCFullYear(); // Returns 1 for 1 BC (which is year 0 in JavaScript)
+
+    var year = signedYear > 0 ? signedYear : 1 - signedYear;
+    return addLeadingZeros(token === 'yy' ? year % 100 : year, token.length);
+  },
+  // Month
+  M: function M(date, token) {
+    var month = date.getUTCMonth();
+    return token === 'M' ? String(month + 1) : addLeadingZeros(month + 1, 2);
+  },
+  // Day of the month
+  d: function d(date, token) {
+    return addLeadingZeros(date.getUTCDate(), token.length);
+  },
+  // AM or PM
+  a: function a(date, token) {
+    var dayPeriodEnumValue = date.getUTCHours() / 12 >= 1 ? 'pm' : 'am';
+
+    switch (token) {
+      case 'a':
+      case 'aa':
+        return dayPeriodEnumValue.toUpperCase();
+
+      case 'aaa':
+        return dayPeriodEnumValue;
+
+      case 'aaaaa':
+        return dayPeriodEnumValue[0];
+
+      case 'aaaa':
+      default:
+        return dayPeriodEnumValue === 'am' ? 'a.m.' : 'p.m.';
+    }
+  },
+  // Hour [1-12]
+  h: function h(date, token) {
+    return addLeadingZeros(date.getUTCHours() % 12 || 12, token.length);
+  },
+  // Hour [0-23]
+  H: function H(date, token) {
+    return addLeadingZeros(date.getUTCHours(), token.length);
+  },
+  // Minute
+  m: function m(date, token) {
+    return addLeadingZeros(date.getUTCMinutes(), token.length);
+  },
+  // Second
+  s: function s(date, token) {
+    return addLeadingZeros(date.getUTCSeconds(), token.length);
+  },
+  // Fraction of second
+  S: function S(date, token) {
+    var numberOfDigits = token.length;
+    var milliseconds = date.getUTCMilliseconds();
+    var fractionalSeconds = Math.floor(milliseconds * Math.pow(10, numberOfDigits - 3));
+    return addLeadingZeros(fractionalSeconds, token.length);
+  }
+};
+var lightFormatters = formatters$2;
+
+var dayPeriodEnum = {
+  am: 'am',
+  pm: 'pm',
+  midnight: 'midnight',
+  noon: 'noon',
+  morning: 'morning',
+  afternoon: 'afternoon',
+  evening: 'evening',
+  night: 'night'
+};
+
+/*
+ * |     | Unit                           |     | Unit                           |
+ * |-----|--------------------------------|-----|--------------------------------|
+ * |  a  | AM, PM                         |  A* | Milliseconds in day            |
+ * |  b  | AM, PM, noon, midnight         |  B  | Flexible day period            |
+ * |  c  | Stand-alone local day of week  |  C* | Localized hour w/ day period   |
+ * |  d  | Day of month                   |  D  | Day of year                    |
+ * |  e  | Local day of week              |  E  | Day of week                    |
+ * |  f  |                                |  F* | Day of week in month           |
+ * |  g* | Modified Julian day            |  G  | Era                            |
+ * |  h  | Hour [1-12]                    |  H  | Hour [0-23]                    |
+ * |  i! | ISO day of week                |  I! | ISO week of year               |
+ * |  j* | Localized hour w/ day period   |  J* | Localized hour w/o day period  |
+ * |  k  | Hour [1-24]                    |  K  | Hour [0-11]                    |
+ * |  l* | (deprecated)                   |  L  | Stand-alone month              |
+ * |  m  | Minute                         |  M  | Month                          |
+ * |  n  |                                |  N  |                                |
+ * |  o! | Ordinal number modifier        |  O  | Timezone (GMT)                 |
+ * |  p! | Long localized time            |  P! | Long localized date            |
+ * |  q  | Stand-alone quarter            |  Q  | Quarter                        |
+ * |  r* | Related Gregorian year         |  R! | ISO week-numbering year        |
+ * |  s  | Second                         |  S  | Fraction of second             |
+ * |  t! | Seconds timestamp              |  T! | Milliseconds timestamp         |
+ * |  u  | Extended year                  |  U* | Cyclic year                    |
+ * |  v* | Timezone (generic non-locat.)  |  V* | Timezone (location)            |
+ * |  w  | Local week of year             |  W* | Week of month                  |
+ * |  x  | Timezone (ISO-8601 w/o Z)      |  X  | Timezone (ISO-8601)            |
+ * |  y  | Year (abs)                     |  Y  | Local week-numbering year      |
+ * |  z  | Timezone (specific non-locat.) |  Z* | Timezone (aliases)             |
+ *
+ * Letters marked by * are not implemented but reserved by Unicode standard.
+ *
+ * Letters marked by ! are non-standard, but implemented by date-fns:
+ * - `o` modifies the previous token to turn it into an ordinal (see `format` docs)
+ * - `i` is ISO day of week. For `i` and `ii` is returns numeric ISO week days,
+ *   i.e. 7 for Sunday, 1 for Monday, etc.
+ * - `I` is ISO week of year, as opposed to `w` which is local week of year.
+ * - `R` is ISO week-numbering year, as opposed to `Y` which is local week-numbering year.
+ *   `R` is supposed to be used in conjunction with `I` and `i`
+ *   for universal ISO week-numbering date, whereas
+ *   `Y` is supposed to be used in conjunction with `w` and `e`
+ *   for week-numbering date specific to the locale.
+ * - `P` is long localized date format
+ * - `p` is long localized time format
+ */
+var formatters = {
+  // Era
+  G: function G(date, token, localize) {
+    var era = date.getUTCFullYear() > 0 ? 1 : 0;
+
+    switch (token) {
+      // AD, BC
+      case 'G':
+      case 'GG':
+      case 'GGG':
+        return localize.era(era, {
+          width: 'abbreviated'
+        });
+      // A, B
+
+      case 'GGGGG':
+        return localize.era(era, {
+          width: 'narrow'
+        });
+      // Anno Domini, Before Christ
+
+      case 'GGGG':
+      default:
+        return localize.era(era, {
+          width: 'wide'
+        });
+    }
+  },
+  // Year
+  y: function y(date, token, localize) {
+    // Ordinal number
+    if (token === 'yo') {
+      var signedYear = date.getUTCFullYear(); // Returns 1 for 1 BC (which is year 0 in JavaScript)
+
+      var year = signedYear > 0 ? signedYear : 1 - signedYear;
+      return localize.ordinalNumber(year, {
+        unit: 'year'
+      });
+    }
+
+    return lightFormatters.y(date, token);
+  },
+  // Local week-numbering year
+  Y: function Y(date, token, localize, options) {
+    var signedWeekYear = getUTCWeekYear(date, options); // Returns 1 for 1 BC (which is year 0 in JavaScript)
+
+    var weekYear = signedWeekYear > 0 ? signedWeekYear : 1 - signedWeekYear; // Two digit year
+
+    if (token === 'YY') {
+      var twoDigitYear = weekYear % 100;
+      return addLeadingZeros(twoDigitYear, 2);
+    } // Ordinal number
+
+
+    if (token === 'Yo') {
+      return localize.ordinalNumber(weekYear, {
+        unit: 'year'
+      });
+    } // Padding
+
+
+    return addLeadingZeros(weekYear, token.length);
+  },
+  // ISO week-numbering year
+  R: function R(date, token) {
+    var isoWeekYear = getUTCISOWeekYear(date); // Padding
+
+    return addLeadingZeros(isoWeekYear, token.length);
+  },
+  // Extended year. This is a single number designating the year of this calendar system.
+  // The main difference between `y` and `u` localizers are B.C. years:
+  // | Year | `y` | `u` |
+  // |------|-----|-----|
+  // | AC 1 |   1 |   1 |
+  // | BC 1 |   1 |   0 |
+  // | BC 2 |   2 |  -1 |
+  // Also `yy` always returns the last two digits of a year,
+  // while `uu` pads single digit years to 2 characters and returns other years unchanged.
+  u: function u(date, token) {
+    var year = date.getUTCFullYear();
+    return addLeadingZeros(year, token.length);
+  },
+  // Quarter
+  Q: function Q(date, token, localize) {
+    var quarter = Math.ceil((date.getUTCMonth() + 1) / 3);
+
+    switch (token) {
+      // 1, 2, 3, 4
+      case 'Q':
+        return String(quarter);
+      // 01, 02, 03, 04
+
+      case 'QQ':
+        return addLeadingZeros(quarter, 2);
+      // 1st, 2nd, 3rd, 4th
+
+      case 'Qo':
+        return localize.ordinalNumber(quarter, {
+          unit: 'quarter'
+        });
+      // Q1, Q2, Q3, Q4
+
+      case 'QQQ':
+        return localize.quarter(quarter, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+      // 1, 2, 3, 4 (narrow quarter; could be not numerical)
+
+      case 'QQQQQ':
+        return localize.quarter(quarter, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+      // 1st quarter, 2nd quarter, ...
+
+      case 'QQQQ':
+      default:
+        return localize.quarter(quarter, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // Stand-alone quarter
+  q: function q(date, token, localize) {
+    var quarter = Math.ceil((date.getUTCMonth() + 1) / 3);
+
+    switch (token) {
+      // 1, 2, 3, 4
+      case 'q':
+        return String(quarter);
+      // 01, 02, 03, 04
+
+      case 'qq':
+        return addLeadingZeros(quarter, 2);
+      // 1st, 2nd, 3rd, 4th
+
+      case 'qo':
+        return localize.ordinalNumber(quarter, {
+          unit: 'quarter'
+        });
+      // Q1, Q2, Q3, Q4
+
+      case 'qqq':
+        return localize.quarter(quarter, {
+          width: 'abbreviated',
+          context: 'standalone'
+        });
+      // 1, 2, 3, 4 (narrow quarter; could be not numerical)
+
+      case 'qqqqq':
+        return localize.quarter(quarter, {
+          width: 'narrow',
+          context: 'standalone'
+        });
+      // 1st quarter, 2nd quarter, ...
+
+      case 'qqqq':
+      default:
+        return localize.quarter(quarter, {
+          width: 'wide',
+          context: 'standalone'
+        });
+    }
+  },
+  // Month
+  M: function M(date, token, localize) {
+    var month = date.getUTCMonth();
+
+    switch (token) {
+      case 'M':
+      case 'MM':
+        return lightFormatters.M(date, token);
+      // 1st, 2nd, ..., 12th
+
+      case 'Mo':
+        return localize.ordinalNumber(month + 1, {
+          unit: 'month'
+        });
+      // Jan, Feb, ..., Dec
+
+      case 'MMM':
+        return localize.month(month, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+      // J, F, ..., D
+
+      case 'MMMMM':
+        return localize.month(month, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+      // January, February, ..., December
+
+      case 'MMMM':
+      default:
+        return localize.month(month, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // Stand-alone month
+  L: function L(date, token, localize) {
+    var month = date.getUTCMonth();
+
+    switch (token) {
+      // 1, 2, ..., 12
+      case 'L':
+        return String(month + 1);
+      // 01, 02, ..., 12
+
+      case 'LL':
+        return addLeadingZeros(month + 1, 2);
+      // 1st, 2nd, ..., 12th
+
+      case 'Lo':
+        return localize.ordinalNumber(month + 1, {
+          unit: 'month'
+        });
+      // Jan, Feb, ..., Dec
+
+      case 'LLL':
+        return localize.month(month, {
+          width: 'abbreviated',
+          context: 'standalone'
+        });
+      // J, F, ..., D
+
+      case 'LLLLL':
+        return localize.month(month, {
+          width: 'narrow',
+          context: 'standalone'
+        });
+      // January, February, ..., December
+
+      case 'LLLL':
+      default:
+        return localize.month(month, {
+          width: 'wide',
+          context: 'standalone'
+        });
+    }
+  },
+  // Local week of year
+  w: function w(date, token, localize, options) {
+    var week = getUTCWeek(date, options);
+
+    if (token === 'wo') {
+      return localize.ordinalNumber(week, {
+        unit: 'week'
+      });
+    }
+
+    return addLeadingZeros(week, token.length);
+  },
+  // ISO week of year
+  I: function I(date, token, localize) {
+    var isoWeek = getUTCISOWeek(date);
+
+    if (token === 'Io') {
+      return localize.ordinalNumber(isoWeek, {
+        unit: 'week'
+      });
+    }
+
+    return addLeadingZeros(isoWeek, token.length);
+  },
+  // Day of the month
+  d: function d(date, token, localize) {
+    if (token === 'do') {
+      return localize.ordinalNumber(date.getUTCDate(), {
+        unit: 'date'
+      });
+    }
+
+    return lightFormatters.d(date, token);
+  },
+  // Day of year
+  D: function D(date, token, localize) {
+    var dayOfYear = getUTCDayOfYear(date);
+
+    if (token === 'Do') {
+      return localize.ordinalNumber(dayOfYear, {
+        unit: 'dayOfYear'
+      });
+    }
+
+    return addLeadingZeros(dayOfYear, token.length);
+  },
+  // Day of week
+  E: function E(date, token, localize) {
+    var dayOfWeek = date.getUTCDay();
+
+    switch (token) {
+      // Tue
+      case 'E':
+      case 'EE':
+      case 'EEE':
+        return localize.day(dayOfWeek, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+      // T
+
+      case 'EEEEE':
+        return localize.day(dayOfWeek, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+      // Tu
+
+      case 'EEEEEE':
+        return localize.day(dayOfWeek, {
+          width: 'short',
+          context: 'formatting'
+        });
+      // Tuesday
+
+      case 'EEEE':
+      default:
+        return localize.day(dayOfWeek, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // Local day of week
+  e: function e(date, token, localize, options) {
+    var dayOfWeek = date.getUTCDay();
+    var localDayOfWeek = (dayOfWeek - options.weekStartsOn + 8) % 7 || 7;
+
+    switch (token) {
+      // Numerical value (Nth day of week with current locale or weekStartsOn)
+      case 'e':
+        return String(localDayOfWeek);
+      // Padded numerical value
+
+      case 'ee':
+        return addLeadingZeros(localDayOfWeek, 2);
+      // 1st, 2nd, ..., 7th
+
+      case 'eo':
+        return localize.ordinalNumber(localDayOfWeek, {
+          unit: 'day'
+        });
+
+      case 'eee':
+        return localize.day(dayOfWeek, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+      // T
+
+      case 'eeeee':
+        return localize.day(dayOfWeek, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+      // Tu
+
+      case 'eeeeee':
+        return localize.day(dayOfWeek, {
+          width: 'short',
+          context: 'formatting'
+        });
+      // Tuesday
+
+      case 'eeee':
+      default:
+        return localize.day(dayOfWeek, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // Stand-alone local day of week
+  c: function c(date, token, localize, options) {
+    var dayOfWeek = date.getUTCDay();
+    var localDayOfWeek = (dayOfWeek - options.weekStartsOn + 8) % 7 || 7;
+
+    switch (token) {
+      // Numerical value (same as in `e`)
+      case 'c':
+        return String(localDayOfWeek);
+      // Padded numerical value
+
+      case 'cc':
+        return addLeadingZeros(localDayOfWeek, token.length);
+      // 1st, 2nd, ..., 7th
+
+      case 'co':
+        return localize.ordinalNumber(localDayOfWeek, {
+          unit: 'day'
+        });
+
+      case 'ccc':
+        return localize.day(dayOfWeek, {
+          width: 'abbreviated',
+          context: 'standalone'
+        });
+      // T
+
+      case 'ccccc':
+        return localize.day(dayOfWeek, {
+          width: 'narrow',
+          context: 'standalone'
+        });
+      // Tu
+
+      case 'cccccc':
+        return localize.day(dayOfWeek, {
+          width: 'short',
+          context: 'standalone'
+        });
+      // Tuesday
+
+      case 'cccc':
+      default:
+        return localize.day(dayOfWeek, {
+          width: 'wide',
+          context: 'standalone'
+        });
+    }
+  },
+  // ISO day of week
+  i: function i(date, token, localize) {
+    var dayOfWeek = date.getUTCDay();
+    var isoDayOfWeek = dayOfWeek === 0 ? 7 : dayOfWeek;
+
+    switch (token) {
+      // 2
+      case 'i':
+        return String(isoDayOfWeek);
+      // 02
+
+      case 'ii':
+        return addLeadingZeros(isoDayOfWeek, token.length);
+      // 2nd
+
+      case 'io':
+        return localize.ordinalNumber(isoDayOfWeek, {
+          unit: 'day'
+        });
+      // Tue
+
+      case 'iii':
+        return localize.day(dayOfWeek, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+      // T
+
+      case 'iiiii':
+        return localize.day(dayOfWeek, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+      // Tu
+
+      case 'iiiiii':
+        return localize.day(dayOfWeek, {
+          width: 'short',
+          context: 'formatting'
+        });
+      // Tuesday
+
+      case 'iiii':
+      default:
+        return localize.day(dayOfWeek, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // AM or PM
+  a: function a(date, token, localize) {
+    var hours = date.getUTCHours();
+    var dayPeriodEnumValue = hours / 12 >= 1 ? 'pm' : 'am';
+
+    switch (token) {
+      case 'a':
+      case 'aa':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+
+      case 'aaa':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'abbreviated',
+          context: 'formatting'
+        }).toLowerCase();
+
+      case 'aaaaa':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+
+      case 'aaaa':
+      default:
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // AM, PM, midnight, noon
+  b: function b(date, token, localize) {
+    var hours = date.getUTCHours();
+    var dayPeriodEnumValue;
+
+    if (hours === 12) {
+      dayPeriodEnumValue = dayPeriodEnum.noon;
+    } else if (hours === 0) {
+      dayPeriodEnumValue = dayPeriodEnum.midnight;
+    } else {
+      dayPeriodEnumValue = hours / 12 >= 1 ? 'pm' : 'am';
+    }
+
+    switch (token) {
+      case 'b':
+      case 'bb':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+
+      case 'bbb':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'abbreviated',
+          context: 'formatting'
+        }).toLowerCase();
+
+      case 'bbbbb':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+
+      case 'bbbb':
+      default:
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // in the morning, in the afternoon, in the evening, at night
+  B: function B(date, token, localize) {
+    var hours = date.getUTCHours();
+    var dayPeriodEnumValue;
+
+    if (hours >= 17) {
+      dayPeriodEnumValue = dayPeriodEnum.evening;
+    } else if (hours >= 12) {
+      dayPeriodEnumValue = dayPeriodEnum.afternoon;
+    } else if (hours >= 4) {
+      dayPeriodEnumValue = dayPeriodEnum.morning;
+    } else {
+      dayPeriodEnumValue = dayPeriodEnum.night;
+    }
+
+    switch (token) {
+      case 'B':
+      case 'BB':
+      case 'BBB':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'abbreviated',
+          context: 'formatting'
+        });
+
+      case 'BBBBB':
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'narrow',
+          context: 'formatting'
+        });
+
+      case 'BBBB':
+      default:
+        return localize.dayPeriod(dayPeriodEnumValue, {
+          width: 'wide',
+          context: 'formatting'
+        });
+    }
+  },
+  // Hour [1-12]
+  h: function h(date, token, localize) {
+    if (token === 'ho') {
+      var hours = date.getUTCHours() % 12;
+      if (hours === 0) hours = 12;
+      return localize.ordinalNumber(hours, {
+        unit: 'hour'
+      });
+    }
+
+    return lightFormatters.h(date, token);
+  },
+  // Hour [0-23]
+  H: function H(date, token, localize) {
+    if (token === 'Ho') {
+      return localize.ordinalNumber(date.getUTCHours(), {
+        unit: 'hour'
+      });
+    }
+
+    return lightFormatters.H(date, token);
+  },
+  // Hour [0-11]
+  K: function K(date, token, localize) {
+    var hours = date.getUTCHours() % 12;
+
+    if (token === 'Ko') {
+      return localize.ordinalNumber(hours, {
+        unit: 'hour'
+      });
+    }
+
+    return addLeadingZeros(hours, token.length);
+  },
+  // Hour [1-24]
+  k: function k(date, token, localize) {
+    var hours = date.getUTCHours();
+    if (hours === 0) hours = 24;
+
+    if (token === 'ko') {
+      return localize.ordinalNumber(hours, {
+        unit: 'hour'
+      });
+    }
+
+    return addLeadingZeros(hours, token.length);
+  },
+  // Minute
+  m: function m(date, token, localize) {
+    if (token === 'mo') {
+      return localize.ordinalNumber(date.getUTCMinutes(), {
+        unit: 'minute'
+      });
+    }
+
+    return lightFormatters.m(date, token);
+  },
+  // Second
+  s: function s(date, token, localize) {
+    if (token === 'so') {
+      return localize.ordinalNumber(date.getUTCSeconds(), {
+        unit: 'second'
+      });
+    }
+
+    return lightFormatters.s(date, token);
+  },
+  // Fraction of second
+  S: function S(date, token) {
+    return lightFormatters.S(date, token);
+  },
+  // Timezone (ISO-8601. If offset is 0, output is always `'Z'`)
+  X: function X(date, token, _localize, options) {
+    var originalDate = options._originalDate || date;
+    var timezoneOffset = originalDate.getTimezoneOffset();
+
+    if (timezoneOffset === 0) {
+      return 'Z';
+    }
+
+    switch (token) {
+      // Hours and optional minutes
+      case 'X':
+        return formatTimezoneWithOptionalMinutes(timezoneOffset);
+      // Hours, minutes and optional seconds without `:` delimiter
+      // Note: neither ISO-8601 nor JavaScript supports seconds in timezone offsets
+      // so this token always has the same output as `XX`
+
+      case 'XXXX':
+      case 'XX':
+        // Hours and minutes without `:` delimiter
+        return formatTimezone(timezoneOffset);
+      // Hours, minutes and optional seconds with `:` delimiter
+      // Note: neither ISO-8601 nor JavaScript supports seconds in timezone offsets
+      // so this token always has the same output as `XXX`
+
+      case 'XXXXX':
+      case 'XXX': // Hours and minutes with `:` delimiter
+
+      default:
+        return formatTimezone(timezoneOffset, ':');
+    }
+  },
+  // Timezone (ISO-8601. If offset is 0, output is `'+00:00'` or equivalent)
+  x: function x(date, token, _localize, options) {
+    var originalDate = options._originalDate || date;
+    var timezoneOffset = originalDate.getTimezoneOffset();
+
+    switch (token) {
+      // Hours and optional minutes
+      case 'x':
+        return formatTimezoneWithOptionalMinutes(timezoneOffset);
+      // Hours, minutes and optional seconds without `:` delimiter
+      // Note: neither ISO-8601 nor JavaScript supports seconds in timezone offsets
+      // so this token always has the same output as `xx`
+
+      case 'xxxx':
+      case 'xx':
+        // Hours and minutes without `:` delimiter
+        return formatTimezone(timezoneOffset);
+      // Hours, minutes and optional seconds with `:` delimiter
+      // Note: neither ISO-8601 nor JavaScript supports seconds in timezone offsets
+      // so this token always has the same output as `xxx`
+
+      case 'xxxxx':
+      case 'xxx': // Hours and minutes with `:` delimiter
+
+      default:
+        return formatTimezone(timezoneOffset, ':');
+    }
+  },
+  // Timezone (GMT)
+  O: function O(date, token, _localize, options) {
+    var originalDate = options._originalDate || date;
+    var timezoneOffset = originalDate.getTimezoneOffset();
+
+    switch (token) {
+      // Short
+      case 'O':
+      case 'OO':
+      case 'OOO':
+        return 'GMT' + formatTimezoneShort(timezoneOffset, ':');
+      // Long
+
+      case 'OOOO':
+      default:
+        return 'GMT' + formatTimezone(timezoneOffset, ':');
+    }
+  },
+  // Timezone (specific non-location)
+  z: function z(date, token, _localize, options) {
+    var originalDate = options._originalDate || date;
+    var timezoneOffset = originalDate.getTimezoneOffset();
+
+    switch (token) {
+      // Short
+      case 'z':
+      case 'zz':
+      case 'zzz':
+        return 'GMT' + formatTimezoneShort(timezoneOffset, ':');
+      // Long
+
+      case 'zzzz':
+      default:
+        return 'GMT' + formatTimezone(timezoneOffset, ':');
+    }
+  },
+  // Seconds timestamp
+  t: function t(date, token, _localize, options) {
+    var originalDate = options._originalDate || date;
+    var timestamp = Math.floor(originalDate.getTime() / 1000);
+    return addLeadingZeros(timestamp, token.length);
+  },
+  // Milliseconds timestamp
+  T: function T(date, token, _localize, options) {
+    var originalDate = options._originalDate || date;
+    var timestamp = originalDate.getTime();
+    return addLeadingZeros(timestamp, token.length);
+  }
+};
+
+function formatTimezoneShort(offset, dirtyDelimiter) {
+  var sign = offset > 0 ? '-' : '+';
+  var absOffset = Math.abs(offset);
+  var hours = Math.floor(absOffset / 60);
+  var minutes = absOffset % 60;
+
+  if (minutes === 0) {
+    return sign + String(hours);
+  }
+
+  var delimiter = dirtyDelimiter || '';
+  return sign + String(hours) + delimiter + addLeadingZeros(minutes, 2);
+}
+
+function formatTimezoneWithOptionalMinutes(offset, dirtyDelimiter) {
+  if (offset % 60 === 0) {
+    var sign = offset > 0 ? '-' : '+';
+    return sign + addLeadingZeros(Math.abs(offset) / 60, 2);
+  }
+
+  return formatTimezone(offset, dirtyDelimiter);
+}
+
+function formatTimezone(offset, dirtyDelimiter) {
+  var delimiter = dirtyDelimiter || '';
+  var sign = offset > 0 ? '-' : '+';
+  var absOffset = Math.abs(offset);
+  var hours = addLeadingZeros(Math.floor(absOffset / 60), 2);
+  var minutes = addLeadingZeros(absOffset % 60, 2);
+  return sign + hours + delimiter + minutes;
+}
+
+var formatters$1 = formatters;
+
+var dateLongFormatter = function dateLongFormatter(pattern, formatLong) {
+  switch (pattern) {
+    case 'P':
+      return formatLong.date({
+        width: 'short'
+      });
+
+    case 'PP':
+      return formatLong.date({
+        width: 'medium'
+      });
+
+    case 'PPP':
+      return formatLong.date({
+        width: 'long'
+      });
+
+    case 'PPPP':
+    default:
+      return formatLong.date({
+        width: 'full'
+      });
+  }
+};
+
+var timeLongFormatter = function timeLongFormatter(pattern, formatLong) {
+  switch (pattern) {
+    case 'p':
+      return formatLong.time({
+        width: 'short'
+      });
+
+    case 'pp':
+      return formatLong.time({
+        width: 'medium'
+      });
+
+    case 'ppp':
+      return formatLong.time({
+        width: 'long'
+      });
+
+    case 'pppp':
+    default:
+      return formatLong.time({
+        width: 'full'
+      });
+  }
+};
+
+var dateTimeLongFormatter = function dateTimeLongFormatter(pattern, formatLong) {
+  var matchResult = pattern.match(/(P+)(p+)?/) || [];
+  var datePattern = matchResult[1];
+  var timePattern = matchResult[2];
+
+  if (!timePattern) {
+    return dateLongFormatter(pattern, formatLong);
+  }
+
+  var dateTimeFormat;
+
+  switch (datePattern) {
+    case 'P':
+      dateTimeFormat = formatLong.dateTime({
+        width: 'short'
+      });
+      break;
+
+    case 'PP':
+      dateTimeFormat = formatLong.dateTime({
+        width: 'medium'
+      });
+      break;
+
+    case 'PPP':
+      dateTimeFormat = formatLong.dateTime({
+        width: 'long'
+      });
+      break;
+
+    case 'PPPP':
+    default:
+      dateTimeFormat = formatLong.dateTime({
+        width: 'full'
+      });
+      break;
+  }
+
+  return dateTimeFormat.replace('{{date}}', dateLongFormatter(datePattern, formatLong)).replace('{{time}}', timeLongFormatter(timePattern, formatLong));
+};
+
+var longFormatters$2 = {
+  p: timeLongFormatter,
+  P: dateTimeLongFormatter
+};
+var longFormatters$3 = longFormatters$2;
+
+var protectedDayOfYearTokens = ['D', 'DD'];
+var protectedWeekYearTokens = ['YY', 'YYYY'];
+function isProtectedDayOfYearToken(token) {
+  return protectedDayOfYearTokens.indexOf(token) !== -1;
+}
+function isProtectedWeekYearToken(token) {
+  return protectedWeekYearTokens.indexOf(token) !== -1;
+}
+function throwProtectedError(token, format, input) {
+  if (token === 'YYYY') {
+    throw new RangeError("Use `yyyy` instead of `YYYY` (in `".concat(format, "`) for formatting years to the input `").concat(input, "`; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md"));
+  } else if (token === 'YY') {
+    throw new RangeError("Use `yy` instead of `YY` (in `".concat(format, "`) for formatting years to the input `").concat(input, "`; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md"));
+  } else if (token === 'D') {
+    throw new RangeError("Use `d` instead of `D` (in `".concat(format, "`) for formatting days of the month to the input `").concat(input, "`; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md"));
+  } else if (token === 'DD') {
+    throw new RangeError("Use `dd` instead of `DD` (in `".concat(format, "`) for formatting days of the month to the input `").concat(input, "`; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md"));
+  }
+}
+
+var formatDistanceLocale = {
+  lessThanXSeconds: {
+    one: 'less than a second',
+    other: 'less than {{count}} seconds'
+  },
+  xSeconds: {
+    one: '1 second',
+    other: '{{count}} seconds'
+  },
+  halfAMinute: 'half a minute',
+  lessThanXMinutes: {
+    one: 'less than a minute',
+    other: 'less than {{count}} minutes'
+  },
+  xMinutes: {
+    one: '1 minute',
+    other: '{{count}} minutes'
+  },
+  aboutXHours: {
+    one: 'about 1 hour',
+    other: 'about {{count}} hours'
+  },
+  xHours: {
+    one: '1 hour',
+    other: '{{count}} hours'
+  },
+  xDays: {
+    one: '1 day',
+    other: '{{count}} days'
+  },
+  aboutXWeeks: {
+    one: 'about 1 week',
+    other: 'about {{count}} weeks'
+  },
+  xWeeks: {
+    one: '1 week',
+    other: '{{count}} weeks'
+  },
+  aboutXMonths: {
+    one: 'about 1 month',
+    other: 'about {{count}} months'
+  },
+  xMonths: {
+    one: '1 month',
+    other: '{{count}} months'
+  },
+  aboutXYears: {
+    one: 'about 1 year',
+    other: 'about {{count}} years'
+  },
+  xYears: {
+    one: '1 year',
+    other: '{{count}} years'
+  },
+  overXYears: {
+    one: 'over 1 year',
+    other: 'over {{count}} years'
+  },
+  almostXYears: {
+    one: 'almost 1 year',
+    other: 'almost {{count}} years'
+  }
+};
+
+var formatDistance = function formatDistance(token, count, options) {
+  var result;
+  var tokenValue = formatDistanceLocale[token];
+
+  if (typeof tokenValue === 'string') {
+    result = tokenValue;
+  } else if (count === 1) {
+    result = tokenValue.one;
+  } else {
+    result = tokenValue.other.replace('{{count}}', count.toString());
+  }
+
+  if (options !== null && options !== void 0 && options.addSuffix) {
+    if (options.comparison && options.comparison > 0) {
+      return 'in ' + result;
+    } else {
+      return result + ' ago';
+    }
+  }
+
+  return result;
+};
+
+var formatDistance$1 = formatDistance;
+
+function buildFormatLongFn(args) {
+  return function () {
+    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+    // TODO: Remove String()
+    var width = options.width ? String(options.width) : args.defaultWidth;
+    var format = args.formats[width] || args.formats[args.defaultWidth];
+    return format;
+  };
+}
+
+var dateFormats = {
+  full: 'EEEE, MMMM do, y',
+  long: 'MMMM do, y',
+  medium: 'MMM d, y',
+  short: 'MM/dd/yyyy'
+};
+var timeFormats = {
+  full: 'h:mm:ss a zzzz',
+  long: 'h:mm:ss a z',
+  medium: 'h:mm:ss a',
+  short: 'h:mm a'
+};
+var dateTimeFormats = {
+  full: "{{date}} 'at' {{time}}",
+  long: "{{date}} 'at' {{time}}",
+  medium: '{{date}}, {{time}}',
+  short: '{{date}}, {{time}}'
+};
+var formatLong = {
+  date: buildFormatLongFn({
+    formats: dateFormats,
+    defaultWidth: 'full'
+  }),
+  time: buildFormatLongFn({
+    formats: timeFormats,
+    defaultWidth: 'full'
+  }),
+  dateTime: buildFormatLongFn({
+    formats: dateTimeFormats,
+    defaultWidth: 'full'
+  })
+};
+var formatLong$1 = formatLong;
+
+var formatRelativeLocale = {
+  lastWeek: "'last' eeee 'at' p",
+  yesterday: "'yesterday at' p",
+  today: "'today at' p",
+  tomorrow: "'tomorrow at' p",
+  nextWeek: "eeee 'at' p",
+  other: 'P'
+};
+
+var formatRelative = function formatRelative(token, _date, _baseDate, _options) {
+  return formatRelativeLocale[token];
+};
+
+var formatRelative$1 = formatRelative;
+
+function buildLocalizeFn(args) {
+  return function (dirtyIndex, options) {
+    var context = options !== null && options !== void 0 && options.context ? String(options.context) : 'standalone';
+    var valuesArray;
+
+    if (context === 'formatting' && args.formattingValues) {
+      var defaultWidth = args.defaultFormattingWidth || args.defaultWidth;
+      var width = options !== null && options !== void 0 && options.width ? String(options.width) : defaultWidth;
+      valuesArray = args.formattingValues[width] || args.formattingValues[defaultWidth];
+    } else {
+      var _defaultWidth = args.defaultWidth;
+
+      var _width = options !== null && options !== void 0 && options.width ? String(options.width) : args.defaultWidth;
+
+      valuesArray = args.values[_width] || args.values[_defaultWidth];
+    }
+
+    var index = args.argumentCallback ? args.argumentCallback(dirtyIndex) : dirtyIndex; // @ts-ignore: For some reason TypeScript just don't want to match it, no matter how hard we try. I challenge you to try to remove it!
+
+    return valuesArray[index];
+  };
+}
+
+var eraValues = {
+  narrow: ['B', 'A'],
+  abbreviated: ['BC', 'AD'],
+  wide: ['Before Christ', 'Anno Domini']
+};
+var quarterValues = {
+  narrow: ['1', '2', '3', '4'],
+  abbreviated: ['Q1', 'Q2', 'Q3', 'Q4'],
+  wide: ['1st quarter', '2nd quarter', '3rd quarter', '4th quarter']
+}; // Note: in English, the names of days of the week and months are capitalized.
+// If you are making a new locale based on this one, check if the same is true for the language you're working on.
+// Generally, formatted dates should look like they are in the middle of a sentence,
+// e.g. in Spanish language the weekdays and months should be in the lowercase.
+
+var monthValues = {
+  narrow: ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'],
+  abbreviated: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+  wide: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+};
+var dayValues = {
+  narrow: ['S', 'M', 'T', 'W', 'T', 'F', 'S'],
+  short: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'],
+  abbreviated: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+  wide: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+};
+var dayPeriodValues = {
+  narrow: {
+    am: 'a',
+    pm: 'p',
+    midnight: 'mi',
+    noon: 'n',
+    morning: 'morning',
+    afternoon: 'afternoon',
+    evening: 'evening',
+    night: 'night'
+  },
+  abbreviated: {
+    am: 'AM',
+    pm: 'PM',
+    midnight: 'midnight',
+    noon: 'noon',
+    morning: 'morning',
+    afternoon: 'afternoon',
+    evening: 'evening',
+    night: 'night'
+  },
+  wide: {
+    am: 'a.m.',
+    pm: 'p.m.',
+    midnight: 'midnight',
+    noon: 'noon',
+    morning: 'morning',
+    afternoon: 'afternoon',
+    evening: 'evening',
+    night: 'night'
+  }
+};
+var formattingDayPeriodValues = {
+  narrow: {
+    am: 'a',
+    pm: 'p',
+    midnight: 'mi',
+    noon: 'n',
+    morning: 'in the morning',
+    afternoon: 'in the afternoon',
+    evening: 'in the evening',
+    night: 'at night'
+  },
+  abbreviated: {
+    am: 'AM',
+    pm: 'PM',
+    midnight: 'midnight',
+    noon: 'noon',
+    morning: 'in the morning',
+    afternoon: 'in the afternoon',
+    evening: 'in the evening',
+    night: 'at night'
+  },
+  wide: {
+    am: 'a.m.',
+    pm: 'p.m.',
+    midnight: 'midnight',
+    noon: 'noon',
+    morning: 'in the morning',
+    afternoon: 'in the afternoon',
+    evening: 'in the evening',
+    night: 'at night'
+  }
+};
+
+var ordinalNumber = function ordinalNumber(dirtyNumber, _options) {
+  var number = Number(dirtyNumber); // If ordinal numbers depend on context, for example,
+  // if they are different for different grammatical genders,
+  // use `options.unit`.
+  //
+  // `unit` can be 'year', 'quarter', 'month', 'week', 'date', 'dayOfYear',
+  // 'day', 'hour', 'minute', 'second'.
+
+  var rem100 = number % 100;
+
+  if (rem100 > 20 || rem100 < 10) {
+    switch (rem100 % 10) {
+      case 1:
+        return number + 'st';
+
+      case 2:
+        return number + 'nd';
+
+      case 3:
+        return number + 'rd';
+    }
+  }
+
+  return number + 'th';
+};
+
+var localize = {
+  ordinalNumber: ordinalNumber,
+  era: buildLocalizeFn({
+    values: eraValues,
+    defaultWidth: 'wide'
+  }),
+  quarter: buildLocalizeFn({
+    values: quarterValues,
+    defaultWidth: 'wide',
+    argumentCallback: function argumentCallback(quarter) {
+      return quarter - 1;
+    }
+  }),
+  month: buildLocalizeFn({
+    values: monthValues,
+    defaultWidth: 'wide'
+  }),
+  day: buildLocalizeFn({
+    values: dayValues,
+    defaultWidth: 'wide'
+  }),
+  dayPeriod: buildLocalizeFn({
+    values: dayPeriodValues,
+    defaultWidth: 'wide',
+    formattingValues: formattingDayPeriodValues,
+    defaultFormattingWidth: 'wide'
+  })
+};
+var localize$1 = localize;
+
+function buildMatchFn(args) {
+  return function (string) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var width = options.width;
+    var matchPattern = width && args.matchPatterns[width] || args.matchPatterns[args.defaultMatchWidth];
+    var matchResult = string.match(matchPattern);
+
+    if (!matchResult) {
+      return null;
+    }
+
+    var matchedString = matchResult[0];
+    var parsePatterns = width && args.parsePatterns[width] || args.parsePatterns[args.defaultParseWidth];
+    var key = Array.isArray(parsePatterns) ? findIndex(parsePatterns, function (pattern) {
+      return pattern.test(matchedString);
+    }) : findKey(parsePatterns, function (pattern) {
+      return pattern.test(matchedString);
+    });
+    var value;
+    value = args.valueCallback ? args.valueCallback(key) : key;
+    value = options.valueCallback ? options.valueCallback(value) : value;
+    var rest = string.slice(matchedString.length);
+    return {
+      value: value,
+      rest: rest
+    };
+  };
+}
+
+function findKey(object, predicate) {
+  for (var key in object) {
+    if (object.hasOwnProperty(key) && predicate(object[key])) {
+      return key;
+    }
+  }
+
+  return undefined;
+}
+
+function findIndex(array, predicate) {
+  for (var key = 0; key < array.length; key++) {
+    if (predicate(array[key])) {
+      return key;
+    }
+  }
+
+  return undefined;
+}
+
+function buildMatchPatternFn(args) {
+  return function (string) {
+    var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+    var matchResult = string.match(args.matchPattern);
+    if (!matchResult) return null;
+    var matchedString = matchResult[0];
+    var parseResult = string.match(args.parsePattern);
+    if (!parseResult) return null;
+    var value = args.valueCallback ? args.valueCallback(parseResult[0]) : parseResult[0];
+    value = options.valueCallback ? options.valueCallback(value) : value;
+    var rest = string.slice(matchedString.length);
+    return {
+      value: value,
+      rest: rest
+    };
+  };
+}
+
+var matchOrdinalNumberPattern = /^(\d+)(th|st|nd|rd)?/i;
+var parseOrdinalNumberPattern = /\d+/i;
+var matchEraPatterns = {
+  narrow: /^(b|a)/i,
+  abbreviated: /^(b\.?\s?c\.?|b\.?\s?c\.?\s?e\.?|a\.?\s?d\.?|c\.?\s?e\.?)/i,
+  wide: /^(before christ|before common era|anno domini|common era)/i
+};
+var parseEraPatterns = {
+  any: [/^b/i, /^(a|c)/i]
+};
+var matchQuarterPatterns = {
+  narrow: /^[1234]/i,
+  abbreviated: /^q[1234]/i,
+  wide: /^[1234](th|st|nd|rd)? quarter/i
+};
+var parseQuarterPatterns = {
+  any: [/1/i, /2/i, /3/i, /4/i]
+};
+var matchMonthPatterns = {
+  narrow: /^[jfmasond]/i,
+  abbreviated: /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i,
+  wide: /^(january|february|march|april|may|june|july|august|september|october|november|december)/i
+};
+var parseMonthPatterns = {
+  narrow: [/^j/i, /^f/i, /^m/i, /^a/i, /^m/i, /^j/i, /^j/i, /^a/i, /^s/i, /^o/i, /^n/i, /^d/i],
+  any: [/^ja/i, /^f/i, /^mar/i, /^ap/i, /^may/i, /^jun/i, /^jul/i, /^au/i, /^s/i, /^o/i, /^n/i, /^d/i]
+};
+var matchDayPatterns = {
+  narrow: /^[smtwf]/i,
+  short: /^(su|mo|tu|we|th|fr|sa)/i,
+  abbreviated: /^(sun|mon|tue|wed|thu|fri|sat)/i,
+  wide: /^(sunday|monday|tuesday|wednesday|thursday|friday|saturday)/i
+};
+var parseDayPatterns = {
+  narrow: [/^s/i, /^m/i, /^t/i, /^w/i, /^t/i, /^f/i, /^s/i],
+  any: [/^su/i, /^m/i, /^tu/i, /^w/i, /^th/i, /^f/i, /^sa/i]
+};
+var matchDayPeriodPatterns = {
+  narrow: /^(a|p|mi|n|(in the|at) (morning|afternoon|evening|night))/i,
+  any: /^([ap]\.?\s?m\.?|midnight|noon|(in the|at) (morning|afternoon|evening|night))/i
+};
+var parseDayPeriodPatterns = {
+  any: {
+    am: /^a/i,
+    pm: /^p/i,
+    midnight: /^mi/i,
+    noon: /^no/i,
+    morning: /morning/i,
+    afternoon: /afternoon/i,
+    evening: /evening/i,
+    night: /night/i
+  }
+};
+var match = {
+  ordinalNumber: buildMatchPatternFn({
+    matchPattern: matchOrdinalNumberPattern,
+    parsePattern: parseOrdinalNumberPattern,
+    valueCallback: function valueCallback(value) {
+      return parseInt(value, 10);
+    }
+  }),
+  era: buildMatchFn({
+    matchPatterns: matchEraPatterns,
+    defaultMatchWidth: 'wide',
+    parsePatterns: parseEraPatterns,
+    defaultParseWidth: 'any'
+  }),
+  quarter: buildMatchFn({
+    matchPatterns: matchQuarterPatterns,
+    defaultMatchWidth: 'wide',
+    parsePatterns: parseQuarterPatterns,
+    defaultParseWidth: 'any',
+    valueCallback: function valueCallback(index) {
+      return index + 1;
+    }
+  }),
+  month: buildMatchFn({
+    matchPatterns: matchMonthPatterns,
+    defaultMatchWidth: 'wide',
+    parsePatterns: parseMonthPatterns,
+    defaultParseWidth: 'any'
+  }),
+  day: buildMatchFn({
+    matchPatterns: matchDayPatterns,
+    defaultMatchWidth: 'wide',
+    parsePatterns: parseDayPatterns,
+    defaultParseWidth: 'any'
+  }),
+  dayPeriod: buildMatchFn({
+    matchPatterns: matchDayPeriodPatterns,
+    defaultMatchWidth: 'any',
+    parsePatterns: parseDayPeriodPatterns,
+    defaultParseWidth: 'any'
+  })
+};
+var match$1 = match;
+
+/**
+ * @type {Locale}
+ * @category Locales
+ * @summary English locale (United States).
+ * @language English
+ * @iso-639-2 eng
+ * @author Sasha Koss [@kossnocorp]{@link https://github.com/kossnocorp}
+ * @author Lesha Koss [@leshakoss]{@link https://github.com/leshakoss}
+ */
+var locale = {
+  code: 'en-US',
+  formatDistance: formatDistance$1,
+  formatLong: formatLong$1,
+  formatRelative: formatRelative$1,
+  localize: localize$1,
+  match: match$1,
+  options: {
+    weekStartsOn: 0
+    /* Sunday */
+    ,
+    firstWeekContainsDate: 1
+  }
+};
+var defaultLocale = locale;
+
+// - [yYQqMLwIdDecihHKkms]o matches any available ordinal number token
+//   (one of the certain letters followed by `o`)
+// - (\w)\1* matches any sequences of the same letter
+// - '' matches two quote characters in a row
+// - '(''|[^'])+('|$) matches anything surrounded by two quote characters ('),
+//   except a single quote symbol, which ends the sequence.
+//   Two quote characters do not end the sequence.
+//   If there is no matching single quote
+//   then the sequence will continue until the end of the string.
+// - . matches any single character unmatched by previous parts of the RegExps
+
+var formattingTokensRegExp$1 = /[yYQqMLwIdDecihHKkms]o|(\w)\1*|''|'(''|[^'])+('|$)|./g; // This RegExp catches symbols escaped by quotes, and also
+// sequences of symbols P, p, and the combinations like `PPPPPPPppppp`
+
+var longFormattingTokensRegExp$1 = /P+p+|P+|p+|''|'(''|[^'])+('|$)|./g;
+var escapedStringRegExp$1 = /^'([^]*?)'?$/;
+var doubleQuoteRegExp$1 = /''/g;
+var unescapedLatinCharacterRegExp$1 = /[a-zA-Z]/;
+/**
+ * @name format
+ * @category Common Helpers
+ * @summary Format the date.
+ *
+ * @description
+ * Return the formatted date string in the given format. The result may vary by locale.
+ *
+ * > ⚠️ Please note that the `format` tokens differ from Moment.js and other libraries.
+ * > See: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ *
+ * The characters wrapped between two single quotes characters (') are escaped.
+ * Two single quotes in a row, whether inside or outside a quoted sequence, represent a 'real' single quote.
+ * (see the last example)
+ *
+ * Format of the string is based on Unicode Technical Standard #35:
+ * https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table
+ * with a few additions (see note 7 below the table).
+ *
+ * Accepted patterns:
+ * | Unit                            | Pattern | Result examples                   | Notes |
+ * |---------------------------------|---------|-----------------------------------|-------|
+ * | Era                             | G..GGG  | AD, BC                            |       |
+ * |                                 | GGGG    | Anno Domini, Before Christ        | 2     |
+ * |                                 | GGGGG   | A, B                              |       |
+ * | Calendar year                   | y       | 44, 1, 1900, 2017                 | 5     |
+ * |                                 | yo      | 44th, 1st, 0th, 17th              | 5,7   |
+ * |                                 | yy      | 44, 01, 00, 17                    | 5     |
+ * |                                 | yyy     | 044, 001, 1900, 2017              | 5     |
+ * |                                 | yyyy    | 0044, 0001, 1900, 2017            | 5     |
+ * |                                 | yyyyy   | ...                               | 3,5   |
+ * | Local week-numbering year       | Y       | 44, 1, 1900, 2017                 | 5     |
+ * |                                 | Yo      | 44th, 1st, 1900th, 2017th         | 5,7   |
+ * |                                 | YY      | 44, 01, 00, 17                    | 5,8   |
+ * |                                 | YYY     | 044, 001, 1900, 2017              | 5     |
+ * |                                 | YYYY    | 0044, 0001, 1900, 2017            | 5,8   |
+ * |                                 | YYYYY   | ...                               | 3,5   |
+ * | ISO week-numbering year         | R       | -43, 0, 1, 1900, 2017             | 5,7   |
+ * |                                 | RR      | -43, 00, 01, 1900, 2017           | 5,7   |
+ * |                                 | RRR     | -043, 000, 001, 1900, 2017        | 5,7   |
+ * |                                 | RRRR    | -0043, 0000, 0001, 1900, 2017     | 5,7   |
+ * |                                 | RRRRR   | ...                               | 3,5,7 |
+ * | Extended year                   | u       | -43, 0, 1, 1900, 2017             | 5     |
+ * |                                 | uu      | -43, 01, 1900, 2017               | 5     |
+ * |                                 | uuu     | -043, 001, 1900, 2017             | 5     |
+ * |                                 | uuuu    | -0043, 0001, 1900, 2017           | 5     |
+ * |                                 | uuuuu   | ...                               | 3,5   |
+ * | Quarter (formatting)            | Q       | 1, 2, 3, 4                        |       |
+ * |                                 | Qo      | 1st, 2nd, 3rd, 4th                | 7     |
+ * |                                 | QQ      | 01, 02, 03, 04                    |       |
+ * |                                 | QQQ     | Q1, Q2, Q3, Q4                    |       |
+ * |                                 | QQQQ    | 1st quarter, 2nd quarter, ...     | 2     |
+ * |                                 | QQQQQ   | 1, 2, 3, 4                        | 4     |
+ * | Quarter (stand-alone)           | q       | 1, 2, 3, 4                        |       |
+ * |                                 | qo      | 1st, 2nd, 3rd, 4th                | 7     |
+ * |                                 | qq      | 01, 02, 03, 04                    |       |
+ * |                                 | qqq     | Q1, Q2, Q3, Q4                    |       |
+ * |                                 | qqqq    | 1st quarter, 2nd quarter, ...     | 2     |
+ * |                                 | qqqqq   | 1, 2, 3, 4                        | 4     |
+ * | Month (formatting)              | M       | 1, 2, ..., 12                     |       |
+ * |                                 | Mo      | 1st, 2nd, ..., 12th               | 7     |
+ * |                                 | MM      | 01, 02, ..., 12                   |       |
+ * |                                 | MMM     | Jan, Feb, ..., Dec                |       |
+ * |                                 | MMMM    | January, February, ..., December  | 2     |
+ * |                                 | MMMMM   | J, F, ..., D                      |       |
+ * | Month (stand-alone)             | L       | 1, 2, ..., 12                     |       |
+ * |                                 | Lo      | 1st, 2nd, ..., 12th               | 7     |
+ * |                                 | LL      | 01, 02, ..., 12                   |       |
+ * |                                 | LLL     | Jan, Feb, ..., Dec                |       |
+ * |                                 | LLLL    | January, February, ..., December  | 2     |
+ * |                                 | LLLLL   | J, F, ..., D                      |       |
+ * | Local week of year              | w       | 1, 2, ..., 53                     |       |
+ * |                                 | wo      | 1st, 2nd, ..., 53th               | 7     |
+ * |                                 | ww      | 01, 02, ..., 53                   |       |
+ * | ISO week of year                | I       | 1, 2, ..., 53                     | 7     |
+ * |                                 | Io      | 1st, 2nd, ..., 53th               | 7     |
+ * |                                 | II      | 01, 02, ..., 53                   | 7     |
+ * | Day of month                    | d       | 1, 2, ..., 31                     |       |
+ * |                                 | do      | 1st, 2nd, ..., 31st               | 7     |
+ * |                                 | dd      | 01, 02, ..., 31                   |       |
+ * | Day of year                     | D       | 1, 2, ..., 365, 366               | 9     |
+ * |                                 | Do      | 1st, 2nd, ..., 365th, 366th       | 7     |
+ * |                                 | DD      | 01, 02, ..., 365, 366             | 9     |
+ * |                                 | DDD     | 001, 002, ..., 365, 366           |       |
+ * |                                 | DDDD    | ...                               | 3     |
+ * | Day of week (formatting)        | E..EEE  | Mon, Tue, Wed, ..., Sun           |       |
+ * |                                 | EEEE    | Monday, Tuesday, ..., Sunday      | 2     |
+ * |                                 | EEEEE   | M, T, W, T, F, S, S               |       |
+ * |                                 | EEEEEE  | Mo, Tu, We, Th, Fr, Sa, Su        |       |
+ * | ISO day of week (formatting)    | i       | 1, 2, 3, ..., 7                   | 7     |
+ * |                                 | io      | 1st, 2nd, ..., 7th                | 7     |
+ * |                                 | ii      | 01, 02, ..., 07                   | 7     |
+ * |                                 | iii     | Mon, Tue, Wed, ..., Sun           | 7     |
+ * |                                 | iiii    | Monday, Tuesday, ..., Sunday      | 2,7   |
+ * |                                 | iiiii   | M, T, W, T, F, S, S               | 7     |
+ * |                                 | iiiiii  | Mo, Tu, We, Th, Fr, Sa, Su        | 7     |
+ * | Local day of week (formatting)  | e       | 2, 3, 4, ..., 1                   |       |
+ * |                                 | eo      | 2nd, 3rd, ..., 1st                | 7     |
+ * |                                 | ee      | 02, 03, ..., 01                   |       |
+ * |                                 | eee     | Mon, Tue, Wed, ..., Sun           |       |
+ * |                                 | eeee    | Monday, Tuesday, ..., Sunday      | 2     |
+ * |                                 | eeeee   | M, T, W, T, F, S, S               |       |
+ * |                                 | eeeeee  | Mo, Tu, We, Th, Fr, Sa, Su        |       |
+ * | Local day of week (stand-alone) | c       | 2, 3, 4, ..., 1                   |       |
+ * |                                 | co      | 2nd, 3rd, ..., 1st                | 7     |
+ * |                                 | cc      | 02, 03, ..., 01                   |       |
+ * |                                 | ccc     | Mon, Tue, Wed, ..., Sun           |       |
+ * |                                 | cccc    | Monday, Tuesday, ..., Sunday      | 2     |
+ * |                                 | ccccc   | M, T, W, T, F, S, S               |       |
+ * |                                 | cccccc  | Mo, Tu, We, Th, Fr, Sa, Su        |       |
+ * | AM, PM                          | a..aa   | AM, PM                            |       |
+ * |                                 | aaa     | am, pm                            |       |
+ * |                                 | aaaa    | a.m., p.m.                        | 2     |
+ * |                                 | aaaaa   | a, p                              |       |
+ * | AM, PM, noon, midnight          | b..bb   | AM, PM, noon, midnight            |       |
+ * |                                 | bbb     | am, pm, noon, midnight            |       |
+ * |                                 | bbbb    | a.m., p.m., noon, midnight        | 2     |
+ * |                                 | bbbbb   | a, p, n, mi                       |       |
+ * | Flexible day period             | B..BBB  | at night, in the morning, ...     |       |
+ * |                                 | BBBB    | at night, in the morning, ...     | 2     |
+ * |                                 | BBBBB   | at night, in the morning, ...     |       |
+ * | Hour [1-12]                     | h       | 1, 2, ..., 11, 12                 |       |
+ * |                                 | ho      | 1st, 2nd, ..., 11th, 12th         | 7     |
+ * |                                 | hh      | 01, 02, ..., 11, 12               |       |
+ * | Hour [0-23]                     | H       | 0, 1, 2, ..., 23                  |       |
+ * |                                 | Ho      | 0th, 1st, 2nd, ..., 23rd          | 7     |
+ * |                                 | HH      | 00, 01, 02, ..., 23               |       |
+ * | Hour [0-11]                     | K       | 1, 2, ..., 11, 0                  |       |
+ * |                                 | Ko      | 1st, 2nd, ..., 11th, 0th          | 7     |
+ * |                                 | KK      | 01, 02, ..., 11, 00               |       |
+ * | Hour [1-24]                     | k       | 24, 1, 2, ..., 23                 |       |
+ * |                                 | ko      | 24th, 1st, 2nd, ..., 23rd         | 7     |
+ * |                                 | kk      | 24, 01, 02, ..., 23               |       |
+ * | Minute                          | m       | 0, 1, ..., 59                     |       |
+ * |                                 | mo      | 0th, 1st, ..., 59th               | 7     |
+ * |                                 | mm      | 00, 01, ..., 59                   |       |
+ * | Second                          | s       | 0, 1, ..., 59                     |       |
+ * |                                 | so      | 0th, 1st, ..., 59th               | 7     |
+ * |                                 | ss      | 00, 01, ..., 59                   |       |
+ * | Fraction of second              | S       | 0, 1, ..., 9                      |       |
+ * |                                 | SS      | 00, 01, ..., 99                   |       |
+ * |                                 | SSS     | 000, 001, ..., 999                |       |
+ * |                                 | SSSS    | ...                               | 3     |
+ * | Timezone (ISO-8601 w/ Z)        | X       | -08, +0530, Z                     |       |
+ * |                                 | XX      | -0800, +0530, Z                   |       |
+ * |                                 | XXX     | -08:00, +05:30, Z                 |       |
+ * |                                 | XXXX    | -0800, +0530, Z, +123456          | 2     |
+ * |                                 | XXXXX   | -08:00, +05:30, Z, +12:34:56      |       |
+ * | Timezone (ISO-8601 w/o Z)       | x       | -08, +0530, +00                   |       |
+ * |                                 | xx      | -0800, +0530, +0000               |       |
+ * |                                 | xxx     | -08:00, +05:30, +00:00            | 2     |
+ * |                                 | xxxx    | -0800, +0530, +0000, +123456      |       |
+ * |                                 | xxxxx   | -08:00, +05:30, +00:00, +12:34:56 |       |
+ * | Timezone (GMT)                  | O...OOO | GMT-8, GMT+5:30, GMT+0            |       |
+ * |                                 | OOOO    | GMT-08:00, GMT+05:30, GMT+00:00   | 2     |
+ * | Timezone (specific non-locat.)  | z...zzz | GMT-8, GMT+5:30, GMT+0            | 6     |
+ * |                                 | zzzz    | GMT-08:00, GMT+05:30, GMT+00:00   | 2,6   |
+ * | Seconds timestamp               | t       | 512969520                         | 7     |
+ * |                                 | tt      | ...                               | 3,7   |
+ * | Milliseconds timestamp          | T       | 512969520900                      | 7     |
+ * |                                 | TT      | ...                               | 3,7   |
+ * | Long localized date             | P       | 04/29/1453                        | 7     |
+ * |                                 | PP      | Apr 29, 1453                      | 7     |
+ * |                                 | PPP     | April 29th, 1453                  | 7     |
+ * |                                 | PPPP    | Friday, April 29th, 1453          | 2,7   |
+ * | Long localized time             | p       | 12:00 AM                          | 7     |
+ * |                                 | pp      | 12:00:00 AM                       | 7     |
+ * |                                 | ppp     | 12:00:00 AM GMT+2                 | 7     |
+ * |                                 | pppp    | 12:00:00 AM GMT+02:00             | 2,7   |
+ * | Combination of date and time    | Pp      | 04/29/1453, 12:00 AM              | 7     |
+ * |                                 | PPpp    | Apr 29, 1453, 12:00:00 AM         | 7     |
+ * |                                 | PPPppp  | April 29th, 1453 at ...           | 7     |
+ * |                                 | PPPPpppp| Friday, April 29th, 1453 at ...   | 2,7   |
+ * Notes:
+ * 1. "Formatting" units (e.g. formatting quarter) in the default en-US locale
+ *    are the same as "stand-alone" units, but are different in some languages.
+ *    "Formatting" units are declined according to the rules of the language
+ *    in the context of a date. "Stand-alone" units are always nominative singular:
+ *
+ *    `format(new Date(2017, 10, 6), 'do LLLL', {locale: cs}) //=> '6. listopad'`
+ *
+ *    `format(new Date(2017, 10, 6), 'do MMMM', {locale: cs}) //=> '6. listopadu'`
+ *
+ * 2. Any sequence of the identical letters is a pattern, unless it is escaped by
+ *    the single quote characters (see below).
+ *    If the sequence is longer than listed in table (e.g. `EEEEEEEEEEE`)
+ *    the output will be the same as default pattern for this unit, usually
+ *    the longest one (in case of ISO weekdays, `EEEE`). Default patterns for units
+ *    are marked with "2" in the last column of the table.
+ *
+ *    `format(new Date(2017, 10, 6), 'MMM') //=> 'Nov'`
+ *
+ *    `format(new Date(2017, 10, 6), 'MMMM') //=> 'November'`
+ *
+ *    `format(new Date(2017, 10, 6), 'MMMMM') //=> 'N'`
+ *
+ *    `format(new Date(2017, 10, 6), 'MMMMMM') //=> 'November'`
+ *
+ *    `format(new Date(2017, 10, 6), 'MMMMMMM') //=> 'November'`
+ *
+ * 3. Some patterns could be unlimited length (such as `yyyyyyyy`).
+ *    The output will be padded with zeros to match the length of the pattern.
+ *
+ *    `format(new Date(2017, 10, 6), 'yyyyyyyy') //=> '00002017'`
+ *
+ * 4. `QQQQQ` and `qqqqq` could be not strictly numerical in some locales.
+ *    These tokens represent the shortest form of the quarter.
+ *
+ * 5. The main difference between `y` and `u` patterns are B.C. years:
+ *
+ *    | Year | `y` | `u` |
+ *    |------|-----|-----|
+ *    | AC 1 |   1 |   1 |
+ *    | BC 1 |   1 |   0 |
+ *    | BC 2 |   2 |  -1 |
+ *
+ *    Also `yy` always returns the last two digits of a year,
+ *    while `uu` pads single digit years to 2 characters and returns other years unchanged:
+ *
+ *    | Year | `yy` | `uu` |
+ *    |------|------|------|
+ *    | 1    |   01 |   01 |
+ *    | 14   |   14 |   14 |
+ *    | 376  |   76 |  376 |
+ *    | 1453 |   53 | 1453 |
+ *
+ *    The same difference is true for local and ISO week-numbering years (`Y` and `R`),
+ *    except local week-numbering years are dependent on `options.weekStartsOn`
+ *    and `options.firstWeekContainsDate` (compare [getISOWeekYear]{@link https://date-fns.org/docs/getISOWeekYear}
+ *    and [getWeekYear]{@link https://date-fns.org/docs/getWeekYear}).
+ *
+ * 6. Specific non-location timezones are currently unavailable in `date-fns`,
+ *    so right now these tokens fall back to GMT timezones.
+ *
+ * 7. These patterns are not in the Unicode Technical Standard #35:
+ *    - `i`: ISO day of week
+ *    - `I`: ISO week of year
+ *    - `R`: ISO week-numbering year
+ *    - `t`: seconds timestamp
+ *    - `T`: milliseconds timestamp
+ *    - `o`: ordinal number modifier
+ *    - `P`: long localized date
+ *    - `p`: long localized time
+ *
+ * 8. `YY` and `YYYY` tokens represent week-numbering years but they are often confused with years.
+ *    You should enable `options.useAdditionalWeekYearTokens` to use them. See: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ *
+ * 9. `D` and `DD` tokens represent days of the year but they are often confused with days of the month.
+ *    You should enable `options.useAdditionalDayOfYearTokens` to use them. See: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ *
+ * @param {Date|Number} date - the original date
+ * @param {String} format - the string of tokens
+ * @param {Object} [options] - an object with options.
+ * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
+ * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
+ * @param {Number} [options.firstWeekContainsDate=1] - the day of January, which is
+ * @param {Boolean} [options.useAdditionalWeekYearTokens=false] - if true, allows usage of the week-numbering year tokens `YY` and `YYYY`;
+ *   see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @param {Boolean} [options.useAdditionalDayOfYearTokens=false] - if true, allows usage of the day of year tokens `D` and `DD`;
+ *   see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @returns {String} the formatted date string
+ * @throws {TypeError} 2 arguments required
+ * @throws {RangeError} `date` must not be Invalid Date
+ * @throws {RangeError} `options.locale` must contain `localize` property
+ * @throws {RangeError} `options.locale` must contain `formatLong` property
+ * @throws {RangeError} `options.weekStartsOn` must be between 0 and 6
+ * @throws {RangeError} `options.firstWeekContainsDate` must be between 1 and 7
+ * @throws {RangeError} use `yyyy` instead of `YYYY` for formatting years using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} use `yy` instead of `YY` for formatting years using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} use `d` instead of `D` for formatting days of the month using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} use `dd` instead of `DD` for formatting days of the month using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} format string contains an unescaped latin alphabet character
+ *
+ * @example
+ * // Represent 11 February 2014 in middle-endian format:
+ * const result = format(new Date(2014, 1, 11), 'MM/dd/yyyy')
+ * //=> '02/11/2014'
+ *
+ * @example
+ * // Represent 2 July 2014 in Esperanto:
+ * import { eoLocale } from 'date-fns/locale/eo'
+ * const result = format(new Date(2014, 6, 2), "do 'de' MMMM yyyy", {
+ *   locale: eoLocale
+ * })
+ * //=> '2-a de julio 2014'
+ *
+ * @example
+ * // Escape string by single quote characters:
+ * const result = format(new Date(2014, 6, 2, 15), "h 'o''clock'")
+ * //=> "3 o'clock"
+ */
+
+function format(dirtyDate, dirtyFormatStr, options) {
+  var _ref, _options$locale, _ref2, _ref3, _ref4, _options$firstWeekCon, _options$locale2, _options$locale2$opti, _defaultOptions$local, _defaultOptions$local2, _ref5, _ref6, _ref7, _options$weekStartsOn, _options$locale3, _options$locale3$opti, _defaultOptions$local3, _defaultOptions$local4;
+
+  requiredArgs(2, arguments);
+  var formatStr = String(dirtyFormatStr);
+  var defaultOptions = getDefaultOptions();
+  var locale = (_ref = (_options$locale = options === null || options === void 0 ? void 0 : options.locale) !== null && _options$locale !== void 0 ? _options$locale : defaultOptions.locale) !== null && _ref !== void 0 ? _ref : defaultLocale;
+  var firstWeekContainsDate = toInteger((_ref2 = (_ref3 = (_ref4 = (_options$firstWeekCon = options === null || options === void 0 ? void 0 : options.firstWeekContainsDate) !== null && _options$firstWeekCon !== void 0 ? _options$firstWeekCon : options === null || options === void 0 ? void 0 : (_options$locale2 = options.locale) === null || _options$locale2 === void 0 ? void 0 : (_options$locale2$opti = _options$locale2.options) === null || _options$locale2$opti === void 0 ? void 0 : _options$locale2$opti.firstWeekContainsDate) !== null && _ref4 !== void 0 ? _ref4 : defaultOptions.firstWeekContainsDate) !== null && _ref3 !== void 0 ? _ref3 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.firstWeekContainsDate) !== null && _ref2 !== void 0 ? _ref2 : 1); // Test if weekStartsOn is between 1 and 7 _and_ is not NaN
+
+  if (!(firstWeekContainsDate >= 1 && firstWeekContainsDate <= 7)) {
+    throw new RangeError('firstWeekContainsDate must be between 1 and 7 inclusively');
+  }
+
+  var weekStartsOn = toInteger((_ref5 = (_ref6 = (_ref7 = (_options$weekStartsOn = options === null || options === void 0 ? void 0 : options.weekStartsOn) !== null && _options$weekStartsOn !== void 0 ? _options$weekStartsOn : options === null || options === void 0 ? void 0 : (_options$locale3 = options.locale) === null || _options$locale3 === void 0 ? void 0 : (_options$locale3$opti = _options$locale3.options) === null || _options$locale3$opti === void 0 ? void 0 : _options$locale3$opti.weekStartsOn) !== null && _ref7 !== void 0 ? _ref7 : defaultOptions.weekStartsOn) !== null && _ref6 !== void 0 ? _ref6 : (_defaultOptions$local3 = defaultOptions.locale) === null || _defaultOptions$local3 === void 0 ? void 0 : (_defaultOptions$local4 = _defaultOptions$local3.options) === null || _defaultOptions$local4 === void 0 ? void 0 : _defaultOptions$local4.weekStartsOn) !== null && _ref5 !== void 0 ? _ref5 : 0); // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
+
+  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
+    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
+  }
+
+  if (!locale.localize) {
+    throw new RangeError('locale must contain localize property');
+  }
+
+  if (!locale.formatLong) {
+    throw new RangeError('locale must contain formatLong property');
+  }
+
+  var originalDate = toDate(dirtyDate);
+
+  if (!isValid(originalDate)) {
+    throw new RangeError('Invalid time value');
+  } // Convert the date in system timezone to the same date in UTC+00:00 timezone.
+  // This ensures that when UTC functions will be implemented, locales will be compatible with them.
+  // See an issue about UTC functions: https://github.com/date-fns/date-fns/issues/376
+
+
+  var timezoneOffset = getTimezoneOffsetInMilliseconds(originalDate);
+  var utcDate = subMilliseconds(originalDate, timezoneOffset);
+  var formatterOptions = {
+    firstWeekContainsDate: firstWeekContainsDate,
+    weekStartsOn: weekStartsOn,
+    locale: locale,
+    _originalDate: originalDate
+  };
+  var result = formatStr.match(longFormattingTokensRegExp$1).map(function (substring) {
+    var firstCharacter = substring[0];
+
+    if (firstCharacter === 'p' || firstCharacter === 'P') {
+      var longFormatter = longFormatters$3[firstCharacter];
+      return longFormatter(substring, locale.formatLong);
+    }
+
+    return substring;
+  }).join('').match(formattingTokensRegExp$1).map(function (substring) {
+    // Replace two single quote characters with one single quote character
+    if (substring === "''") {
+      return "'";
+    }
+
+    var firstCharacter = substring[0];
+
+    if (firstCharacter === "'") {
+      return cleanEscapedString$1(substring);
+    }
+
+    var formatter = formatters$1[firstCharacter];
+
+    if (formatter) {
+      if (!(options !== null && options !== void 0 && options.useAdditionalWeekYearTokens) && isProtectedWeekYearToken(substring)) {
+        throwProtectedError(substring, dirtyFormatStr, String(dirtyDate));
+      }
+
+      if (!(options !== null && options !== void 0 && options.useAdditionalDayOfYearTokens) && isProtectedDayOfYearToken(substring)) {
+        throwProtectedError(substring, dirtyFormatStr, String(dirtyDate));
+      }
+
+      return formatter(utcDate, substring, locale.localize, formatterOptions);
+    }
+
+    if (firstCharacter.match(unescapedLatinCharacterRegExp$1)) {
+      throw new RangeError('Format string contains an unescaped latin alphabet character `' + firstCharacter + '`');
+    }
+
+    return substring;
+  }).join('');
+  return result;
+}
+
+function cleanEscapedString$1(input) {
+  var matched = input.match(escapedStringRegExp$1);
+
+  if (!matched) {
+    return input;
+  }
+
+  return matched[1].replace(doubleQuoteRegExp$1, "'");
+}
+
+/**
+ * @name getDate
+ * @category Day Helpers
+ * @summary Get the day of the month of the given date.
+ *
+ * @description
+ * Get the day of the month of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {Number} the day of month
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Which day of the month is 29 February 2012?
+ * const result = getDate(new Date(2012, 1, 29))
+ * //=> 29
+ */
+
+function getDate(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var dayOfMonth = date.getDate();
+  return dayOfMonth;
+}
+
+/**
+ * @name getDay
+ * @category Weekday Helpers
+ * @summary Get the day of the week of the given date.
+ *
+ * @description
+ * Get the day of the week of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {0|1|2|3|4|5|6} the day of week, 0 represents Sunday
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Which day of the week is 29 February 2012?
+ * const result = getDay(new Date(2012, 1, 29))
+ * //=> 3
+ */
+
+function getDay(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var day = date.getDay();
+  return day;
+}
+
+/**
+ * @name getDaysInMonth
+ * @category Month Helpers
+ * @summary Get the number of days in a month of the given date.
+ *
+ * @description
+ * Get the number of days in a month of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {Number} the number of days in a month
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // How many days are in February 2000?
+ * const result = getDaysInMonth(new Date(2000, 1))
+ * //=> 29
+ */
+
+function getDaysInMonth(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var year = date.getFullYear();
+  var monthIndex = date.getMonth();
+  var lastDayOfMonth = new Date(0);
+  lastDayOfMonth.setFullYear(year, monthIndex + 1, 0);
+  lastDayOfMonth.setHours(0, 0, 0, 0);
+  return lastDayOfMonth.getDate();
+}
+
+/**
+ * @name getHours
+ * @category Hour Helpers
+ * @summary Get the hours of the given date.
+ *
+ * @description
+ * Get the hours of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {Number} the hours
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Get the hours of 29 February 2012 11:45:00:
+ * const result = getHours(new Date(2012, 1, 29, 11, 45))
+ * //=> 11
+ */
+
+function getHours(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var hours = date.getHours();
+  return hours;
+}
+
+/**
+ * @name getMinutes
+ * @category Minute Helpers
+ * @summary Get the minutes of the given date.
+ *
+ * @description
+ * Get the minutes of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {Number} the minutes
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Get the minutes of 29 February 2012 11:45:05:
+ * const result = getMinutes(new Date(2012, 1, 29, 11, 45, 5))
+ * //=> 45
+ */
+
+function getMinutes(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var minutes = date.getMinutes();
+  return minutes;
+}
+
+/**
+ * @name getMonth
+ * @category Month Helpers
+ * @summary Get the month of the given date.
+ *
+ * @description
+ * Get the month of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {Number} the month
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Which month is 29 February 2012?
+ * const result = getMonth(new Date(2012, 1, 29))
+ * //=> 1
+ */
+
+function getMonth(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var month = date.getMonth();
+  return month;
+}
+
+/**
+ * @name getSeconds
+ * @category Second Helpers
+ * @summary Get the seconds of the given date.
+ *
+ * @description
+ * Get the seconds of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {Number} the seconds
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Get the seconds of 29 February 2012 11:45:05.123:
+ * const result = getSeconds(new Date(2012, 1, 29, 11, 45, 5, 123))
+ * //=> 5
+ */
+
+function getSeconds(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  var seconds = date.getSeconds();
+  return seconds;
+}
+
+/**
+ * @name getYear
+ * @category Year Helpers
+ * @summary Get the year of the given date.
+ *
+ * @description
+ * Get the year of the given date.
+ *
+ * @param {Date|Number} date - the given date
+ * @returns {Number} the year
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // Which year is 2 July 2014?
+ * const result = getYear(new Date(2014, 6, 2))
+ * //=> 2014
+ */
+
+function getYear(dirtyDate) {
+  requiredArgs(1, arguments);
+  return toDate(dirtyDate).getFullYear();
+}
+
+/**
+ * @name isAfter
+ * @category Common Helpers
+ * @summary Is the first date after the second one?
+ *
+ * @description
+ * Is the first date after the second one?
+ *
+ * @param {Date|Number} date - the date that should be after the other one to return true
+ * @param {Date|Number} dateToCompare - the date to compare with
+ * @returns {Boolean} the first date is after the second date
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Is 10 July 1989 after 11 February 1987?
+ * const result = isAfter(new Date(1989, 6, 10), new Date(1987, 1, 11))
+ * //=> true
+ */
+
+function isAfter(dirtyDate, dirtyDateToCompare) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var dateToCompare = toDate(dirtyDateToCompare);
+  return date.getTime() > dateToCompare.getTime();
+}
+
+/**
+ * @name isBefore
+ * @category Common Helpers
+ * @summary Is the first date before the second one?
+ *
+ * @description
+ * Is the first date before the second one?
+ *
+ * @param {Date|Number} date - the date that should be before the other one to return true
+ * @param {Date|Number} dateToCompare - the date to compare with
+ * @returns {Boolean} the first date is before the second date
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Is 10 July 1989 before 11 February 1987?
+ * const result = isBefore(new Date(1989, 6, 10), new Date(1987, 1, 11))
+ * //=> false
+ */
+
+function isBefore(dirtyDate, dirtyDateToCompare) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var dateToCompare = toDate(dirtyDateToCompare);
+  return date.getTime() < dateToCompare.getTime();
+}
+
+/**
+ * @name isEqual
+ * @category Common Helpers
+ * @summary Are the given dates equal?
+ *
+ * @description
+ * Are the given dates equal?
+ *
+ * @param {Date|Number} dateLeft - the first date to compare
+ * @param {Date|Number} dateRight - the second date to compare
+ * @returns {Boolean} the dates are equal
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Are 2 July 2014 06:30:45.000 and 2 July 2014 06:30:45.500 equal?
+ * const result = isEqual(
+ *   new Date(2014, 6, 2, 6, 30, 45, 0),
+ *   new Date(2014, 6, 2, 6, 30, 45, 500)
+ * )
+ * //=> false
+ */
+
+function isEqual(dirtyLeftDate, dirtyRightDate) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyLeftDate);
+  var dateRight = toDate(dirtyRightDate);
+  return dateLeft.getTime() === dateRight.getTime();
+}
+
+/**
+ * @name isSameDay
+ * @category Day Helpers
+ * @summary Are the given dates in the same day (and year and month)?
+ *
+ * @description
+ * Are the given dates in the same day (and year and month)?
+ *
+ * @param {Date|Number} dateLeft - the first date to check
+ * @param {Date|Number} dateRight - the second date to check
+ * @returns {Boolean} the dates are in the same day (and year and month)
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Are 4 September 06:00:00 and 4 September 18:00:00 in the same day?
+ * const result = isSameDay(new Date(2014, 8, 4, 6, 0), new Date(2014, 8, 4, 18, 0))
+ * //=> true
+ *
+ * @example
+ * // Are 4 September and 4 October in the same day?
+ * const result = isSameDay(new Date(2014, 8, 4), new Date(2014, 9, 4))
+ * //=> false
+ *
+ * @example
+ * // Are 4 September, 2014 and 4 September, 2015 in the same day?
+ * const result = isSameDay(new Date(2014, 8, 4), new Date(2015, 8, 4))
+ * //=> false
+ */
+
+function isSameDay(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeftStartOfDay = startOfDay(dirtyDateLeft);
+  var dateRightStartOfDay = startOfDay(dirtyDateRight);
+  return dateLeftStartOfDay.getTime() === dateRightStartOfDay.getTime();
+}
+
+/**
+ * @name isSameYear
+ * @category Year Helpers
+ * @summary Are the given dates in the same year?
+ *
+ * @description
+ * Are the given dates in the same year?
+ *
+ * @param {Date|Number} dateLeft - the first date to check
+ * @param {Date|Number} dateRight - the second date to check
+ * @returns {Boolean} the dates are in the same year
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Are 2 September 2014 and 25 September 2014 in the same year?
+ * const result = isSameYear(new Date(2014, 8, 2), new Date(2014, 8, 25))
+ * //=> true
+ */
+
+function isSameYear(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  return dateLeft.getFullYear() === dateRight.getFullYear();
+}
+
+/**
+ * @name isSameMonth
+ * @category Month Helpers
+ * @summary Are the given dates in the same month (and year)?
+ *
+ * @description
+ * Are the given dates in the same month (and year)?
+ *
+ * @param {Date|Number} dateLeft - the first date to check
+ * @param {Date|Number} dateRight - the second date to check
+ * @returns {Boolean} the dates are in the same month (and year)
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Are 2 September 2014 and 25 September 2014 in the same month?
+ * const result = isSameMonth(new Date(2014, 8, 2), new Date(2014, 8, 25))
+ * //=> true
+ *
+ * @example
+ * // Are 2 September 2014 and 25 September 2015 in the same month?
+ * const result = isSameMonth(new Date(2014, 8, 2), new Date(2015, 8, 25))
+ * //=> false
+ */
+
+function isSameMonth(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeft = toDate(dirtyDateLeft);
+  var dateRight = toDate(dirtyDateRight);
+  return dateLeft.getFullYear() === dateRight.getFullYear() && dateLeft.getMonth() === dateRight.getMonth();
+}
+
+/**
+ * @name startOfHour
+ * @category Hour Helpers
+ * @summary Return the start of an hour for the given date.
+ *
+ * @description
+ * Return the start of an hour for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @returns {Date} the start of an hour
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // The start of an hour for 2 September 2014 11:55:00:
+ * const result = startOfHour(new Date(2014, 8, 2, 11, 55))
+ * //=> Tue Sep 02 2014 11:00:00
+ */
+
+function startOfHour(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  date.setMinutes(0, 0, 0);
+  return date;
+}
+
+/**
+ * @name isSameHour
+ * @category Hour Helpers
+ * @summary Are the given dates in the same hour (and same day)?
+ *
+ * @description
+ * Are the given dates in the same hour (and same day)?
+ *
+ * @param {Date|Number} dateLeft - the first date to check
+ * @param {Date|Number} dateRight - the second date to check
+ * @returns {Boolean} the dates are in the same hour (and same day)
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Are 4 September 2014 06:00:00 and 4 September 06:30:00 in the same hour?
+ * const result = isSameHour(new Date(2014, 8, 4, 6, 0), new Date(2014, 8, 4, 6, 30))
+ * //=> true
+ *
+ * @example
+ * // Are 4 September 2014 06:00:00 and 5 September 06:00:00 in the same hour?
+ * const result = isSameHour(new Date(2014, 8, 4, 6, 0), new Date(2014, 8, 5, 6, 0))
+ * //=> false
+ */
+
+function isSameHour(dirtyDateLeft, dirtyDateRight) {
+  requiredArgs(2, arguments);
+  var dateLeftStartOfHour = startOfHour(dirtyDateLeft);
+  var dateRightStartOfHour = startOfHour(dirtyDateRight);
+  return dateLeftStartOfHour.getTime() === dateRightStartOfHour.getTime();
+}
+
+function assign(target, object) {
+  if (target == null) {
+    throw new TypeError('assign requires that input parameter not be null or undefined');
+  }
+
+  for (var property in object) {
+    if (Object.prototype.hasOwnProperty.call(object, property)) {
+      target[property] = object[property];
+    }
+  }
+
+  return target;
+}
+
+function _typeof$w(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$w = function _typeof(obj) { return typeof obj; }; } else { _typeof$w = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$w(obj); }
+
+function _inherits$v(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$v(subClass, superClass); }
+
+function _setPrototypeOf$v(o, p) { _setPrototypeOf$v = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$v(o, p); }
+
+function _createSuper$v(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$v(); return function _createSuperInternal() { var Super = _getPrototypeOf$v(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$v(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$v(this, result); }; }
+
+function _possibleConstructorReturn$v(self, call) { if (call && (_typeof$w(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$v(self); }
+
+function _assertThisInitialized$v(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$v() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$v(o) { _getPrototypeOf$v = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$v(o); }
+
+function _classCallCheck$w(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$w(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$w(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$w(Constructor.prototype, protoProps); if (staticProps) _defineProperties$w(Constructor, staticProps); return Constructor; }
+
+function _defineProperty$v(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var TIMEZONE_UNIT_PRIORITY = 10;
+var Setter = /*#__PURE__*/function () {
+  function Setter() {
+    _classCallCheck$w(this, Setter);
+
+    _defineProperty$v(this, "subPriority", 0);
+  }
+
+  _createClass$w(Setter, [{
+    key: "validate",
+    value: function validate(_utcDate, _options) {
+      return true;
+    }
+  }]);
+
+  return Setter;
+}();
+var ValueSetter = /*#__PURE__*/function (_Setter) {
+  _inherits$v(ValueSetter, _Setter);
+
+  var _super = _createSuper$v(ValueSetter);
+
+  function ValueSetter(value, validateValue, setValue, priority, subPriority) {
+    var _this;
+
+    _classCallCheck$w(this, ValueSetter);
+
+    _this = _super.call(this);
+    _this.value = value;
+    _this.validateValue = validateValue;
+    _this.setValue = setValue;
+    _this.priority = priority;
+
+    if (subPriority) {
+      _this.subPriority = subPriority;
+    }
+
+    return _this;
+  }
+
+  _createClass$w(ValueSetter, [{
+    key: "validate",
+    value: function validate(utcDate, options) {
+      return this.validateValue(utcDate, this.value, options);
+    }
+  }, {
+    key: "set",
+    value: function set(utcDate, flags, options) {
+      return this.setValue(utcDate, flags, this.value, options);
+    }
+  }]);
+
+  return ValueSetter;
+}(Setter);
+var DateToSystemTimezoneSetter = /*#__PURE__*/function (_Setter2) {
+  _inherits$v(DateToSystemTimezoneSetter, _Setter2);
+
+  var _super2 = _createSuper$v(DateToSystemTimezoneSetter);
+
+  function DateToSystemTimezoneSetter() {
+    var _this2;
+
+    _classCallCheck$w(this, DateToSystemTimezoneSetter);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this2 = _super2.call.apply(_super2, [this].concat(args));
+
+    _defineProperty$v(_assertThisInitialized$v(_this2), "priority", TIMEZONE_UNIT_PRIORITY);
+
+    _defineProperty$v(_assertThisInitialized$v(_this2), "subPriority", -1);
+
+    return _this2;
+  }
+
+  _createClass$w(DateToSystemTimezoneSetter, [{
+    key: "set",
+    value: function set(date, flags) {
+      if (flags.timestampIsSet) {
+        return date;
+      }
+
+      var convertedDate = new Date(0);
+      convertedDate.setFullYear(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
+      convertedDate.setHours(date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());
+      return convertedDate;
+    }
+  }]);
+
+  return DateToSystemTimezoneSetter;
+}(Setter);
+
+function _classCallCheck$v(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$v(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$v(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$v(Constructor.prototype, protoProps); if (staticProps) _defineProperties$v(Constructor, staticProps); return Constructor; }
+var Parser = /*#__PURE__*/function () {
+  function Parser() {
+    _classCallCheck$v(this, Parser);
+  }
+
+  _createClass$v(Parser, [{
+    key: "run",
+    value: function run(dateString, token, match, options) {
+      var result = this.parse(dateString, token, match, options);
+
+      if (!result) {
+        return null;
+      }
+
+      return {
+        setter: new ValueSetter(result.value, this.validate, this.set, this.priority, this.subPriority),
+        rest: result.rest
+      };
+    }
+  }, {
+    key: "validate",
+    value: function validate(_utcDate, _value, _options) {
+      return true;
+    }
+  }]);
+
+  return Parser;
+}();
+
+function _typeof$v(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$v = function _typeof(obj) { return typeof obj; }; } else { _typeof$v = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$v(obj); }
+
+function _classCallCheck$u(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$u(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$u(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$u(Constructor.prototype, protoProps); if (staticProps) _defineProperties$u(Constructor, staticProps); return Constructor; }
+
+function _inherits$u(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$u(subClass, superClass); }
+
+function _setPrototypeOf$u(o, p) { _setPrototypeOf$u = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$u(o, p); }
+
+function _createSuper$u(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$u(); return function _createSuperInternal() { var Super = _getPrototypeOf$u(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$u(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$u(this, result); }; }
+
+function _possibleConstructorReturn$u(self, call) { if (call && (_typeof$v(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$u(self); }
+
+function _assertThisInitialized$u(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$u() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$u(o) { _getPrototypeOf$u = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$u(o); }
+
+function _defineProperty$u(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var EraParser = /*#__PURE__*/function (_Parser) {
+  _inherits$u(EraParser, _Parser);
+
+  var _super = _createSuper$u(EraParser);
+
+  function EraParser() {
+    var _this;
+
+    _classCallCheck$u(this, EraParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$u(_assertThisInitialized$u(_this), "priority", 140);
+
+    _defineProperty$u(_assertThisInitialized$u(_this), "incompatibleTokens", ['R', 'u', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$u(EraParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        // AD, BC
+        case 'G':
+        case 'GG':
+        case 'GGG':
+          return match.era(dateString, {
+            width: 'abbreviated'
+          }) || match.era(dateString, {
+            width: 'narrow'
+          });
+        // A, B
+
+        case 'GGGGG':
+          return match.era(dateString, {
+            width: 'narrow'
+          });
+        // Anno Domini, Before Christ
+
+        case 'GGGG':
+        default:
+          return match.era(dateString, {
+            width: 'wide'
+          }) || match.era(dateString, {
+            width: 'abbreviated'
+          }) || match.era(dateString, {
+            width: 'narrow'
+          });
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, flags, value) {
+      flags.era = value;
+      date.setUTCFullYear(value, 0, 1);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return EraParser;
+}(Parser);
+
+var numericPatterns = {
+  month: /^(1[0-2]|0?\d)/,
+  // 0 to 12
+  date: /^(3[0-1]|[0-2]?\d)/,
+  // 0 to 31
+  dayOfYear: /^(36[0-6]|3[0-5]\d|[0-2]?\d?\d)/,
+  // 0 to 366
+  week: /^(5[0-3]|[0-4]?\d)/,
+  // 0 to 53
+  hour23h: /^(2[0-3]|[0-1]?\d)/,
+  // 0 to 23
+  hour24h: /^(2[0-4]|[0-1]?\d)/,
+  // 0 to 24
+  hour11h: /^(1[0-1]|0?\d)/,
+  // 0 to 11
+  hour12h: /^(1[0-2]|0?\d)/,
+  // 0 to 12
+  minute: /^[0-5]?\d/,
+  // 0 to 59
+  second: /^[0-5]?\d/,
+  // 0 to 59
+  singleDigit: /^\d/,
+  // 0 to 9
+  twoDigits: /^\d{1,2}/,
+  // 0 to 99
+  threeDigits: /^\d{1,3}/,
+  // 0 to 999
+  fourDigits: /^\d{1,4}/,
+  // 0 to 9999
+  anyDigitsSigned: /^-?\d+/,
+  singleDigitSigned: /^-?\d/,
+  // 0 to 9, -0 to -9
+  twoDigitsSigned: /^-?\d{1,2}/,
+  // 0 to 99, -0 to -99
+  threeDigitsSigned: /^-?\d{1,3}/,
+  // 0 to 999, -0 to -999
+  fourDigitsSigned: /^-?\d{1,4}/ // 0 to 9999, -0 to -9999
+
+};
+var timezonePatterns = {
+  basicOptionalMinutes: /^([+-])(\d{2})(\d{2})?|Z/,
+  basic: /^([+-])(\d{2})(\d{2})|Z/,
+  basicOptionalSeconds: /^([+-])(\d{2})(\d{2})((\d{2}))?|Z/,
+  extended: /^([+-])(\d{2}):(\d{2})|Z/,
+  extendedOptionalSeconds: /^([+-])(\d{2}):(\d{2})(:(\d{2}))?|Z/
+};
+
+function mapValue(parseFnResult, mapFn) {
+  if (!parseFnResult) {
+    return parseFnResult;
+  }
+
+  return {
+    value: mapFn(parseFnResult.value),
+    rest: parseFnResult.rest
+  };
+}
+function parseNumericPattern(pattern, dateString) {
+  var matchResult = dateString.match(pattern);
+
+  if (!matchResult) {
+    return null;
+  }
+
+  return {
+    value: parseInt(matchResult[0], 10),
+    rest: dateString.slice(matchResult[0].length)
+  };
+}
+function parseTimezonePattern(pattern, dateString) {
+  var matchResult = dateString.match(pattern);
+
+  if (!matchResult) {
+    return null;
+  } // Input is 'Z'
+
+
+  if (matchResult[0] === 'Z') {
+    return {
+      value: 0,
+      rest: dateString.slice(1)
+    };
+  }
+
+  var sign = matchResult[1] === '+' ? 1 : -1;
+  var hours = matchResult[2] ? parseInt(matchResult[2], 10) : 0;
+  var minutes = matchResult[3] ? parseInt(matchResult[3], 10) : 0;
+  var seconds = matchResult[5] ? parseInt(matchResult[5], 10) : 0;
+  return {
+    value: sign * (hours * millisecondsInHour + minutes * millisecondsInMinute + seconds * millisecondsInSecond),
+    rest: dateString.slice(matchResult[0].length)
+  };
+}
+function parseAnyDigitsSigned(dateString) {
+  return parseNumericPattern(numericPatterns.anyDigitsSigned, dateString);
+}
+function parseNDigits(n, dateString) {
+  switch (n) {
+    case 1:
+      return parseNumericPattern(numericPatterns.singleDigit, dateString);
+
+    case 2:
+      return parseNumericPattern(numericPatterns.twoDigits, dateString);
+
+    case 3:
+      return parseNumericPattern(numericPatterns.threeDigits, dateString);
+
+    case 4:
+      return parseNumericPattern(numericPatterns.fourDigits, dateString);
+
+    default:
+      return parseNumericPattern(new RegExp('^\\d{1,' + n + '}'), dateString);
+  }
+}
+function parseNDigitsSigned(n, dateString) {
+  switch (n) {
+    case 1:
+      return parseNumericPattern(numericPatterns.singleDigitSigned, dateString);
+
+    case 2:
+      return parseNumericPattern(numericPatterns.twoDigitsSigned, dateString);
+
+    case 3:
+      return parseNumericPattern(numericPatterns.threeDigitsSigned, dateString);
+
+    case 4:
+      return parseNumericPattern(numericPatterns.fourDigitsSigned, dateString);
+
+    default:
+      return parseNumericPattern(new RegExp('^-?\\d{1,' + n + '}'), dateString);
+  }
+}
+function dayPeriodEnumToHours(dayPeriod) {
+  switch (dayPeriod) {
+    case 'morning':
+      return 4;
+
+    case 'evening':
+      return 17;
+
+    case 'pm':
+    case 'noon':
+    case 'afternoon':
+      return 12;
+
+    case 'am':
+    case 'midnight':
+    case 'night':
+    default:
+      return 0;
+  }
+}
+function normalizeTwoDigitYear(twoDigitYear, currentYear) {
+  var isCommonEra = currentYear > 0; // Absolute number of the current year:
+  // 1 -> 1 AC
+  // 0 -> 1 BC
+  // -1 -> 2 BC
+
+  var absCurrentYear = isCommonEra ? currentYear : 1 - currentYear;
+  var result;
+
+  if (absCurrentYear <= 50) {
+    result = twoDigitYear || 100;
+  } else {
+    var rangeEnd = absCurrentYear + 50;
+    var rangeEndCentury = Math.floor(rangeEnd / 100) * 100;
+    var isPreviousCentury = twoDigitYear >= rangeEnd % 100;
+    result = twoDigitYear + rangeEndCentury - (isPreviousCentury ? 100 : 0);
+  }
+
+  return isCommonEra ? result : 1 - result;
+}
+function isLeapYearIndex$1(year) {
+  return year % 400 === 0 || year % 4 === 0 && year % 100 !== 0;
+}
+
+function _typeof$u(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$u = function _typeof(obj) { return typeof obj; }; } else { _typeof$u = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$u(obj); }
+
+function _classCallCheck$t(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$t(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$t(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$t(Constructor.prototype, protoProps); if (staticProps) _defineProperties$t(Constructor, staticProps); return Constructor; }
+
+function _inherits$t(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$t(subClass, superClass); }
+
+function _setPrototypeOf$t(o, p) { _setPrototypeOf$t = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$t(o, p); }
+
+function _createSuper$t(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$t(); return function _createSuperInternal() { var Super = _getPrototypeOf$t(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$t(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$t(this, result); }; }
+
+function _possibleConstructorReturn$t(self, call) { if (call && (_typeof$u(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$t(self); }
+
+function _assertThisInitialized$t(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$t() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$t(o) { _getPrototypeOf$t = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$t(o); }
+
+function _defineProperty$t(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+// From http://www.unicode.org/reports/tr35/tr35-31/tr35-dates.html#Date_Format_Patterns
+// | Year     |     y | yy |   yyy |  yyyy | yyyyy |
+// |----------|-------|----|-------|-------|-------|
+// | AD 1     |     1 | 01 |   001 |  0001 | 00001 |
+// | AD 12    |    12 | 12 |   012 |  0012 | 00012 |
+// | AD 123   |   123 | 23 |   123 |  0123 | 00123 |
+// | AD 1234  |  1234 | 34 |  1234 |  1234 | 01234 |
+// | AD 12345 | 12345 | 45 | 12345 | 12345 | 12345 |
+var YearParser = /*#__PURE__*/function (_Parser) {
+  _inherits$t(YearParser, _Parser);
+
+  var _super = _createSuper$t(YearParser);
+
+  function YearParser() {
+    var _this;
+
+    _classCallCheck$t(this, YearParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$t(_assertThisInitialized$t(_this), "priority", 130);
+
+    _defineProperty$t(_assertThisInitialized$t(_this), "incompatibleTokens", ['Y', 'R', 'u', 'w', 'I', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$t(YearParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      var valueCallback = function valueCallback(year) {
+        return {
+          year: year,
+          isTwoDigitYear: token === 'yy'
+        };
+      };
+
+      switch (token) {
+        case 'y':
+          return mapValue(parseNDigits(4, dateString), valueCallback);
+
+        case 'yo':
+          return mapValue(match.ordinalNumber(dateString, {
+            unit: 'year'
+          }), valueCallback);
+
+        default:
+          return mapValue(parseNDigits(token.length, dateString), valueCallback);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value.isTwoDigitYear || value.year > 0;
+    }
+  }, {
+    key: "set",
+    value: function set(date, flags, value) {
+      var currentYear = date.getUTCFullYear();
+
+      if (value.isTwoDigitYear) {
+        var normalizedTwoDigitYear = normalizeTwoDigitYear(value.year, currentYear);
+        date.setUTCFullYear(normalizedTwoDigitYear, 0, 1);
+        date.setUTCHours(0, 0, 0, 0);
+        return date;
+      }
+
+      var year = !('era' in flags) || flags.era === 1 ? value.year : 1 - value.year;
+      date.setUTCFullYear(year, 0, 1);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return YearParser;
+}(Parser);
+
+function _typeof$t(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$t = function _typeof(obj) { return typeof obj; }; } else { _typeof$t = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$t(obj); }
+
+function _classCallCheck$s(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$s(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$s(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$s(Constructor.prototype, protoProps); if (staticProps) _defineProperties$s(Constructor, staticProps); return Constructor; }
+
+function _inherits$s(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$s(subClass, superClass); }
+
+function _setPrototypeOf$s(o, p) { _setPrototypeOf$s = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$s(o, p); }
+
+function _createSuper$s(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$s(); return function _createSuperInternal() { var Super = _getPrototypeOf$s(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$s(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$s(this, result); }; }
+
+function _possibleConstructorReturn$s(self, call) { if (call && (_typeof$t(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$s(self); }
+
+function _assertThisInitialized$s(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$s() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$s(o) { _getPrototypeOf$s = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$s(o); }
+
+function _defineProperty$s(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+// Local week-numbering year
+var LocalWeekYearParser = /*#__PURE__*/function (_Parser) {
+  _inherits$s(LocalWeekYearParser, _Parser);
+
+  var _super = _createSuper$s(LocalWeekYearParser);
+
+  function LocalWeekYearParser() {
+    var _this;
+
+    _classCallCheck$s(this, LocalWeekYearParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$s(_assertThisInitialized$s(_this), "priority", 130);
+
+    _defineProperty$s(_assertThisInitialized$s(_this), "incompatibleTokens", ['y', 'R', 'u', 'Q', 'q', 'M', 'L', 'I', 'd', 'D', 'i', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$s(LocalWeekYearParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      var valueCallback = function valueCallback(year) {
+        return {
+          year: year,
+          isTwoDigitYear: token === 'YY'
+        };
+      };
+
+      switch (token) {
+        case 'Y':
+          return mapValue(parseNDigits(4, dateString), valueCallback);
+
+        case 'Yo':
+          return mapValue(match.ordinalNumber(dateString, {
+            unit: 'year'
+          }), valueCallback);
+
+        default:
+          return mapValue(parseNDigits(token.length, dateString), valueCallback);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value.isTwoDigitYear || value.year > 0;
+    }
+  }, {
+    key: "set",
+    value: function set(date, flags, value, options) {
+      var currentYear = getUTCWeekYear(date, options);
+
+      if (value.isTwoDigitYear) {
+        var normalizedTwoDigitYear = normalizeTwoDigitYear(value.year, currentYear);
+        date.setUTCFullYear(normalizedTwoDigitYear, 0, options.firstWeekContainsDate);
+        date.setUTCHours(0, 0, 0, 0);
+        return startOfUTCWeek(date, options);
+      }
+
+      var year = !('era' in flags) || flags.era === 1 ? value.year : 1 - value.year;
+      date.setUTCFullYear(year, 0, options.firstWeekContainsDate);
+      date.setUTCHours(0, 0, 0, 0);
+      return startOfUTCWeek(date, options);
+    }
+  }]);
+
+  return LocalWeekYearParser;
+}(Parser);
+
+function _typeof$s(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$s = function _typeof(obj) { return typeof obj; }; } else { _typeof$s = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$s(obj); }
+
+function _classCallCheck$r(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$r(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$r(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$r(Constructor.prototype, protoProps); if (staticProps) _defineProperties$r(Constructor, staticProps); return Constructor; }
+
+function _inherits$r(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$r(subClass, superClass); }
+
+function _setPrototypeOf$r(o, p) { _setPrototypeOf$r = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$r(o, p); }
+
+function _createSuper$r(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$r(); return function _createSuperInternal() { var Super = _getPrototypeOf$r(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$r(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$r(this, result); }; }
+
+function _possibleConstructorReturn$r(self, call) { if (call && (_typeof$s(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$r(self); }
+
+function _assertThisInitialized$r(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$r() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$r(o) { _getPrototypeOf$r = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$r(o); }
+
+function _defineProperty$r(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var ISOWeekYearParser = /*#__PURE__*/function (_Parser) {
+  _inherits$r(ISOWeekYearParser, _Parser);
+
+  var _super = _createSuper$r(ISOWeekYearParser);
+
+  function ISOWeekYearParser() {
+    var _this;
+
+    _classCallCheck$r(this, ISOWeekYearParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$r(_assertThisInitialized$r(_this), "priority", 130);
+
+    _defineProperty$r(_assertThisInitialized$r(_this), "incompatibleTokens", ['G', 'y', 'Y', 'u', 'Q', 'q', 'M', 'L', 'w', 'd', 'D', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$r(ISOWeekYearParser, [{
+    key: "parse",
+    value: function parse(dateString, token) {
+      if (token === 'R') {
+        return parseNDigitsSigned(4, dateString);
+      }
+
+      return parseNDigitsSigned(token.length, dateString);
+    }
+  }, {
+    key: "set",
+    value: function set(_date, _flags, value) {
+      var firstWeekOfYear = new Date(0);
+      firstWeekOfYear.setUTCFullYear(value, 0, 4);
+      firstWeekOfYear.setUTCHours(0, 0, 0, 0);
+      return startOfUTCISOWeek(firstWeekOfYear);
+    }
+  }]);
+
+  return ISOWeekYearParser;
+}(Parser);
+
+function _typeof$r(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$r = function _typeof(obj) { return typeof obj; }; } else { _typeof$r = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$r(obj); }
+
+function _classCallCheck$q(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$q(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$q(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$q(Constructor.prototype, protoProps); if (staticProps) _defineProperties$q(Constructor, staticProps); return Constructor; }
+
+function _inherits$q(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$q(subClass, superClass); }
+
+function _setPrototypeOf$q(o, p) { _setPrototypeOf$q = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$q(o, p); }
+
+function _createSuper$q(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$q(); return function _createSuperInternal() { var Super = _getPrototypeOf$q(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$q(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$q(this, result); }; }
+
+function _possibleConstructorReturn$q(self, call) { if (call && (_typeof$r(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$q(self); }
+
+function _assertThisInitialized$q(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$q() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$q(o) { _getPrototypeOf$q = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$q(o); }
+
+function _defineProperty$q(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var ExtendedYearParser = /*#__PURE__*/function (_Parser) {
+  _inherits$q(ExtendedYearParser, _Parser);
+
+  var _super = _createSuper$q(ExtendedYearParser);
+
+  function ExtendedYearParser() {
+    var _this;
+
+    _classCallCheck$q(this, ExtendedYearParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$q(_assertThisInitialized$q(_this), "priority", 130);
+
+    _defineProperty$q(_assertThisInitialized$q(_this), "incompatibleTokens", ['G', 'y', 'Y', 'R', 'w', 'I', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$q(ExtendedYearParser, [{
+    key: "parse",
+    value: function parse(dateString, token) {
+      if (token === 'u') {
+        return parseNDigitsSigned(4, dateString);
+      }
+
+      return parseNDigitsSigned(token.length, dateString);
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCFullYear(value, 0, 1);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return ExtendedYearParser;
+}(Parser);
+
+function _typeof$q(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$q = function _typeof(obj) { return typeof obj; }; } else { _typeof$q = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$q(obj); }
+
+function _classCallCheck$p(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$p(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$p(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$p(Constructor.prototype, protoProps); if (staticProps) _defineProperties$p(Constructor, staticProps); return Constructor; }
+
+function _inherits$p(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$p(subClass, superClass); }
+
+function _setPrototypeOf$p(o, p) { _setPrototypeOf$p = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$p(o, p); }
+
+function _createSuper$p(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$p(); return function _createSuperInternal() { var Super = _getPrototypeOf$p(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$p(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$p(this, result); }; }
+
+function _possibleConstructorReturn$p(self, call) { if (call && (_typeof$q(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$p(self); }
+
+function _assertThisInitialized$p(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$p() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$p(o) { _getPrototypeOf$p = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$p(o); }
+
+function _defineProperty$p(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var QuarterParser = /*#__PURE__*/function (_Parser) {
+  _inherits$p(QuarterParser, _Parser);
+
+  var _super = _createSuper$p(QuarterParser);
+
+  function QuarterParser() {
+    var _this;
+
+    _classCallCheck$p(this, QuarterParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$p(_assertThisInitialized$p(_this), "priority", 120);
+
+    _defineProperty$p(_assertThisInitialized$p(_this), "incompatibleTokens", ['Y', 'R', 'q', 'M', 'L', 'w', 'I', 'd', 'D', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$p(QuarterParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        // 1, 2, 3, 4
+        case 'Q':
+        case 'QQ':
+          // 01, 02, 03, 04
+          return parseNDigits(token.length, dateString);
+        // 1st, 2nd, 3rd, 4th
+
+        case 'Qo':
+          return match.ordinalNumber(dateString, {
+            unit: 'quarter'
+          });
+        // Q1, Q2, Q3, Q4
+
+        case 'QQQ':
+          return match.quarter(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.quarter(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // 1, 2, 3, 4 (narrow quarter; could be not numerical)
+
+        case 'QQQQQ':
+          return match.quarter(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // 1st quarter, 2nd quarter, ...
+
+        case 'QQQQ':
+        default:
+          return match.quarter(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.quarter(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.quarter(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 1 && value <= 4;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCMonth((value - 1) * 3, 1);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return QuarterParser;
+}(Parser);
+
+function _typeof$p(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$p = function _typeof(obj) { return typeof obj; }; } else { _typeof$p = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$p(obj); }
+
+function _classCallCheck$o(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$o(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$o(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$o(Constructor.prototype, protoProps); if (staticProps) _defineProperties$o(Constructor, staticProps); return Constructor; }
+
+function _inherits$o(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$o(subClass, superClass); }
+
+function _setPrototypeOf$o(o, p) { _setPrototypeOf$o = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$o(o, p); }
+
+function _createSuper$o(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$o(); return function _createSuperInternal() { var Super = _getPrototypeOf$o(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$o(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$o(this, result); }; }
+
+function _possibleConstructorReturn$o(self, call) { if (call && (_typeof$p(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$o(self); }
+
+function _assertThisInitialized$o(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$o() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$o(o) { _getPrototypeOf$o = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$o(o); }
+
+function _defineProperty$o(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var StandAloneQuarterParser = /*#__PURE__*/function (_Parser) {
+  _inherits$o(StandAloneQuarterParser, _Parser);
+
+  var _super = _createSuper$o(StandAloneQuarterParser);
+
+  function StandAloneQuarterParser() {
+    var _this;
+
+    _classCallCheck$o(this, StandAloneQuarterParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$o(_assertThisInitialized$o(_this), "priority", 120);
+
+    _defineProperty$o(_assertThisInitialized$o(_this), "incompatibleTokens", ['Y', 'R', 'Q', 'M', 'L', 'w', 'I', 'd', 'D', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$o(StandAloneQuarterParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        // 1, 2, 3, 4
+        case 'q':
+        case 'qq':
+          // 01, 02, 03, 04
+          return parseNDigits(token.length, dateString);
+        // 1st, 2nd, 3rd, 4th
+
+        case 'qo':
+          return match.ordinalNumber(dateString, {
+            unit: 'quarter'
+          });
+        // Q1, Q2, Q3, Q4
+
+        case 'qqq':
+          return match.quarter(dateString, {
+            width: 'abbreviated',
+            context: 'standalone'
+          }) || match.quarter(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+        // 1, 2, 3, 4 (narrow quarter; could be not numerical)
+
+        case 'qqqqq':
+          return match.quarter(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+        // 1st quarter, 2nd quarter, ...
+
+        case 'qqqq':
+        default:
+          return match.quarter(dateString, {
+            width: 'wide',
+            context: 'standalone'
+          }) || match.quarter(dateString, {
+            width: 'abbreviated',
+            context: 'standalone'
+          }) || match.quarter(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 1 && value <= 4;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCMonth((value - 1) * 3, 1);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return StandAloneQuarterParser;
+}(Parser);
+
+function _typeof$o(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$o = function _typeof(obj) { return typeof obj; }; } else { _typeof$o = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$o(obj); }
+
+function _classCallCheck$n(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$n(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$n(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$n(Constructor.prototype, protoProps); if (staticProps) _defineProperties$n(Constructor, staticProps); return Constructor; }
+
+function _inherits$n(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$n(subClass, superClass); }
+
+function _setPrototypeOf$n(o, p) { _setPrototypeOf$n = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$n(o, p); }
+
+function _createSuper$n(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$n(); return function _createSuperInternal() { var Super = _getPrototypeOf$n(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$n(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$n(this, result); }; }
+
+function _possibleConstructorReturn$n(self, call) { if (call && (_typeof$o(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$n(self); }
+
+function _assertThisInitialized$n(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$n() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$n(o) { _getPrototypeOf$n = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$n(o); }
+
+function _defineProperty$n(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var MonthParser = /*#__PURE__*/function (_Parser) {
+  _inherits$n(MonthParser, _Parser);
+
+  var _super = _createSuper$n(MonthParser);
+
+  function MonthParser() {
+    var _this;
+
+    _classCallCheck$n(this, MonthParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$n(_assertThisInitialized$n(_this), "incompatibleTokens", ['Y', 'R', 'q', 'Q', 'L', 'w', 'I', 'D', 'i', 'e', 'c', 't', 'T']);
+
+    _defineProperty$n(_assertThisInitialized$n(_this), "priority", 110);
+
+    return _this;
+  }
+
+  _createClass$n(MonthParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      var valueCallback = function valueCallback(value) {
+        return value - 1;
+      };
+
+      switch (token) {
+        // 1, 2, ..., 12
+        case 'M':
+          return mapValue(parseNumericPattern(numericPatterns.month, dateString), valueCallback);
+        // 01, 02, ..., 12
+
+        case 'MM':
+          return mapValue(parseNDigits(2, dateString), valueCallback);
+        // 1st, 2nd, ..., 12th
+
+        case 'Mo':
+          return mapValue(match.ordinalNumber(dateString, {
+            unit: 'month'
+          }), valueCallback);
+        // Jan, Feb, ..., Dec
+
+        case 'MMM':
+          return match.month(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.month(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // J, F, ..., D
+
+        case 'MMMMM':
+          return match.month(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // January, February, ..., December
+
+        case 'MMMM':
+        default:
+          return match.month(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.month(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.month(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 11;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCMonth(value, 1);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return MonthParser;
+}(Parser);
+
+function _typeof$n(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$n = function _typeof(obj) { return typeof obj; }; } else { _typeof$n = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$n(obj); }
+
+function _classCallCheck$m(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$m(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$m(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$m(Constructor.prototype, protoProps); if (staticProps) _defineProperties$m(Constructor, staticProps); return Constructor; }
+
+function _inherits$m(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$m(subClass, superClass); }
+
+function _setPrototypeOf$m(o, p) { _setPrototypeOf$m = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$m(o, p); }
+
+function _createSuper$m(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$m(); return function _createSuperInternal() { var Super = _getPrototypeOf$m(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$m(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$m(this, result); }; }
+
+function _possibleConstructorReturn$m(self, call) { if (call && (_typeof$n(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$m(self); }
+
+function _assertThisInitialized$m(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$m() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$m(o) { _getPrototypeOf$m = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$m(o); }
+
+function _defineProperty$m(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var StandAloneMonthParser = /*#__PURE__*/function (_Parser) {
+  _inherits$m(StandAloneMonthParser, _Parser);
+
+  var _super = _createSuper$m(StandAloneMonthParser);
+
+  function StandAloneMonthParser() {
+    var _this;
+
+    _classCallCheck$m(this, StandAloneMonthParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$m(_assertThisInitialized$m(_this), "priority", 110);
+
+    _defineProperty$m(_assertThisInitialized$m(_this), "incompatibleTokens", ['Y', 'R', 'q', 'Q', 'M', 'w', 'I', 'D', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$m(StandAloneMonthParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      var valueCallback = function valueCallback(value) {
+        return value - 1;
+      };
+
+      switch (token) {
+        // 1, 2, ..., 12
+        case 'L':
+          return mapValue(parseNumericPattern(numericPatterns.month, dateString), valueCallback);
+        // 01, 02, ..., 12
+
+        case 'LL':
+          return mapValue(parseNDigits(2, dateString), valueCallback);
+        // 1st, 2nd, ..., 12th
+
+        case 'Lo':
+          return mapValue(match.ordinalNumber(dateString, {
+            unit: 'month'
+          }), valueCallback);
+        // Jan, Feb, ..., Dec
+
+        case 'LLL':
+          return match.month(dateString, {
+            width: 'abbreviated',
+            context: 'standalone'
+          }) || match.month(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+        // J, F, ..., D
+
+        case 'LLLLL':
+          return match.month(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+        // January, February, ..., December
+
+        case 'LLLL':
+        default:
+          return match.month(dateString, {
+            width: 'wide',
+            context: 'standalone'
+          }) || match.month(dateString, {
+            width: 'abbreviated',
+            context: 'standalone'
+          }) || match.month(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 11;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCMonth(value, 1);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return StandAloneMonthParser;
+}(Parser);
+
+function setUTCWeek(dirtyDate, dirtyWeek, options) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var week = toInteger(dirtyWeek);
+  var diff = getUTCWeek(date, options) - week;
+  date.setUTCDate(date.getUTCDate() - diff * 7);
+  return date;
+}
+
+function _typeof$m(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$m = function _typeof(obj) { return typeof obj; }; } else { _typeof$m = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$m(obj); }
+
+function _classCallCheck$l(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$l(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$l(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$l(Constructor.prototype, protoProps); if (staticProps) _defineProperties$l(Constructor, staticProps); return Constructor; }
+
+function _inherits$l(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$l(subClass, superClass); }
+
+function _setPrototypeOf$l(o, p) { _setPrototypeOf$l = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$l(o, p); }
+
+function _createSuper$l(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$l(); return function _createSuperInternal() { var Super = _getPrototypeOf$l(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$l(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$l(this, result); }; }
+
+function _possibleConstructorReturn$l(self, call) { if (call && (_typeof$m(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$l(self); }
+
+function _assertThisInitialized$l(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$l() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$l(o) { _getPrototypeOf$l = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$l(o); }
+
+function _defineProperty$l(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var LocalWeekParser = /*#__PURE__*/function (_Parser) {
+  _inherits$l(LocalWeekParser, _Parser);
+
+  var _super = _createSuper$l(LocalWeekParser);
+
+  function LocalWeekParser() {
+    var _this;
+
+    _classCallCheck$l(this, LocalWeekParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$l(_assertThisInitialized$l(_this), "priority", 100);
+
+    _defineProperty$l(_assertThisInitialized$l(_this), "incompatibleTokens", ['y', 'R', 'u', 'q', 'Q', 'M', 'L', 'I', 'd', 'D', 'i', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$l(LocalWeekParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'w':
+          return parseNumericPattern(numericPatterns.week, dateString);
+
+        case 'wo':
+          return match.ordinalNumber(dateString, {
+            unit: 'week'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 1 && value <= 53;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value, options) {
+      return startOfUTCWeek(setUTCWeek(date, value, options), options);
+    }
+  }]);
+
+  return LocalWeekParser;
+}(Parser);
+
+function setUTCISOWeek(dirtyDate, dirtyISOWeek) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var isoWeek = toInteger(dirtyISOWeek);
+  var diff = getUTCISOWeek(date) - isoWeek;
+  date.setUTCDate(date.getUTCDate() - diff * 7);
+  return date;
+}
+
+function _typeof$l(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$l = function _typeof(obj) { return typeof obj; }; } else { _typeof$l = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$l(obj); }
+
+function _classCallCheck$k(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$k(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$k(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$k(Constructor.prototype, protoProps); if (staticProps) _defineProperties$k(Constructor, staticProps); return Constructor; }
+
+function _inherits$k(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$k(subClass, superClass); }
+
+function _setPrototypeOf$k(o, p) { _setPrototypeOf$k = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$k(o, p); }
+
+function _createSuper$k(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$k(); return function _createSuperInternal() { var Super = _getPrototypeOf$k(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$k(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$k(this, result); }; }
+
+function _possibleConstructorReturn$k(self, call) { if (call && (_typeof$l(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$k(self); }
+
+function _assertThisInitialized$k(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$k() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$k(o) { _getPrototypeOf$k = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$k(o); }
+
+function _defineProperty$k(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var ISOWeekParser = /*#__PURE__*/function (_Parser) {
+  _inherits$k(ISOWeekParser, _Parser);
+
+  var _super = _createSuper$k(ISOWeekParser);
+
+  function ISOWeekParser() {
+    var _this;
+
+    _classCallCheck$k(this, ISOWeekParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$k(_assertThisInitialized$k(_this), "priority", 100);
+
+    _defineProperty$k(_assertThisInitialized$k(_this), "incompatibleTokens", ['y', 'Y', 'u', 'q', 'Q', 'M', 'L', 'w', 'd', 'D', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$k(ISOWeekParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'I':
+          return parseNumericPattern(numericPatterns.week, dateString);
+
+        case 'Io':
+          return match.ordinalNumber(dateString, {
+            unit: 'week'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 1 && value <= 53;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      return startOfUTCISOWeek(setUTCISOWeek(date, value));
+    }
+  }]);
+
+  return ISOWeekParser;
+}(Parser);
+
+function _typeof$k(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$k = function _typeof(obj) { return typeof obj; }; } else { _typeof$k = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$k(obj); }
+
+function _classCallCheck$j(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$j(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$j(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$j(Constructor.prototype, protoProps); if (staticProps) _defineProperties$j(Constructor, staticProps); return Constructor; }
+
+function _inherits$j(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$j(subClass, superClass); }
+
+function _setPrototypeOf$j(o, p) { _setPrototypeOf$j = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$j(o, p); }
+
+function _createSuper$j(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$j(); return function _createSuperInternal() { var Super = _getPrototypeOf$j(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$j(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$j(this, result); }; }
+
+function _possibleConstructorReturn$j(self, call) { if (call && (_typeof$k(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$j(self); }
+
+function _assertThisInitialized$j(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$j() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$j(o) { _getPrototypeOf$j = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$j(o); }
+
+function _defineProperty$j(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+var DAYS_IN_MONTH_LEAP_YEAR = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]; // Day of the month
+
+var DateParser = /*#__PURE__*/function (_Parser) {
+  _inherits$j(DateParser, _Parser);
+
+  var _super = _createSuper$j(DateParser);
+
+  function DateParser() {
+    var _this;
+
+    _classCallCheck$j(this, DateParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$j(_assertThisInitialized$j(_this), "priority", 90);
+
+    _defineProperty$j(_assertThisInitialized$j(_this), "subPriority", 1);
+
+    _defineProperty$j(_assertThisInitialized$j(_this), "incompatibleTokens", ['Y', 'R', 'q', 'Q', 'w', 'I', 'D', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$j(DateParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'd':
+          return parseNumericPattern(numericPatterns.date, dateString);
+
+        case 'do':
+          return match.ordinalNumber(dateString, {
+            unit: 'date'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(date, value) {
+      var year = date.getUTCFullYear();
+      var isLeapYear = isLeapYearIndex$1(year);
+      var month = date.getUTCMonth();
+
+      if (isLeapYear) {
+        return value >= 1 && value <= DAYS_IN_MONTH_LEAP_YEAR[month];
+      } else {
+        return value >= 1 && value <= DAYS_IN_MONTH[month];
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCDate(value);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return DateParser;
+}(Parser);
+
+function _typeof$j(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$j = function _typeof(obj) { return typeof obj; }; } else { _typeof$j = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$j(obj); }
+
+function _classCallCheck$i(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$i(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$i(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$i(Constructor.prototype, protoProps); if (staticProps) _defineProperties$i(Constructor, staticProps); return Constructor; }
+
+function _inherits$i(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$i(subClass, superClass); }
+
+function _setPrototypeOf$i(o, p) { _setPrototypeOf$i = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$i(o, p); }
+
+function _createSuper$i(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$i(); return function _createSuperInternal() { var Super = _getPrototypeOf$i(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$i(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$i(this, result); }; }
+
+function _possibleConstructorReturn$i(self, call) { if (call && (_typeof$j(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$i(self); }
+
+function _assertThisInitialized$i(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$i() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$i(o) { _getPrototypeOf$i = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$i(o); }
+
+function _defineProperty$i(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var DayOfYearParser = /*#__PURE__*/function (_Parser) {
+  _inherits$i(DayOfYearParser, _Parser);
+
+  var _super = _createSuper$i(DayOfYearParser);
+
+  function DayOfYearParser() {
+    var _this;
+
+    _classCallCheck$i(this, DayOfYearParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$i(_assertThisInitialized$i(_this), "priority", 90);
+
+    _defineProperty$i(_assertThisInitialized$i(_this), "subpriority", 1);
+
+    _defineProperty$i(_assertThisInitialized$i(_this), "incompatibleTokens", ['Y', 'R', 'q', 'Q', 'M', 'L', 'w', 'I', 'd', 'E', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$i(DayOfYearParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'D':
+        case 'DD':
+          return parseNumericPattern(numericPatterns.dayOfYear, dateString);
+
+        case 'Do':
+          return match.ordinalNumber(dateString, {
+            unit: 'date'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(date, value) {
+      var year = date.getUTCFullYear();
+      var isLeapYear = isLeapYearIndex$1(year);
+
+      if (isLeapYear) {
+        return value >= 1 && value <= 366;
+      } else {
+        return value >= 1 && value <= 365;
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCMonth(0, value);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return DayOfYearParser;
+}(Parser);
+
+function setUTCDay(dirtyDate, dirtyDay, options) {
+  var _ref, _ref2, _ref3, _options$weekStartsOn, _options$locale, _options$locale$optio, _defaultOptions$local, _defaultOptions$local2;
+
+  requiredArgs(2, arguments);
+  var defaultOptions = getDefaultOptions();
+  var weekStartsOn = toInteger((_ref = (_ref2 = (_ref3 = (_options$weekStartsOn = options === null || options === void 0 ? void 0 : options.weekStartsOn) !== null && _options$weekStartsOn !== void 0 ? _options$weekStartsOn : options === null || options === void 0 ? void 0 : (_options$locale = options.locale) === null || _options$locale === void 0 ? void 0 : (_options$locale$optio = _options$locale.options) === null || _options$locale$optio === void 0 ? void 0 : _options$locale$optio.weekStartsOn) !== null && _ref3 !== void 0 ? _ref3 : defaultOptions.weekStartsOn) !== null && _ref2 !== void 0 ? _ref2 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.weekStartsOn) !== null && _ref !== void 0 ? _ref : 0); // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
+
+  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
+    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
+  }
+
+  var date = toDate(dirtyDate);
+  var day = toInteger(dirtyDay);
+  var currentDay = date.getUTCDay();
+  var remainder = day % 7;
+  var dayIndex = (remainder + 7) % 7;
+  var diff = (dayIndex < weekStartsOn ? 7 : 0) + day - currentDay;
+  date.setUTCDate(date.getUTCDate() + diff);
+  return date;
+}
+
+function _typeof$i(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$i = function _typeof(obj) { return typeof obj; }; } else { _typeof$i = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$i(obj); }
+
+function _classCallCheck$h(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$h(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$h(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$h(Constructor.prototype, protoProps); if (staticProps) _defineProperties$h(Constructor, staticProps); return Constructor; }
+
+function _inherits$h(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$h(subClass, superClass); }
+
+function _setPrototypeOf$h(o, p) { _setPrototypeOf$h = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$h(o, p); }
+
+function _createSuper$h(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$h(); return function _createSuperInternal() { var Super = _getPrototypeOf$h(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$h(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$h(this, result); }; }
+
+function _possibleConstructorReturn$h(self, call) { if (call && (_typeof$i(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$h(self); }
+
+function _assertThisInitialized$h(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$h() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$h(o) { _getPrototypeOf$h = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$h(o); }
+
+function _defineProperty$h(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var DayParser = /*#__PURE__*/function (_Parser) {
+  _inherits$h(DayParser, _Parser);
+
+  var _super = _createSuper$h(DayParser);
+
+  function DayParser() {
+    var _this;
+
+    _classCallCheck$h(this, DayParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$h(_assertThisInitialized$h(_this), "priority", 90);
+
+    _defineProperty$h(_assertThisInitialized$h(_this), "incompatibleTokens", ['D', 'i', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$h(DayParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        // Tue
+        case 'E':
+        case 'EE':
+        case 'EEE':
+          return match.day(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // T
+
+        case 'EEEEE':
+          return match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // Tu
+
+        case 'EEEEEE':
+          return match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // Tuesday
+
+        case 'EEEE':
+        default:
+          return match.day(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 6;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value, options) {
+      date = setUTCDay(date, value, options);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return DayParser;
+}(Parser);
+
+function _typeof$h(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$h = function _typeof(obj) { return typeof obj; }; } else { _typeof$h = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$h(obj); }
+
+function _classCallCheck$g(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$g(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$g(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$g(Constructor.prototype, protoProps); if (staticProps) _defineProperties$g(Constructor, staticProps); return Constructor; }
+
+function _inherits$g(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$g(subClass, superClass); }
+
+function _setPrototypeOf$g(o, p) { _setPrototypeOf$g = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$g(o, p); }
+
+function _createSuper$g(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$g(); return function _createSuperInternal() { var Super = _getPrototypeOf$g(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$g(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$g(this, result); }; }
+
+function _possibleConstructorReturn$g(self, call) { if (call && (_typeof$h(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$g(self); }
+
+function _assertThisInitialized$g(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$g() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$g(o) { _getPrototypeOf$g = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$g(o); }
+
+function _defineProperty$g(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var LocalDayParser = /*#__PURE__*/function (_Parser) {
+  _inherits$g(LocalDayParser, _Parser);
+
+  var _super = _createSuper$g(LocalDayParser);
+
+  function LocalDayParser() {
+    var _this;
+
+    _classCallCheck$g(this, LocalDayParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$g(_assertThisInitialized$g(_this), "priority", 90);
+
+    _defineProperty$g(_assertThisInitialized$g(_this), "incompatibleTokens", ['y', 'R', 'u', 'q', 'Q', 'M', 'L', 'I', 'd', 'D', 'E', 'i', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$g(LocalDayParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match, options) {
+      var valueCallback = function valueCallback(value) {
+        var wholeWeekDays = Math.floor((value - 1) / 7) * 7;
+        return (value + options.weekStartsOn + 6) % 7 + wholeWeekDays;
+      };
+
+      switch (token) {
+        // 3
+        case 'e':
+        case 'ee':
+          // 03
+          return mapValue(parseNDigits(token.length, dateString), valueCallback);
+        // 3rd
+
+        case 'eo':
+          return mapValue(match.ordinalNumber(dateString, {
+            unit: 'day'
+          }), valueCallback);
+        // Tue
+
+        case 'eee':
+          return match.day(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // T
+
+        case 'eeeee':
+          return match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // Tu
+
+        case 'eeeeee':
+          return match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+        // Tuesday
+
+        case 'eeee':
+        default:
+          return match.day(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 6;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value, options) {
+      date = setUTCDay(date, value, options);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return LocalDayParser;
+}(Parser);
+
+function _typeof$g(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$g = function _typeof(obj) { return typeof obj; }; } else { _typeof$g = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$g(obj); }
+
+function _classCallCheck$f(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$f(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$f(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$f(Constructor.prototype, protoProps); if (staticProps) _defineProperties$f(Constructor, staticProps); return Constructor; }
+
+function _inherits$f(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$f(subClass, superClass); }
+
+function _setPrototypeOf$f(o, p) { _setPrototypeOf$f = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$f(o, p); }
+
+function _createSuper$f(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$f(); return function _createSuperInternal() { var Super = _getPrototypeOf$f(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$f(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$f(this, result); }; }
+
+function _possibleConstructorReturn$f(self, call) { if (call && (_typeof$g(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$f(self); }
+
+function _assertThisInitialized$f(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$f() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$f(o) { _getPrototypeOf$f = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$f(o); }
+
+function _defineProperty$f(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var StandAloneLocalDayParser = /*#__PURE__*/function (_Parser) {
+  _inherits$f(StandAloneLocalDayParser, _Parser);
+
+  var _super = _createSuper$f(StandAloneLocalDayParser);
+
+  function StandAloneLocalDayParser() {
+    var _this;
+
+    _classCallCheck$f(this, StandAloneLocalDayParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$f(_assertThisInitialized$f(_this), "priority", 90);
+
+    _defineProperty$f(_assertThisInitialized$f(_this), "incompatibleTokens", ['y', 'R', 'u', 'q', 'Q', 'M', 'L', 'I', 'd', 'D', 'E', 'i', 'e', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$f(StandAloneLocalDayParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match, options) {
+      var valueCallback = function valueCallback(value) {
+        var wholeWeekDays = Math.floor((value - 1) / 7) * 7;
+        return (value + options.weekStartsOn + 6) % 7 + wholeWeekDays;
+      };
+
+      switch (token) {
+        // 3
+        case 'c':
+        case 'cc':
+          // 03
+          return mapValue(parseNDigits(token.length, dateString), valueCallback);
+        // 3rd
+
+        case 'co':
+          return mapValue(match.ordinalNumber(dateString, {
+            unit: 'day'
+          }), valueCallback);
+        // Tue
+
+        case 'ccc':
+          return match.day(dateString, {
+            width: 'abbreviated',
+            context: 'standalone'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'standalone'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+        // T
+
+        case 'ccccc':
+          return match.day(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+        // Tu
+
+        case 'cccccc':
+          return match.day(dateString, {
+            width: 'short',
+            context: 'standalone'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+        // Tuesday
+
+        case 'cccc':
+        default:
+          return match.day(dateString, {
+            width: 'wide',
+            context: 'standalone'
+          }) || match.day(dateString, {
+            width: 'abbreviated',
+            context: 'standalone'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'standalone'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'standalone'
+          });
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 6;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value, options) {
+      date = setUTCDay(date, value, options);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return StandAloneLocalDayParser;
+}(Parser);
+
+function setUTCISODay(dirtyDate, dirtyDay) {
+  requiredArgs(2, arguments);
+  var day = toInteger(dirtyDay);
+
+  if (day % 7 === 0) {
+    day = day - 7;
+  }
+
+  var weekStartsOn = 1;
+  var date = toDate(dirtyDate);
+  var currentDay = date.getUTCDay();
+  var remainder = day % 7;
+  var dayIndex = (remainder + 7) % 7;
+  var diff = (dayIndex < weekStartsOn ? 7 : 0) + day - currentDay;
+  date.setUTCDate(date.getUTCDate() + diff);
+  return date;
+}
+
+function _typeof$f(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$f = function _typeof(obj) { return typeof obj; }; } else { _typeof$f = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$f(obj); }
+
+function _classCallCheck$e(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$e(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$e(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$e(Constructor.prototype, protoProps); if (staticProps) _defineProperties$e(Constructor, staticProps); return Constructor; }
+
+function _inherits$e(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$e(subClass, superClass); }
+
+function _setPrototypeOf$e(o, p) { _setPrototypeOf$e = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$e(o, p); }
+
+function _createSuper$e(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$e(); return function _createSuperInternal() { var Super = _getPrototypeOf$e(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$e(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$e(this, result); }; }
+
+function _possibleConstructorReturn$e(self, call) { if (call && (_typeof$f(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$e(self); }
+
+function _assertThisInitialized$e(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$e() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$e(o) { _getPrototypeOf$e = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$e(o); }
+
+function _defineProperty$e(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var ISODayParser = /*#__PURE__*/function (_Parser) {
+  _inherits$e(ISODayParser, _Parser);
+
+  var _super = _createSuper$e(ISODayParser);
+
+  function ISODayParser() {
+    var _this;
+
+    _classCallCheck$e(this, ISODayParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$e(_assertThisInitialized$e(_this), "priority", 90);
+
+    _defineProperty$e(_assertThisInitialized$e(_this), "incompatibleTokens", ['y', 'Y', 'u', 'q', 'Q', 'M', 'L', 'w', 'd', 'D', 'E', 'e', 'c', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$e(ISODayParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      var valueCallback = function valueCallback(value) {
+        if (value === 0) {
+          return 7;
+        }
+
+        return value;
+      };
+
+      switch (token) {
+        // 2
+        case 'i':
+        case 'ii':
+          // 02
+          return parseNDigits(token.length, dateString);
+        // 2nd
+
+        case 'io':
+          return match.ordinalNumber(dateString, {
+            unit: 'day'
+          });
+        // Tue
+
+        case 'iii':
+          return mapValue(match.day(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          }), valueCallback);
+        // T
+
+        case 'iiiii':
+          return mapValue(match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          }), valueCallback);
+        // Tu
+
+        case 'iiiiii':
+          return mapValue(match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          }), valueCallback);
+        // Tuesday
+
+        case 'iiii':
+        default:
+          return mapValue(match.day(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'short',
+            context: 'formatting'
+          }) || match.day(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          }), valueCallback);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 1 && value <= 7;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date = setUTCISODay(date, value);
+      date.setUTCHours(0, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return ISODayParser;
+}(Parser);
+
+function _typeof$e(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$e = function _typeof(obj) { return typeof obj; }; } else { _typeof$e = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$e(obj); }
+
+function _classCallCheck$d(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$d(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$d(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$d(Constructor.prototype, protoProps); if (staticProps) _defineProperties$d(Constructor, staticProps); return Constructor; }
+
+function _inherits$d(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$d(subClass, superClass); }
+
+function _setPrototypeOf$d(o, p) { _setPrototypeOf$d = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$d(o, p); }
+
+function _createSuper$d(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$d(); return function _createSuperInternal() { var Super = _getPrototypeOf$d(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$d(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$d(this, result); }; }
+
+function _possibleConstructorReturn$d(self, call) { if (call && (_typeof$e(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$d(self); }
+
+function _assertThisInitialized$d(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$d() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$d(o) { _getPrototypeOf$d = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$d(o); }
+
+function _defineProperty$d(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var AMPMParser = /*#__PURE__*/function (_Parser) {
+  _inherits$d(AMPMParser, _Parser);
+
+  var _super = _createSuper$d(AMPMParser);
+
+  function AMPMParser() {
+    var _this;
+
+    _classCallCheck$d(this, AMPMParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$d(_assertThisInitialized$d(_this), "priority", 80);
+
+    _defineProperty$d(_assertThisInitialized$d(_this), "incompatibleTokens", ['b', 'B', 'H', 'k', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$d(AMPMParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'a':
+        case 'aa':
+        case 'aaa':
+          return match.dayPeriod(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+
+        case 'aaaaa':
+          return match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+
+        case 'aaaa':
+        default:
+          return match.dayPeriod(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCHours(dayPeriodEnumToHours(value), 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return AMPMParser;
+}(Parser);
+
+function _typeof$d(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$d = function _typeof(obj) { return typeof obj; }; } else { _typeof$d = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$d(obj); }
+
+function _classCallCheck$c(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$c(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$c(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$c(Constructor.prototype, protoProps); if (staticProps) _defineProperties$c(Constructor, staticProps); return Constructor; }
+
+function _inherits$c(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$c(subClass, superClass); }
+
+function _setPrototypeOf$c(o, p) { _setPrototypeOf$c = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$c(o, p); }
+
+function _createSuper$c(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$c(); return function _createSuperInternal() { var Super = _getPrototypeOf$c(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$c(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$c(this, result); }; }
+
+function _possibleConstructorReturn$c(self, call) { if (call && (_typeof$d(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$c(self); }
+
+function _assertThisInitialized$c(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$c() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$c(o) { _getPrototypeOf$c = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$c(o); }
+
+function _defineProperty$c(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var AMPMMidnightParser = /*#__PURE__*/function (_Parser) {
+  _inherits$c(AMPMMidnightParser, _Parser);
+
+  var _super = _createSuper$c(AMPMMidnightParser);
+
+  function AMPMMidnightParser() {
+    var _this;
+
+    _classCallCheck$c(this, AMPMMidnightParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$c(_assertThisInitialized$c(_this), "priority", 80);
+
+    _defineProperty$c(_assertThisInitialized$c(_this), "incompatibleTokens", ['a', 'B', 'H', 'k', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$c(AMPMMidnightParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'b':
+        case 'bb':
+        case 'bbb':
+          return match.dayPeriod(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+
+        case 'bbbbb':
+          return match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+
+        case 'bbbb':
+        default:
+          return match.dayPeriod(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCHours(dayPeriodEnumToHours(value), 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return AMPMMidnightParser;
+}(Parser);
+
+function _typeof$c(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$c = function _typeof(obj) { return typeof obj; }; } else { _typeof$c = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$c(obj); }
+
+function _classCallCheck$b(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$b(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$b(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$b(Constructor.prototype, protoProps); if (staticProps) _defineProperties$b(Constructor, staticProps); return Constructor; }
+
+function _inherits$b(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$b(subClass, superClass); }
+
+function _setPrototypeOf$b(o, p) { _setPrototypeOf$b = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$b(o, p); }
+
+function _createSuper$b(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$b(); return function _createSuperInternal() { var Super = _getPrototypeOf$b(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$b(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$b(this, result); }; }
+
+function _possibleConstructorReturn$b(self, call) { if (call && (_typeof$c(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$b(self); }
+
+function _assertThisInitialized$b(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$b() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$b(o) { _getPrototypeOf$b = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$b(o); }
+
+function _defineProperty$b(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var DayPeriodParser = /*#__PURE__*/function (_Parser) {
+  _inherits$b(DayPeriodParser, _Parser);
+
+  var _super = _createSuper$b(DayPeriodParser);
+
+  function DayPeriodParser() {
+    var _this;
+
+    _classCallCheck$b(this, DayPeriodParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$b(_assertThisInitialized$b(_this), "priority", 80);
+
+    _defineProperty$b(_assertThisInitialized$b(_this), "incompatibleTokens", ['a', 'b', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$b(DayPeriodParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'B':
+        case 'BB':
+        case 'BBB':
+          return match.dayPeriod(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+
+        case 'BBBBB':
+          return match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+
+        case 'BBBB':
+        default:
+          return match.dayPeriod(dateString, {
+            width: 'wide',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'abbreviated',
+            context: 'formatting'
+          }) || match.dayPeriod(dateString, {
+            width: 'narrow',
+            context: 'formatting'
+          });
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCHours(dayPeriodEnumToHours(value), 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return DayPeriodParser;
+}(Parser);
+
+function _typeof$b(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$b = function _typeof(obj) { return typeof obj; }; } else { _typeof$b = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$b(obj); }
+
+function _classCallCheck$a(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$a(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$a(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$a(Constructor.prototype, protoProps); if (staticProps) _defineProperties$a(Constructor, staticProps); return Constructor; }
+
+function _inherits$a(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$a(subClass, superClass); }
+
+function _setPrototypeOf$a(o, p) { _setPrototypeOf$a = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$a(o, p); }
+
+function _createSuper$a(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$a(); return function _createSuperInternal() { var Super = _getPrototypeOf$a(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$a(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$a(this, result); }; }
+
+function _possibleConstructorReturn$a(self, call) { if (call && (_typeof$b(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$a(self); }
+
+function _assertThisInitialized$a(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$a() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$a(o) { _getPrototypeOf$a = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$a(o); }
+
+function _defineProperty$a(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var Hour1to12Parser = /*#__PURE__*/function (_Parser) {
+  _inherits$a(Hour1to12Parser, _Parser);
+
+  var _super = _createSuper$a(Hour1to12Parser);
+
+  function Hour1to12Parser() {
+    var _this;
+
+    _classCallCheck$a(this, Hour1to12Parser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$a(_assertThisInitialized$a(_this), "priority", 70);
+
+    _defineProperty$a(_assertThisInitialized$a(_this), "incompatibleTokens", ['H', 'K', 'k', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$a(Hour1to12Parser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'h':
+          return parseNumericPattern(numericPatterns.hour12h, dateString);
+
+        case 'ho':
+          return match.ordinalNumber(dateString, {
+            unit: 'hour'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 1 && value <= 12;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      var isPM = date.getUTCHours() >= 12;
+
+      if (isPM && value < 12) {
+        date.setUTCHours(value + 12, 0, 0, 0);
+      } else if (!isPM && value === 12) {
+        date.setUTCHours(0, 0, 0, 0);
+      } else {
+        date.setUTCHours(value, 0, 0, 0);
+      }
+
+      return date;
+    }
+  }]);
+
+  return Hour1to12Parser;
+}(Parser);
+
+function _typeof$a(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$a = function _typeof(obj) { return typeof obj; }; } else { _typeof$a = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$a(obj); }
+
+function _classCallCheck$9(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$9(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$9(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$9(Constructor.prototype, protoProps); if (staticProps) _defineProperties$9(Constructor, staticProps); return Constructor; }
+
+function _inherits$9(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$9(subClass, superClass); }
+
+function _setPrototypeOf$9(o, p) { _setPrototypeOf$9 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$9(o, p); }
+
+function _createSuper$9(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$9(); return function _createSuperInternal() { var Super = _getPrototypeOf$9(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$9(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$9(this, result); }; }
+
+function _possibleConstructorReturn$9(self, call) { if (call && (_typeof$a(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$9(self); }
+
+function _assertThisInitialized$9(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$9() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$9(o) { _getPrototypeOf$9 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$9(o); }
+
+function _defineProperty$9(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var Hour0to23Parser = /*#__PURE__*/function (_Parser) {
+  _inherits$9(Hour0to23Parser, _Parser);
+
+  var _super = _createSuper$9(Hour0to23Parser);
+
+  function Hour0to23Parser() {
+    var _this;
+
+    _classCallCheck$9(this, Hour0to23Parser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$9(_assertThisInitialized$9(_this), "priority", 70);
+
+    _defineProperty$9(_assertThisInitialized$9(_this), "incompatibleTokens", ['a', 'b', 'h', 'K', 'k', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$9(Hour0to23Parser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'H':
+          return parseNumericPattern(numericPatterns.hour23h, dateString);
+
+        case 'Ho':
+          return match.ordinalNumber(dateString, {
+            unit: 'hour'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 23;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCHours(value, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return Hour0to23Parser;
+}(Parser);
+
+function _typeof$9(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$9 = function _typeof(obj) { return typeof obj; }; } else { _typeof$9 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$9(obj); }
+
+function _classCallCheck$8(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$8(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$8(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$8(Constructor.prototype, protoProps); if (staticProps) _defineProperties$8(Constructor, staticProps); return Constructor; }
+
+function _inherits$8(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$8(subClass, superClass); }
+
+function _setPrototypeOf$8(o, p) { _setPrototypeOf$8 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$8(o, p); }
+
+function _createSuper$8(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$8(); return function _createSuperInternal() { var Super = _getPrototypeOf$8(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$8(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$8(this, result); }; }
+
+function _possibleConstructorReturn$8(self, call) { if (call && (_typeof$9(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$8(self); }
+
+function _assertThisInitialized$8(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$8() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$8(o) { _getPrototypeOf$8 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$8(o); }
+
+function _defineProperty$8(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var Hour0To11Parser = /*#__PURE__*/function (_Parser) {
+  _inherits$8(Hour0To11Parser, _Parser);
+
+  var _super = _createSuper$8(Hour0To11Parser);
+
+  function Hour0To11Parser() {
+    var _this;
+
+    _classCallCheck$8(this, Hour0To11Parser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$8(_assertThisInitialized$8(_this), "priority", 70);
+
+    _defineProperty$8(_assertThisInitialized$8(_this), "incompatibleTokens", ['h', 'H', 'k', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$8(Hour0To11Parser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'K':
+          return parseNumericPattern(numericPatterns.hour11h, dateString);
+
+        case 'Ko':
+          return match.ordinalNumber(dateString, {
+            unit: 'hour'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 11;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      var isPM = date.getUTCHours() >= 12;
+
+      if (isPM && value < 12) {
+        date.setUTCHours(value + 12, 0, 0, 0);
+      } else {
+        date.setUTCHours(value, 0, 0, 0);
+      }
+
+      return date;
+    }
+  }]);
+
+  return Hour0To11Parser;
+}(Parser);
+
+function _typeof$8(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$8 = function _typeof(obj) { return typeof obj; }; } else { _typeof$8 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$8(obj); }
+
+function _classCallCheck$7(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$7(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$7(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$7(Constructor.prototype, protoProps); if (staticProps) _defineProperties$7(Constructor, staticProps); return Constructor; }
+
+function _inherits$7(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$7(subClass, superClass); }
+
+function _setPrototypeOf$7(o, p) { _setPrototypeOf$7 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$7(o, p); }
+
+function _createSuper$7(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$7(); return function _createSuperInternal() { var Super = _getPrototypeOf$7(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$7(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$7(this, result); }; }
+
+function _possibleConstructorReturn$7(self, call) { if (call && (_typeof$8(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$7(self); }
+
+function _assertThisInitialized$7(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$7() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$7(o) { _getPrototypeOf$7 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$7(o); }
+
+function _defineProperty$7(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var Hour1To24Parser = /*#__PURE__*/function (_Parser) {
+  _inherits$7(Hour1To24Parser, _Parser);
+
+  var _super = _createSuper$7(Hour1To24Parser);
+
+  function Hour1To24Parser() {
+    var _this;
+
+    _classCallCheck$7(this, Hour1To24Parser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$7(_assertThisInitialized$7(_this), "priority", 70);
+
+    _defineProperty$7(_assertThisInitialized$7(_this), "incompatibleTokens", ['a', 'b', 'h', 'H', 'K', 't', 'T']);
+
+    return _this;
+  }
+
+  _createClass$7(Hour1To24Parser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'k':
+          return parseNumericPattern(numericPatterns.hour24h, dateString);
+
+        case 'ko':
+          return match.ordinalNumber(dateString, {
+            unit: 'hour'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 1 && value <= 24;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      var hours = value <= 24 ? value % 24 : value;
+      date.setUTCHours(hours, 0, 0, 0);
+      return date;
+    }
+  }]);
+
+  return Hour1To24Parser;
+}(Parser);
+
+function _typeof$7(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$7 = function _typeof(obj) { return typeof obj; }; } else { _typeof$7 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$7(obj); }
+
+function _classCallCheck$6(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$6(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$6(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$6(Constructor.prototype, protoProps); if (staticProps) _defineProperties$6(Constructor, staticProps); return Constructor; }
+
+function _inherits$6(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$6(subClass, superClass); }
+
+function _setPrototypeOf$6(o, p) { _setPrototypeOf$6 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$6(o, p); }
+
+function _createSuper$6(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$6(); return function _createSuperInternal() { var Super = _getPrototypeOf$6(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$6(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$6(this, result); }; }
+
+function _possibleConstructorReturn$6(self, call) { if (call && (_typeof$7(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$6(self); }
+
+function _assertThisInitialized$6(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$6() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$6(o) { _getPrototypeOf$6 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$6(o); }
+
+function _defineProperty$6(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var MinuteParser = /*#__PURE__*/function (_Parser) {
+  _inherits$6(MinuteParser, _Parser);
+
+  var _super = _createSuper$6(MinuteParser);
+
+  function MinuteParser() {
+    var _this;
+
+    _classCallCheck$6(this, MinuteParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$6(_assertThisInitialized$6(_this), "priority", 60);
+
+    _defineProperty$6(_assertThisInitialized$6(_this), "incompatibleTokens", ['t', 'T']);
+
+    return _this;
+  }
+
+  _createClass$6(MinuteParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 'm':
+          return parseNumericPattern(numericPatterns.minute, dateString);
+
+        case 'mo':
+          return match.ordinalNumber(dateString, {
+            unit: 'minute'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 59;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCMinutes(value, 0, 0);
+      return date;
+    }
+  }]);
+
+  return MinuteParser;
+}(Parser);
+
+function _typeof$6(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$6 = function _typeof(obj) { return typeof obj; }; } else { _typeof$6 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$6(obj); }
+
+function _classCallCheck$5(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$5(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$5(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$5(Constructor.prototype, protoProps); if (staticProps) _defineProperties$5(Constructor, staticProps); return Constructor; }
+
+function _inherits$5(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$5(subClass, superClass); }
+
+function _setPrototypeOf$5(o, p) { _setPrototypeOf$5 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$5(o, p); }
+
+function _createSuper$5(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$5(); return function _createSuperInternal() { var Super = _getPrototypeOf$5(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$5(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$5(this, result); }; }
+
+function _possibleConstructorReturn$5(self, call) { if (call && (_typeof$6(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$5(self); }
+
+function _assertThisInitialized$5(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$5() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$5(o) { _getPrototypeOf$5 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$5(o); }
+
+function _defineProperty$5(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var SecondParser = /*#__PURE__*/function (_Parser) {
+  _inherits$5(SecondParser, _Parser);
+
+  var _super = _createSuper$5(SecondParser);
+
+  function SecondParser() {
+    var _this;
+
+    _classCallCheck$5(this, SecondParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$5(_assertThisInitialized$5(_this), "priority", 50);
+
+    _defineProperty$5(_assertThisInitialized$5(_this), "incompatibleTokens", ['t', 'T']);
+
+    return _this;
+  }
+
+  _createClass$5(SecondParser, [{
+    key: "parse",
+    value: function parse(dateString, token, match) {
+      switch (token) {
+        case 's':
+          return parseNumericPattern(numericPatterns.second, dateString);
+
+        case 'so':
+          return match.ordinalNumber(dateString, {
+            unit: 'second'
+          });
+
+        default:
+          return parseNDigits(token.length, dateString);
+      }
+    }
+  }, {
+    key: "validate",
+    value: function validate(_date, value) {
+      return value >= 0 && value <= 59;
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCSeconds(value, 0);
+      return date;
+    }
+  }]);
+
+  return SecondParser;
+}(Parser);
+
+function _typeof$5(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$5 = function _typeof(obj) { return typeof obj; }; } else { _typeof$5 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$5(obj); }
+
+function _classCallCheck$4(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$4(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$4(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$4(Constructor.prototype, protoProps); if (staticProps) _defineProperties$4(Constructor, staticProps); return Constructor; }
+
+function _inherits$4(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$4(subClass, superClass); }
+
+function _setPrototypeOf$4(o, p) { _setPrototypeOf$4 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$4(o, p); }
+
+function _createSuper$4(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$4(); return function _createSuperInternal() { var Super = _getPrototypeOf$4(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$4(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$4(this, result); }; }
+
+function _possibleConstructorReturn$4(self, call) { if (call && (_typeof$5(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$4(self); }
+
+function _assertThisInitialized$4(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$4() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$4(o) { _getPrototypeOf$4 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$4(o); }
+
+function _defineProperty$4(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var FractionOfSecondParser = /*#__PURE__*/function (_Parser) {
+  _inherits$4(FractionOfSecondParser, _Parser);
+
+  var _super = _createSuper$4(FractionOfSecondParser);
+
+  function FractionOfSecondParser() {
+    var _this;
+
+    _classCallCheck$4(this, FractionOfSecondParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$4(_assertThisInitialized$4(_this), "priority", 30);
+
+    _defineProperty$4(_assertThisInitialized$4(_this), "incompatibleTokens", ['t', 'T']);
+
+    return _this;
+  }
+
+  _createClass$4(FractionOfSecondParser, [{
+    key: "parse",
+    value: function parse(dateString, token) {
+      var valueCallback = function valueCallback(value) {
+        return Math.floor(value * Math.pow(10, -token.length + 3));
+      };
+
+      return mapValue(parseNDigits(token.length, dateString), valueCallback);
+    }
+  }, {
+    key: "set",
+    value: function set(date, _flags, value) {
+      date.setUTCMilliseconds(value);
+      return date;
+    }
+  }]);
+
+  return FractionOfSecondParser;
+}(Parser);
+
+function _typeof$4(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$4 = function _typeof(obj) { return typeof obj; }; } else { _typeof$4 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$4(obj); }
+
+function _classCallCheck$3(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$3(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$3(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$3(Constructor.prototype, protoProps); if (staticProps) _defineProperties$3(Constructor, staticProps); return Constructor; }
+
+function _inherits$3(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$3(subClass, superClass); }
+
+function _setPrototypeOf$3(o, p) { _setPrototypeOf$3 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$3(o, p); }
+
+function _createSuper$3(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$3(); return function _createSuperInternal() { var Super = _getPrototypeOf$3(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$3(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$3(this, result); }; }
+
+function _possibleConstructorReturn$3(self, call) { if (call && (_typeof$4(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$3(self); }
+
+function _assertThisInitialized$3(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$3() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$3(o) { _getPrototypeOf$3 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$3(o); }
+
+function _defineProperty$3(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var ISOTimezoneWithZParser = /*#__PURE__*/function (_Parser) {
+  _inherits$3(ISOTimezoneWithZParser, _Parser);
+
+  var _super = _createSuper$3(ISOTimezoneWithZParser);
+
+  function ISOTimezoneWithZParser() {
+    var _this;
+
+    _classCallCheck$3(this, ISOTimezoneWithZParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$3(_assertThisInitialized$3(_this), "priority", 10);
+
+    _defineProperty$3(_assertThisInitialized$3(_this), "incompatibleTokens", ['t', 'T', 'x']);
+
+    return _this;
+  }
+
+  _createClass$3(ISOTimezoneWithZParser, [{
+    key: "parse",
+    value: function parse(dateString, token) {
+      switch (token) {
+        case 'X':
+          return parseTimezonePattern(timezonePatterns.basicOptionalMinutes, dateString);
+
+        case 'XX':
+          return parseTimezonePattern(timezonePatterns.basic, dateString);
+
+        case 'XXXX':
+          return parseTimezonePattern(timezonePatterns.basicOptionalSeconds, dateString);
+
+        case 'XXXXX':
+          return parseTimezonePattern(timezonePatterns.extendedOptionalSeconds, dateString);
+
+        case 'XXX':
+        default:
+          return parseTimezonePattern(timezonePatterns.extended, dateString);
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, flags, value) {
+      if (flags.timestampIsSet) {
+        return date;
+      }
+
+      return new Date(date.getTime() - value);
+    }
+  }]);
+
+  return ISOTimezoneWithZParser;
+}(Parser);
+
+function _typeof$3(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$3 = function _typeof(obj) { return typeof obj; }; } else { _typeof$3 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$3(obj); }
+
+function _classCallCheck$2(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$2(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$2(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$2(Constructor.prototype, protoProps); if (staticProps) _defineProperties$2(Constructor, staticProps); return Constructor; }
+
+function _inherits$2(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$2(subClass, superClass); }
+
+function _setPrototypeOf$2(o, p) { _setPrototypeOf$2 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$2(o, p); }
+
+function _createSuper$2(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$2(); return function _createSuperInternal() { var Super = _getPrototypeOf$2(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$2(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$2(this, result); }; }
+
+function _possibleConstructorReturn$2(self, call) { if (call && (_typeof$3(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$2(self); }
+
+function _assertThisInitialized$2(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$2() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$2(o) { _getPrototypeOf$2 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$2(o); }
+
+function _defineProperty$2(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
+var ISOTimezoneParser = /*#__PURE__*/function (_Parser) {
+  _inherits$2(ISOTimezoneParser, _Parser);
+
+  var _super = _createSuper$2(ISOTimezoneParser);
+
+  function ISOTimezoneParser() {
+    var _this;
+
+    _classCallCheck$2(this, ISOTimezoneParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$2(_assertThisInitialized$2(_this), "priority", 10);
+
+    _defineProperty$2(_assertThisInitialized$2(_this), "incompatibleTokens", ['t', 'T', 'X']);
+
+    return _this;
+  }
+
+  _createClass$2(ISOTimezoneParser, [{
+    key: "parse",
+    value: function parse(dateString, token) {
+      switch (token) {
+        case 'x':
+          return parseTimezonePattern(timezonePatterns.basicOptionalMinutes, dateString);
+
+        case 'xx':
+          return parseTimezonePattern(timezonePatterns.basic, dateString);
+
+        case 'xxxx':
+          return parseTimezonePattern(timezonePatterns.basicOptionalSeconds, dateString);
+
+        case 'xxxxx':
+          return parseTimezonePattern(timezonePatterns.extendedOptionalSeconds, dateString);
+
+        case 'xxx':
+        default:
+          return parseTimezonePattern(timezonePatterns.extended, dateString);
+      }
+    }
+  }, {
+    key: "set",
+    value: function set(date, flags, value) {
+      if (flags.timestampIsSet) {
+        return date;
+      }
+
+      return new Date(date.getTime() - value);
+    }
+  }]);
+
+  return ISOTimezoneParser;
+}(Parser);
+
+function _typeof$2(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$2 = function _typeof(obj) { return typeof obj; }; } else { _typeof$2 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$2(obj); }
+
+function _classCallCheck$1(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties$1(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass$1(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties$1(Constructor.prototype, protoProps); if (staticProps) _defineProperties$1(Constructor, staticProps); return Constructor; }
+
+function _inherits$1(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf$1(subClass, superClass); }
+
+function _setPrototypeOf$1(o, p) { _setPrototypeOf$1 = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf$1(o, p); }
+
+function _createSuper$1(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct$1(); return function _createSuperInternal() { var Super = _getPrototypeOf$1(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf$1(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn$1(this, result); }; }
+
+function _possibleConstructorReturn$1(self, call) { if (call && (_typeof$2(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized$1(self); }
+
+function _assertThisInitialized$1(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct$1() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf$1(o) { _getPrototypeOf$1 = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf$1(o); }
+
+function _defineProperty$1(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var TimestampSecondsParser = /*#__PURE__*/function (_Parser) {
+  _inherits$1(TimestampSecondsParser, _Parser);
+
+  var _super = _createSuper$1(TimestampSecondsParser);
+
+  function TimestampSecondsParser() {
+    var _this;
+
+    _classCallCheck$1(this, TimestampSecondsParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty$1(_assertThisInitialized$1(_this), "priority", 40);
+
+    _defineProperty$1(_assertThisInitialized$1(_this), "incompatibleTokens", '*');
+
+    return _this;
+  }
+
+  _createClass$1(TimestampSecondsParser, [{
+    key: "parse",
+    value: function parse(dateString) {
+      return parseAnyDigitsSigned(dateString);
+    }
+  }, {
+    key: "set",
+    value: function set(_date, _flags, value) {
+      return [new Date(value * 1000), {
+        timestampIsSet: true
+      }];
+    }
+  }]);
+
+  return TimestampSecondsParser;
+}(Parser);
+
+function _typeof$1(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof$1 = function _typeof(obj) { return typeof obj; }; } else { _typeof$1 = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof$1(obj); }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } }
+
+function _createClass(Constructor, protoProps, staticProps) { if (protoProps) _defineProperties(Constructor.prototype, protoProps); if (staticProps) _defineProperties(Constructor, staticProps); return Constructor; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function"); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, writable: true, configurable: true } }); if (superClass) _setPrototypeOf(subClass, superClass); }
+
+function _setPrototypeOf(o, p) { _setPrototypeOf = Object.setPrototypeOf || function _setPrototypeOf(o, p) { o.__proto__ = p; return o; }; return _setPrototypeOf(o, p); }
+
+function _createSuper(Derived) { var hasNativeReflectConstruct = _isNativeReflectConstruct(); return function _createSuperInternal() { var Super = _getPrototypeOf(Derived), result; if (hasNativeReflectConstruct) { var NewTarget = _getPrototypeOf(this).constructor; result = Reflect.construct(Super, arguments, NewTarget); } else { result = Super.apply(this, arguments); } return _possibleConstructorReturn(this, result); }; }
+
+function _possibleConstructorReturn(self, call) { if (call && (_typeof$1(call) === "object" || typeof call === "function")) { return call; } return _assertThisInitialized(self); }
+
+function _assertThisInitialized(self) { if (self === void 0) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return self; }
+
+function _isNativeReflectConstruct() { if (typeof Reflect === "undefined" || !Reflect.construct) return false; if (Reflect.construct.sham) return false; if (typeof Proxy === "function") return true; try { Boolean.prototype.valueOf.call(Reflect.construct(Boolean, [], function () {})); return true; } catch (e) { return false; } }
+
+function _getPrototypeOf(o) { _getPrototypeOf = Object.setPrototypeOf ? Object.getPrototypeOf : function _getPrototypeOf(o) { return o.__proto__ || Object.getPrototypeOf(o); }; return _getPrototypeOf(o); }
+
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+var TimestampMillisecondsParser = /*#__PURE__*/function (_Parser) {
+  _inherits(TimestampMillisecondsParser, _Parser);
+
+  var _super = _createSuper(TimestampMillisecondsParser);
+
+  function TimestampMillisecondsParser() {
+    var _this;
+
+    _classCallCheck(this, TimestampMillisecondsParser);
+
+    for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+      args[_key] = arguments[_key];
+    }
+
+    _this = _super.call.apply(_super, [this].concat(args));
+
+    _defineProperty(_assertThisInitialized(_this), "priority", 20);
+
+    _defineProperty(_assertThisInitialized(_this), "incompatibleTokens", '*');
+
+    return _this;
+  }
+
+  _createClass(TimestampMillisecondsParser, [{
+    key: "parse",
+    value: function parse(dateString) {
+      return parseAnyDigitsSigned(dateString);
+    }
+  }, {
+    key: "set",
+    value: function set(_date, _flags, value) {
+      return [new Date(value), {
+        timestampIsSet: true
+      }];
+    }
+  }]);
+
+  return TimestampMillisecondsParser;
+}(Parser);
+
+/*
+ * |     | Unit                           |     | Unit                           |
+ * |-----|--------------------------------|-----|--------------------------------|
+ * |  a  | AM, PM                         |  A* | Milliseconds in day            |
+ * |  b  | AM, PM, noon, midnight         |  B  | Flexible day period            |
+ * |  c  | Stand-alone local day of week  |  C* | Localized hour w/ day period   |
+ * |  d  | Day of month                   |  D  | Day of year                    |
+ * |  e  | Local day of week              |  E  | Day of week                    |
+ * |  f  |                                |  F* | Day of week in month           |
+ * |  g* | Modified Julian day            |  G  | Era                            |
+ * |  h  | Hour [1-12]                    |  H  | Hour [0-23]                    |
+ * |  i! | ISO day of week                |  I! | ISO week of year               |
+ * |  j* | Localized hour w/ day period   |  J* | Localized hour w/o day period  |
+ * |  k  | Hour [1-24]                    |  K  | Hour [0-11]                    |
+ * |  l* | (deprecated)                   |  L  | Stand-alone month              |
+ * |  m  | Minute                         |  M  | Month                          |
+ * |  n  |                                |  N  |                                |
+ * |  o! | Ordinal number modifier        |  O* | Timezone (GMT)                 |
+ * |  p  |                                |  P  |                                |
+ * |  q  | Stand-alone quarter            |  Q  | Quarter                        |
+ * |  r* | Related Gregorian year         |  R! | ISO week-numbering year        |
+ * |  s  | Second                         |  S  | Fraction of second             |
+ * |  t! | Seconds timestamp              |  T! | Milliseconds timestamp         |
+ * |  u  | Extended year                  |  U* | Cyclic year                    |
+ * |  v* | Timezone (generic non-locat.)  |  V* | Timezone (location)            |
+ * |  w  | Local week of year             |  W* | Week of month                  |
+ * |  x  | Timezone (ISO-8601 w/o Z)      |  X  | Timezone (ISO-8601)            |
+ * |  y  | Year (abs)                     |  Y  | Local week-numbering year      |
+ * |  z* | Timezone (specific non-locat.) |  Z* | Timezone (aliases)             |
+ *
+ * Letters marked by * are not implemented but reserved by Unicode standard.
+ *
+ * Letters marked by ! are non-standard, but implemented by date-fns:
+ * - `o` modifies the previous token to turn it into an ordinal (see `parse` docs)
+ * - `i` is ISO day of week. For `i` and `ii` is returns numeric ISO week days,
+ *   i.e. 7 for Sunday, 1 for Monday, etc.
+ * - `I` is ISO week of year, as opposed to `w` which is local week of year.
+ * - `R` is ISO week-numbering year, as opposed to `Y` which is local week-numbering year.
+ *   `R` is supposed to be used in conjunction with `I` and `i`
+ *   for universal ISO week-numbering date, whereas
+ *   `Y` is supposed to be used in conjunction with `w` and `e`
+ *   for week-numbering date specific to the locale.
+ */
+
+var parsers = {
+  G: new EraParser(),
+  y: new YearParser(),
+  Y: new LocalWeekYearParser(),
+  R: new ISOWeekYearParser(),
+  u: new ExtendedYearParser(),
+  Q: new QuarterParser(),
+  q: new StandAloneQuarterParser(),
+  M: new MonthParser(),
+  L: new StandAloneMonthParser(),
+  w: new LocalWeekParser(),
+  I: new ISOWeekParser(),
+  d: new DateParser(),
+  D: new DayOfYearParser(),
+  E: new DayParser(),
+  e: new LocalDayParser(),
+  c: new StandAloneLocalDayParser(),
+  i: new ISODayParser(),
+  a: new AMPMParser(),
+  b: new AMPMMidnightParser(),
+  B: new DayPeriodParser(),
+  h: new Hour1to12Parser(),
+  H: new Hour0to23Parser(),
+  K: new Hour0To11Parser(),
+  k: new Hour1To24Parser(),
+  m: new MinuteParser(),
+  s: new SecondParser(),
+  S: new FractionOfSecondParser(),
+  X: new ISOTimezoneWithZParser(),
+  x: new ISOTimezoneParser(),
+  t: new TimestampSecondsParser(),
+  T: new TimestampMillisecondsParser()
+};
+
+function _typeof(obj) { "@babel/helpers - typeof"; if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
+
+function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
+
+function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
+
+function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
+// - [yYQqMLwIdDecihHKkms]o matches any available ordinal number token
+//   (one of the certain letters followed by `o`)
+// - (\w)\1* matches any sequences of the same letter
+// - '' matches two quote characters in a row
+// - '(''|[^'])+('|$) matches anything surrounded by two quote characters ('),
+//   except a single quote symbol, which ends the sequence.
+//   Two quote characters do not end the sequence.
+//   If there is no matching single quote
+//   then the sequence will continue until the end of the string.
+// - . matches any single character unmatched by previous parts of the RegExps
+
+var formattingTokensRegExp = /[yYQqMLwIdDecihHKkms]o|(\w)\1*|''|'(''|[^'])+('|$)|./g; // This RegExp catches symbols escaped by quotes, and also
+// sequences of symbols P, p, and the combinations like `PPPPPPPppppp`
+
+var longFormattingTokensRegExp = /P+p+|P+|p+|''|'(''|[^'])+('|$)|./g;
+var escapedStringRegExp = /^'([^]*?)'?$/;
+var doubleQuoteRegExp = /''/g;
+var notWhitespaceRegExp = /\S/;
+var unescapedLatinCharacterRegExp = /[a-zA-Z]/;
+/**
+ * @name parse
+ * @category Common Helpers
+ * @summary Parse the date.
+ *
+ * @description
+ * Return the date parsed from string using the given format string.
+ *
+ * > ⚠️ Please note that the `format` tokens differ from Moment.js and other libraries.
+ * > See: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ *
+ * The characters in the format string wrapped between two single quotes characters (') are escaped.
+ * Two single quotes in a row, whether inside or outside a quoted sequence, represent a 'real' single quote.
+ *
+ * Format of the format string is based on Unicode Technical Standard #35:
+ * https://www.unicode.org/reports/tr35/tr35-dates.html#Date_Field_Symbol_Table
+ * with a few additions (see note 5 below the table).
+ *
+ * Not all tokens are compatible. Combinations that don't make sense or could lead to bugs are prohibited
+ * and will throw `RangeError`. For example usage of 24-hour format token with AM/PM token will throw an exception:
+ *
+ * ```javascript
+ * parse('23 AM', 'HH a', new Date())
+ * //=> RangeError: The format string mustn't contain `HH` and `a` at the same time
+ * ```
+ *
+ * See the compatibility table: https://docs.google.com/spreadsheets/d/e/2PACX-1vQOPU3xUhplll6dyoMmVUXHKl_8CRDs6_ueLmex3SoqwhuolkuN3O05l4rqx5h1dKX8eb46Ul-CCSrq/pubhtml?gid=0&single=true
+ *
+ * Accepted format string patterns:
+ * | Unit                            |Prior| Pattern | Result examples                   | Notes |
+ * |---------------------------------|-----|---------|-----------------------------------|-------|
+ * | Era                             | 140 | G..GGG  | AD, BC                            |       |
+ * |                                 |     | GGGG    | Anno Domini, Before Christ        | 2     |
+ * |                                 |     | GGGGG   | A, B                              |       |
+ * | Calendar year                   | 130 | y       | 44, 1, 1900, 2017, 9999           | 4     |
+ * |                                 |     | yo      | 44th, 1st, 1900th, 9999999th      | 4,5   |
+ * |                                 |     | yy      | 44, 01, 00, 17                    | 4     |
+ * |                                 |     | yyy     | 044, 001, 123, 999                | 4     |
+ * |                                 |     | yyyy    | 0044, 0001, 1900, 2017            | 4     |
+ * |                                 |     | yyyyy   | ...                               | 2,4   |
+ * | Local week-numbering year       | 130 | Y       | 44, 1, 1900, 2017, 9000           | 4     |
+ * |                                 |     | Yo      | 44th, 1st, 1900th, 9999999th      | 4,5   |
+ * |                                 |     | YY      | 44, 01, 00, 17                    | 4,6   |
+ * |                                 |     | YYY     | 044, 001, 123, 999                | 4     |
+ * |                                 |     | YYYY    | 0044, 0001, 1900, 2017            | 4,6   |
+ * |                                 |     | YYYYY   | ...                               | 2,4   |
+ * | ISO week-numbering year         | 130 | R       | -43, 1, 1900, 2017, 9999, -9999   | 4,5   |
+ * |                                 |     | RR      | -43, 01, 00, 17                   | 4,5   |
+ * |                                 |     | RRR     | -043, 001, 123, 999, -999         | 4,5   |
+ * |                                 |     | RRRR    | -0043, 0001, 2017, 9999, -9999    | 4,5   |
+ * |                                 |     | RRRRR   | ...                               | 2,4,5 |
+ * | Extended year                   | 130 | u       | -43, 1, 1900, 2017, 9999, -999    | 4     |
+ * |                                 |     | uu      | -43, 01, 99, -99                  | 4     |
+ * |                                 |     | uuu     | -043, 001, 123, 999, -999         | 4     |
+ * |                                 |     | uuuu    | -0043, 0001, 2017, 9999, -9999    | 4     |
+ * |                                 |     | uuuuu   | ...                               | 2,4   |
+ * | Quarter (formatting)            | 120 | Q       | 1, 2, 3, 4                        |       |
+ * |                                 |     | Qo      | 1st, 2nd, 3rd, 4th                | 5     |
+ * |                                 |     | QQ      | 01, 02, 03, 04                    |       |
+ * |                                 |     | QQQ     | Q1, Q2, Q3, Q4                    |       |
+ * |                                 |     | QQQQ    | 1st quarter, 2nd quarter, ...     | 2     |
+ * |                                 |     | QQQQQ   | 1, 2, 3, 4                        | 4     |
+ * | Quarter (stand-alone)           | 120 | q       | 1, 2, 3, 4                        |       |
+ * |                                 |     | qo      | 1st, 2nd, 3rd, 4th                | 5     |
+ * |                                 |     | qq      | 01, 02, 03, 04                    |       |
+ * |                                 |     | qqq     | Q1, Q2, Q3, Q4                    |       |
+ * |                                 |     | qqqq    | 1st quarter, 2nd quarter, ...     | 2     |
+ * |                                 |     | qqqqq   | 1, 2, 3, 4                        | 3     |
+ * | Month (formatting)              | 110 | M       | 1, 2, ..., 12                     |       |
+ * |                                 |     | Mo      | 1st, 2nd, ..., 12th               | 5     |
+ * |                                 |     | MM      | 01, 02, ..., 12                   |       |
+ * |                                 |     | MMM     | Jan, Feb, ..., Dec                |       |
+ * |                                 |     | MMMM    | January, February, ..., December  | 2     |
+ * |                                 |     | MMMMM   | J, F, ..., D                      |       |
+ * | Month (stand-alone)             | 110 | L       | 1, 2, ..., 12                     |       |
+ * |                                 |     | Lo      | 1st, 2nd, ..., 12th               | 5     |
+ * |                                 |     | LL      | 01, 02, ..., 12                   |       |
+ * |                                 |     | LLL     | Jan, Feb, ..., Dec                |       |
+ * |                                 |     | LLLL    | January, February, ..., December  | 2     |
+ * |                                 |     | LLLLL   | J, F, ..., D                      |       |
+ * | Local week of year              | 100 | w       | 1, 2, ..., 53                     |       |
+ * |                                 |     | wo      | 1st, 2nd, ..., 53th               | 5     |
+ * |                                 |     | ww      | 01, 02, ..., 53                   |       |
+ * | ISO week of year                | 100 | I       | 1, 2, ..., 53                     | 5     |
+ * |                                 |     | Io      | 1st, 2nd, ..., 53th               | 5     |
+ * |                                 |     | II      | 01, 02, ..., 53                   | 5     |
+ * | Day of month                    |  90 | d       | 1, 2, ..., 31                     |       |
+ * |                                 |     | do      | 1st, 2nd, ..., 31st               | 5     |
+ * |                                 |     | dd      | 01, 02, ..., 31                   |       |
+ * | Day of year                     |  90 | D       | 1, 2, ..., 365, 366               | 7     |
+ * |                                 |     | Do      | 1st, 2nd, ..., 365th, 366th       | 5     |
+ * |                                 |     | DD      | 01, 02, ..., 365, 366             | 7     |
+ * |                                 |     | DDD     | 001, 002, ..., 365, 366           |       |
+ * |                                 |     | DDDD    | ...                               | 2     |
+ * | Day of week (formatting)        |  90 | E..EEE  | Mon, Tue, Wed, ..., Sun           |       |
+ * |                                 |     | EEEE    | Monday, Tuesday, ..., Sunday      | 2     |
+ * |                                 |     | EEEEE   | M, T, W, T, F, S, S               |       |
+ * |                                 |     | EEEEEE  | Mo, Tu, We, Th, Fr, Sa, Su        |       |
+ * | ISO day of week (formatting)    |  90 | i       | 1, 2, 3, ..., 7                   | 5     |
+ * |                                 |     | io      | 1st, 2nd, ..., 7th                | 5     |
+ * |                                 |     | ii      | 01, 02, ..., 07                   | 5     |
+ * |                                 |     | iii     | Mon, Tue, Wed, ..., Sun           | 5     |
+ * |                                 |     | iiii    | Monday, Tuesday, ..., Sunday      | 2,5   |
+ * |                                 |     | iiiii   | M, T, W, T, F, S, S               | 5     |
+ * |                                 |     | iiiiii  | Mo, Tu, We, Th, Fr, Sa, Su        | 5     |
+ * | Local day of week (formatting)  |  90 | e       | 2, 3, 4, ..., 1                   |       |
+ * |                                 |     | eo      | 2nd, 3rd, ..., 1st                | 5     |
+ * |                                 |     | ee      | 02, 03, ..., 01                   |       |
+ * |                                 |     | eee     | Mon, Tue, Wed, ..., Sun           |       |
+ * |                                 |     | eeee    | Monday, Tuesday, ..., Sunday      | 2     |
+ * |                                 |     | eeeee   | M, T, W, T, F, S, S               |       |
+ * |                                 |     | eeeeee  | Mo, Tu, We, Th, Fr, Sa, Su        |       |
+ * | Local day of week (stand-alone) |  90 | c       | 2, 3, 4, ..., 1                   |       |
+ * |                                 |     | co      | 2nd, 3rd, ..., 1st                | 5     |
+ * |                                 |     | cc      | 02, 03, ..., 01                   |       |
+ * |                                 |     | ccc     | Mon, Tue, Wed, ..., Sun           |       |
+ * |                                 |     | cccc    | Monday, Tuesday, ..., Sunday      | 2     |
+ * |                                 |     | ccccc   | M, T, W, T, F, S, S               |       |
+ * |                                 |     | cccccc  | Mo, Tu, We, Th, Fr, Sa, Su        |       |
+ * | AM, PM                          |  80 | a..aaa  | AM, PM                            |       |
+ * |                                 |     | aaaa    | a.m., p.m.                        | 2     |
+ * |                                 |     | aaaaa   | a, p                              |       |
+ * | AM, PM, noon, midnight          |  80 | b..bbb  | AM, PM, noon, midnight            |       |
+ * |                                 |     | bbbb    | a.m., p.m., noon, midnight        | 2     |
+ * |                                 |     | bbbbb   | a, p, n, mi                       |       |
+ * | Flexible day period             |  80 | B..BBB  | at night, in the morning, ...     |       |
+ * |                                 |     | BBBB    | at night, in the morning, ...     | 2     |
+ * |                                 |     | BBBBB   | at night, in the morning, ...     |       |
+ * | Hour [1-12]                     |  70 | h       | 1, 2, ..., 11, 12                 |       |
+ * |                                 |     | ho      | 1st, 2nd, ..., 11th, 12th         | 5     |
+ * |                                 |     | hh      | 01, 02, ..., 11, 12               |       |
+ * | Hour [0-23]                     |  70 | H       | 0, 1, 2, ..., 23                  |       |
+ * |                                 |     | Ho      | 0th, 1st, 2nd, ..., 23rd          | 5     |
+ * |                                 |     | HH      | 00, 01, 02, ..., 23               |       |
+ * | Hour [0-11]                     |  70 | K       | 1, 2, ..., 11, 0                  |       |
+ * |                                 |     | Ko      | 1st, 2nd, ..., 11th, 0th          | 5     |
+ * |                                 |     | KK      | 01, 02, ..., 11, 00               |       |
+ * | Hour [1-24]                     |  70 | k       | 24, 1, 2, ..., 23                 |       |
+ * |                                 |     | ko      | 24th, 1st, 2nd, ..., 23rd         | 5     |
+ * |                                 |     | kk      | 24, 01, 02, ..., 23               |       |
+ * | Minute                          |  60 | m       | 0, 1, ..., 59                     |       |
+ * |                                 |     | mo      | 0th, 1st, ..., 59th               | 5     |
+ * |                                 |     | mm      | 00, 01, ..., 59                   |       |
+ * | Second                          |  50 | s       | 0, 1, ..., 59                     |       |
+ * |                                 |     | so      | 0th, 1st, ..., 59th               | 5     |
+ * |                                 |     | ss      | 00, 01, ..., 59                   |       |
+ * | Seconds timestamp               |  40 | t       | 512969520                         |       |
+ * |                                 |     | tt      | ...                               | 2     |
+ * | Fraction of second              |  30 | S       | 0, 1, ..., 9                      |       |
+ * |                                 |     | SS      | 00, 01, ..., 99                   |       |
+ * |                                 |     | SSS     | 000, 001, ..., 999                |       |
+ * |                                 |     | SSSS    | ...                               | 2     |
+ * | Milliseconds timestamp          |  20 | T       | 512969520900                      |       |
+ * |                                 |     | TT      | ...                               | 2     |
+ * | Timezone (ISO-8601 w/ Z)        |  10 | X       | -08, +0530, Z                     |       |
+ * |                                 |     | XX      | -0800, +0530, Z                   |       |
+ * |                                 |     | XXX     | -08:00, +05:30, Z                 |       |
+ * |                                 |     | XXXX    | -0800, +0530, Z, +123456          | 2     |
+ * |                                 |     | XXXXX   | -08:00, +05:30, Z, +12:34:56      |       |
+ * | Timezone (ISO-8601 w/o Z)       |  10 | x       | -08, +0530, +00                   |       |
+ * |                                 |     | xx      | -0800, +0530, +0000               |       |
+ * |                                 |     | xxx     | -08:00, +05:30, +00:00            | 2     |
+ * |                                 |     | xxxx    | -0800, +0530, +0000, +123456      |       |
+ * |                                 |     | xxxxx   | -08:00, +05:30, +00:00, +12:34:56 |       |
+ * | Long localized date             |  NA | P       | 05/29/1453                        | 5,8   |
+ * |                                 |     | PP      | May 29, 1453                      |       |
+ * |                                 |     | PPP     | May 29th, 1453                    |       |
+ * |                                 |     | PPPP    | Sunday, May 29th, 1453            | 2,5,8 |
+ * | Long localized time             |  NA | p       | 12:00 AM                          | 5,8   |
+ * |                                 |     | pp      | 12:00:00 AM                       |       |
+ * | Combination of date and time    |  NA | Pp      | 05/29/1453, 12:00 AM              |       |
+ * |                                 |     | PPpp    | May 29, 1453, 12:00:00 AM         |       |
+ * |                                 |     | PPPpp   | May 29th, 1453 at ...             |       |
+ * |                                 |     | PPPPpp  | Sunday, May 29th, 1453 at ...     | 2,5,8 |
+ * Notes:
+ * 1. "Formatting" units (e.g. formatting quarter) in the default en-US locale
+ *    are the same as "stand-alone" units, but are different in some languages.
+ *    "Formatting" units are declined according to the rules of the language
+ *    in the context of a date. "Stand-alone" units are always nominative singular.
+ *    In `format` function, they will produce different result:
+ *
+ *    `format(new Date(2017, 10, 6), 'do LLLL', {locale: cs}) //=> '6. listopad'`
+ *
+ *    `format(new Date(2017, 10, 6), 'do MMMM', {locale: cs}) //=> '6. listopadu'`
+ *
+ *    `parse` will try to match both formatting and stand-alone units interchangably.
+ *
+ * 2. Any sequence of the identical letters is a pattern, unless it is escaped by
+ *    the single quote characters (see below).
+ *    If the sequence is longer than listed in table:
+ *    - for numerical units (`yyyyyyyy`) `parse` will try to match a number
+ *      as wide as the sequence
+ *    - for text units (`MMMMMMMM`) `parse` will try to match the widest variation of the unit.
+ *      These variations are marked with "2" in the last column of the table.
+ *
+ * 3. `QQQQQ` and `qqqqq` could be not strictly numerical in some locales.
+ *    These tokens represent the shortest form of the quarter.
+ *
+ * 4. The main difference between `y` and `u` patterns are B.C. years:
+ *
+ *    | Year | `y` | `u` |
+ *    |------|-----|-----|
+ *    | AC 1 |   1 |   1 |
+ *    | BC 1 |   1 |   0 |
+ *    | BC 2 |   2 |  -1 |
+ *
+ *    Also `yy` will try to guess the century of two digit year by proximity with `referenceDate`:
+ *
+ *    `parse('50', 'yy', new Date(2018, 0, 1)) //=> Sat Jan 01 2050 00:00:00`
+ *
+ *    `parse('75', 'yy', new Date(2018, 0, 1)) //=> Wed Jan 01 1975 00:00:00`
+ *
+ *    while `uu` will just assign the year as is:
+ *
+ *    `parse('50', 'uu', new Date(2018, 0, 1)) //=> Sat Jan 01 0050 00:00:00`
+ *
+ *    `parse('75', 'uu', new Date(2018, 0, 1)) //=> Tue Jan 01 0075 00:00:00`
+ *
+ *    The same difference is true for local and ISO week-numbering years (`Y` and `R`),
+ *    except local week-numbering years are dependent on `options.weekStartsOn`
+ *    and `options.firstWeekContainsDate` (compare [setISOWeekYear]{@link https://date-fns.org/docs/setISOWeekYear}
+ *    and [setWeekYear]{@link https://date-fns.org/docs/setWeekYear}).
+ *
+ * 5. These patterns are not in the Unicode Technical Standard #35:
+ *    - `i`: ISO day of week
+ *    - `I`: ISO week of year
+ *    - `R`: ISO week-numbering year
+ *    - `o`: ordinal number modifier
+ *    - `P`: long localized date
+ *    - `p`: long localized time
+ *
+ * 6. `YY` and `YYYY` tokens represent week-numbering years but they are often confused with years.
+ *    You should enable `options.useAdditionalWeekYearTokens` to use them. See: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ *
+ * 7. `D` and `DD` tokens represent days of the year but they are ofthen confused with days of the month.
+ *    You should enable `options.useAdditionalDayOfYearTokens` to use them. See: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ *
+ * 8. `P+` tokens do not have a defined priority since they are merely aliases to other tokens based
+ *    on the given locale.
+ *
+ *    using `en-US` locale: `P` => `MM/dd/yyyy`
+ *    using `en-US` locale: `p` => `hh:mm a`
+ *    using `pt-BR` locale: `P` => `dd/MM/yyyy`
+ *    using `pt-BR` locale: `p` => `HH:mm`
+ *
+ * Values will be assigned to the date in the descending order of its unit's priority.
+ * Units of an equal priority overwrite each other in the order of appearance.
+ *
+ * If no values of higher priority are parsed (e.g. when parsing string 'January 1st' without a year),
+ * the values will be taken from 3rd argument `referenceDate` which works as a context of parsing.
+ *
+ * `referenceDate` must be passed for correct work of the function.
+ * If you're not sure which `referenceDate` to supply, create a new instance of Date:
+ * `parse('02/11/2014', 'MM/dd/yyyy', new Date())`
+ * In this case parsing will be done in the context of the current date.
+ * If `referenceDate` is `Invalid Date` or a value not convertible to valid `Date`,
+ * then `Invalid Date` will be returned.
+ *
+ * The result may vary by locale.
+ *
+ * If `formatString` matches with `dateString` but does not provides tokens, `referenceDate` will be returned.
+ *
+ * If parsing failed, `Invalid Date` will be returned.
+ * Invalid Date is a Date, whose time value is NaN.
+ * Time value of Date: http://es5.github.io/#x15.9.1.1
+ *
+ * @param {String} dateString - the string to parse
+ * @param {String} formatString - the string of tokens
+ * @param {Date|Number} referenceDate - defines values missing from the parsed dateString
+ * @param {Object} [options] - an object with options.
+ * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
+ * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
+ * @param {1|2|3|4|5|6|7} [options.firstWeekContainsDate=1] - the day of January, which is always in the first week of the year
+ * @param {Boolean} [options.useAdditionalWeekYearTokens=false] - if true, allows usage of the week-numbering year tokens `YY` and `YYYY`;
+ *   see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @param {Boolean} [options.useAdditionalDayOfYearTokens=false] - if true, allows usage of the day of year tokens `D` and `DD`;
+ *   see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @returns {Date} the parsed date
+ * @throws {TypeError} 3 arguments required
+ * @throws {RangeError} `options.weekStartsOn` must be between 0 and 6
+ * @throws {RangeError} `options.firstWeekContainsDate` must be between 1 and 7
+ * @throws {RangeError} `options.locale` must contain `match` property
+ * @throws {RangeError} use `yyyy` instead of `YYYY` for formatting years using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} use `yy` instead of `YY` for formatting years using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} use `d` instead of `D` for formatting days of the month using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} use `dd` instead of `DD` for formatting days of the month using [format provided] to the input [input provided]; see: https://github.com/date-fns/date-fns/blob/master/docs/unicodeTokens.md
+ * @throws {RangeError} format string contains an unescaped latin alphabet character
+ *
+ * @example
+ * // Parse 11 February 2014 from middle-endian format:
+ * var result = parse('02/11/2014', 'MM/dd/yyyy', new Date())
+ * //=> Tue Feb 11 2014 00:00:00
+ *
+ * @example
+ * // Parse 28th of February in Esperanto locale in the context of 2010 year:
+ * import eo from 'date-fns/locale/eo'
+ * var result = parse('28-a de februaro', "do 'de' MMMM", new Date(2010, 0, 1), {
+ *   locale: eo
+ * })
+ * //=> Sun Feb 28 2010 00:00:00
+ */
+
+function parse(dirtyDateString, dirtyFormatString, dirtyReferenceDate, options) {
+  var _ref, _options$locale, _ref2, _ref3, _ref4, _options$firstWeekCon, _options$locale2, _options$locale2$opti, _defaultOptions$local, _defaultOptions$local2, _ref5, _ref6, _ref7, _options$weekStartsOn, _options$locale3, _options$locale3$opti, _defaultOptions$local3, _defaultOptions$local4;
+
+  requiredArgs(3, arguments);
+  var dateString = String(dirtyDateString);
+  var formatString = String(dirtyFormatString);
+  var defaultOptions = getDefaultOptions();
+  var locale = (_ref = (_options$locale = options === null || options === void 0 ? void 0 : options.locale) !== null && _options$locale !== void 0 ? _options$locale : defaultOptions.locale) !== null && _ref !== void 0 ? _ref : defaultLocale;
+
+  if (!locale.match) {
+    throw new RangeError('locale must contain match property');
+  }
+
+  var firstWeekContainsDate = toInteger((_ref2 = (_ref3 = (_ref4 = (_options$firstWeekCon = options === null || options === void 0 ? void 0 : options.firstWeekContainsDate) !== null && _options$firstWeekCon !== void 0 ? _options$firstWeekCon : options === null || options === void 0 ? void 0 : (_options$locale2 = options.locale) === null || _options$locale2 === void 0 ? void 0 : (_options$locale2$opti = _options$locale2.options) === null || _options$locale2$opti === void 0 ? void 0 : _options$locale2$opti.firstWeekContainsDate) !== null && _ref4 !== void 0 ? _ref4 : defaultOptions.firstWeekContainsDate) !== null && _ref3 !== void 0 ? _ref3 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.firstWeekContainsDate) !== null && _ref2 !== void 0 ? _ref2 : 1); // Test if weekStartsOn is between 1 and 7 _and_ is not NaN
+
+  if (!(firstWeekContainsDate >= 1 && firstWeekContainsDate <= 7)) {
+    throw new RangeError('firstWeekContainsDate must be between 1 and 7 inclusively');
+  }
+
+  var weekStartsOn = toInteger((_ref5 = (_ref6 = (_ref7 = (_options$weekStartsOn = options === null || options === void 0 ? void 0 : options.weekStartsOn) !== null && _options$weekStartsOn !== void 0 ? _options$weekStartsOn : options === null || options === void 0 ? void 0 : (_options$locale3 = options.locale) === null || _options$locale3 === void 0 ? void 0 : (_options$locale3$opti = _options$locale3.options) === null || _options$locale3$opti === void 0 ? void 0 : _options$locale3$opti.weekStartsOn) !== null && _ref7 !== void 0 ? _ref7 : defaultOptions.weekStartsOn) !== null && _ref6 !== void 0 ? _ref6 : (_defaultOptions$local3 = defaultOptions.locale) === null || _defaultOptions$local3 === void 0 ? void 0 : (_defaultOptions$local4 = _defaultOptions$local3.options) === null || _defaultOptions$local4 === void 0 ? void 0 : _defaultOptions$local4.weekStartsOn) !== null && _ref5 !== void 0 ? _ref5 : 0); // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
+
+  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
+    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
+  }
+
+  if (formatString === '') {
+    if (dateString === '') {
+      return toDate(dirtyReferenceDate);
+    } else {
+      return new Date(NaN);
+    }
+  }
+
+  var subFnOptions = {
+    firstWeekContainsDate: firstWeekContainsDate,
+    weekStartsOn: weekStartsOn,
+    locale: locale
+  }; // If timezone isn't specified, it will be set to the system timezone
+
+  var setters = [new DateToSystemTimezoneSetter()];
+  var tokens = formatString.match(longFormattingTokensRegExp).map(function (substring) {
+    var firstCharacter = substring[0];
+
+    if (firstCharacter in longFormatters$3) {
+      var longFormatter = longFormatters$3[firstCharacter];
+      return longFormatter(substring, locale.formatLong);
+    }
+
+    return substring;
+  }).join('').match(formattingTokensRegExp);
+  var usedTokens = [];
+
+  var _iterator = _createForOfIteratorHelper(tokens),
+      _step;
+
+  try {
+    var _loop = function _loop() {
+      var token = _step.value;
+
+      if (!(options !== null && options !== void 0 && options.useAdditionalWeekYearTokens) && isProtectedWeekYearToken(token)) {
+        throwProtectedError(token, formatString, dirtyDateString);
+      }
+
+      if (!(options !== null && options !== void 0 && options.useAdditionalDayOfYearTokens) && isProtectedDayOfYearToken(token)) {
+        throwProtectedError(token, formatString, dirtyDateString);
+      }
+
+      var firstCharacter = token[0];
+      var parser = parsers[firstCharacter];
+
+      if (parser) {
+        var incompatibleTokens = parser.incompatibleTokens;
+
+        if (Array.isArray(incompatibleTokens)) {
+          var incompatibleToken = usedTokens.find(function (usedToken) {
+            return incompatibleTokens.includes(usedToken.token) || usedToken.token === firstCharacter;
+          });
+
+          if (incompatibleToken) {
+            throw new RangeError("The format string mustn't contain `".concat(incompatibleToken.fullToken, "` and `").concat(token, "` at the same time"));
+          }
+        } else if (parser.incompatibleTokens === '*' && usedTokens.length > 0) {
+          throw new RangeError("The format string mustn't contain `".concat(token, "` and any other token at the same time"));
+        }
+
+        usedTokens.push({
+          token: firstCharacter,
+          fullToken: token
+        });
+        var parseResult = parser.run(dateString, token, locale.match, subFnOptions);
+
+        if (!parseResult) {
+          return {
+            v: new Date(NaN)
+          };
+        }
+
+        setters.push(parseResult.setter);
+        dateString = parseResult.rest;
+      } else {
+        if (firstCharacter.match(unescapedLatinCharacterRegExp)) {
+          throw new RangeError('Format string contains an unescaped latin alphabet character `' + firstCharacter + '`');
+        } // Replace two single quote characters with one single quote character
+
+
+        if (token === "''") {
+          token = "'";
+        } else if (firstCharacter === "'") {
+          token = cleanEscapedString(token);
+        } // Cut token from string, or, if string doesn't match the token, return Invalid Date
+
+
+        if (dateString.indexOf(token) === 0) {
+          dateString = dateString.slice(token.length);
+        } else {
+          return {
+            v: new Date(NaN)
+          };
+        }
+      }
+    };
+
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var _ret = _loop();
+
+      if (_typeof(_ret) === "object") return _ret.v;
+    } // Check if the remaining input contains something other than whitespace
+
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+
+  if (dateString.length > 0 && notWhitespaceRegExp.test(dateString)) {
+    return new Date(NaN);
+  }
+
+  var uniquePrioritySetters = setters.map(function (setter) {
+    return setter.priority;
+  }).sort(function (a, b) {
+    return b - a;
+  }).filter(function (priority, index, array) {
+    return array.indexOf(priority) === index;
+  }).map(function (priority) {
+    return setters.filter(function (setter) {
+      return setter.priority === priority;
+    }).sort(function (a, b) {
+      return b.subPriority - a.subPriority;
+    });
+  }).map(function (setterArray) {
+    return setterArray[0];
+  });
+  var date = toDate(dirtyReferenceDate);
+
+  if (isNaN(date.getTime())) {
+    return new Date(NaN);
+  } // Convert the date in system timezone to the same date in UTC+00:00 timezone.
+
+
+  var utcDate = subMilliseconds(date, getTimezoneOffsetInMilliseconds(date));
+  var flags = {};
+
+  var _iterator2 = _createForOfIteratorHelper(uniquePrioritySetters),
+      _step2;
+
+  try {
+    for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+      var setter = _step2.value;
+
+      if (!setter.validate(utcDate, subFnOptions)) {
+        return new Date(NaN);
+      }
+
+      var result = setter.set(utcDate, flags, subFnOptions); // Result is tuple (date, flags)
+
+      if (Array.isArray(result)) {
+        utcDate = result[0];
+        assign(flags, result[1]); // Result is date
+      } else {
+        utcDate = result;
+      }
+    }
+  } catch (err) {
+    _iterator2.e(err);
+  } finally {
+    _iterator2.f();
+  }
+
+  return utcDate;
+}
+
+function cleanEscapedString(input) {
+  return input.match(escapedStringRegExp)[1].replace(doubleQuoteRegExp, "'");
+}
+
+/**
+ * @name setDate
+ * @category Day Helpers
+ * @summary Set the day of the month to the given date.
+ *
+ * @description
+ * Set the day of the month to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} dayOfMonth - the day of the month of the new date
+ * @returns {Date} the new date with the day of the month set
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Set the 30th day of the month to 1 September 2014:
+ * const result = setDate(new Date(2014, 8, 1), 30)
+ * //=> Tue Sep 30 2014 00:00:00
+ */
+
+function setDate(dirtyDate, dirtyDayOfMonth) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var dayOfMonth = toInteger(dirtyDayOfMonth);
+  date.setDate(dayOfMonth);
+  return date;
+}
+
+/**
+ * @name setHours
+ * @category Hour Helpers
+ * @summary Set the hours to the given date.
+ *
+ * @description
+ * Set the hours to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} hours - the hours of the new date
+ * @returns {Date} the new date with the hours set
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Set 4 hours to 1 September 2014 11:30:00:
+ * const result = setHours(new Date(2014, 8, 1, 11, 30), 4)
+ * //=> Mon Sep 01 2014 04:30:00
+ */
+
+function setHours(dirtyDate, dirtyHours) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var hours = toInteger(dirtyHours);
+  date.setHours(hours);
+  return date;
+}
+
+/**
+ * @name setMinutes
+ * @category Minute Helpers
+ * @summary Set the minutes to the given date.
+ *
+ * @description
+ * Set the minutes to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} minutes - the minutes of the new date
+ * @returns {Date} the new date with the minutes set
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Set 45 minutes to 1 September 2014 11:30:40:
+ * const result = setMinutes(new Date(2014, 8, 1, 11, 30, 40), 45)
+ * //=> Mon Sep 01 2014 11:45:40
+ */
+
+function setMinutes(dirtyDate, dirtyMinutes) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var minutes = toInteger(dirtyMinutes);
+  date.setMinutes(minutes);
+  return date;
+}
+
+/**
+ * @name setMonth
+ * @category Month Helpers
+ * @summary Set the month to the given date.
+ *
+ * @description
+ * Set the month to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} month - the month of the new date
+ * @returns {Date} the new date with the month set
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Set February to 1 September 2014:
+ * const result = setMonth(new Date(2014, 8, 1), 1)
+ * //=> Sat Feb 01 2014 00:00:00
+ */
+
+function setMonth(dirtyDate, dirtyMonth) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var month = toInteger(dirtyMonth);
+  var year = date.getFullYear();
+  var day = date.getDate();
+  var dateWithDesiredMonth = new Date(0);
+  dateWithDesiredMonth.setFullYear(year, month, 15);
+  dateWithDesiredMonth.setHours(0, 0, 0, 0);
+  var daysInMonth = getDaysInMonth(dateWithDesiredMonth); // Set the last day of the new month
+  // if the original date was the last day of the longer month
+
+  date.setMonth(month, Math.min(day, daysInMonth));
+  return date;
+}
+
+/**
+ * @name setSeconds
+ * @category Second Helpers
+ * @summary Set the seconds to the given date.
+ *
+ * @description
+ * Set the seconds to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} seconds - the seconds of the new date
+ * @returns {Date} the new date with the seconds set
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Set 45 seconds to 1 September 2014 11:30:40:
+ * const result = setSeconds(new Date(2014, 8, 1, 11, 30, 40), 45)
+ * //=> Mon Sep 01 2014 11:30:45
+ */
+
+function setSeconds(dirtyDate, dirtySeconds) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var seconds = toInteger(dirtySeconds);
+  date.setSeconds(seconds);
+  return date;
+}
+
+/**
+ * @name setYear
+ * @category Year Helpers
+ * @summary Set the year to the given date.
+ *
+ * @description
+ * Set the year to the given date.
+ *
+ * @param {Date|Number} date - the date to be changed
+ * @param {Number} year - the year of the new date
+ * @returns {Date} the new date with the year set
+ * @throws {TypeError} 2 arguments required
+ *
+ * @example
+ * // Set year 2013 to 1 September 2014:
+ * const result = setYear(new Date(2014, 8, 1), 2013)
+ * //=> Sun Sep 01 2013 00:00:00
+ */
+
+function setYear(dirtyDate, dirtyYear) {
+  requiredArgs(2, arguments);
+  var date = toDate(dirtyDate);
+  var year = toInteger(dirtyYear); // Check if date is Invalid Date because Date.prototype.setFullYear ignores the value of Invalid Date
+
+  if (isNaN(date.getTime())) {
+    return new Date(NaN);
+  }
+
+  date.setFullYear(year);
+  return date;
+}
+
+/**
+ * @name startOfMonth
+ * @category Month Helpers
+ * @summary Return the start of a month for the given date.
+ *
+ * @description
+ * Return the start of a month for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @returns {Date} the start of a month
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // The start of a month for 2 September 2014 11:55:00:
+ * const result = startOfMonth(new Date(2014, 8, 2, 11, 55, 0))
+ * //=> Mon Sep 01 2014 00:00:00
+ */
+
+function startOfMonth(dirtyDate) {
+  requiredArgs(1, arguments);
+  var date = toDate(dirtyDate);
+  date.setDate(1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+/**
+ * @name startOfWeek
+ * @category Week Helpers
+ * @summary Return the start of a week for the given date.
+ *
+ * @description
+ * Return the start of a week for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @param {Object} [options] - an object with options.
+ * @param {Locale} [options.locale=defaultLocale] - the locale object. See [Locale]{@link https://date-fns.org/docs/Locale}
+ * @param {0|1|2|3|4|5|6} [options.weekStartsOn=0] - the index of the first day of the week (0 - Sunday)
+ * @returns {Date} the start of a week
+ * @throws {TypeError} 1 argument required
+ * @throws {RangeError} `options.weekStartsOn` must be between 0 and 6
+ *
+ * @example
+ * // The start of a week for 2 September 2014 11:55:00:
+ * const result = startOfWeek(new Date(2014, 8, 2, 11, 55, 0))
+ * //=> Sun Aug 31 2014 00:00:00
+ *
+ * @example
+ * // If the week starts on Monday, the start of the week for 2 September 2014 11:55:00:
+ * const result = startOfWeek(new Date(2014, 8, 2, 11, 55, 0), { weekStartsOn: 1 })
+ * //=> Mon Sep 01 2014 00:00:00
+ */
+
+function startOfWeek(dirtyDate, options) {
+  var _ref, _ref2, _ref3, _options$weekStartsOn, _options$locale, _options$locale$optio, _defaultOptions$local, _defaultOptions$local2;
+
+  requiredArgs(1, arguments);
+  var defaultOptions = getDefaultOptions();
+  var weekStartsOn = toInteger((_ref = (_ref2 = (_ref3 = (_options$weekStartsOn = options === null || options === void 0 ? void 0 : options.weekStartsOn) !== null && _options$weekStartsOn !== void 0 ? _options$weekStartsOn : options === null || options === void 0 ? void 0 : (_options$locale = options.locale) === null || _options$locale === void 0 ? void 0 : (_options$locale$optio = _options$locale.options) === null || _options$locale$optio === void 0 ? void 0 : _options$locale$optio.weekStartsOn) !== null && _ref3 !== void 0 ? _ref3 : defaultOptions.weekStartsOn) !== null && _ref2 !== void 0 ? _ref2 : (_defaultOptions$local = defaultOptions.locale) === null || _defaultOptions$local === void 0 ? void 0 : (_defaultOptions$local2 = _defaultOptions$local.options) === null || _defaultOptions$local2 === void 0 ? void 0 : _defaultOptions$local2.weekStartsOn) !== null && _ref !== void 0 ? _ref : 0); // Test if weekStartsOn is between 0 and 6 _and_ is not NaN
+
+  if (!(weekStartsOn >= 0 && weekStartsOn <= 6)) {
+    throw new RangeError('weekStartsOn must be between 0 and 6 inclusively');
+  }
+
+  var date = toDate(dirtyDate);
+  var day = date.getDay();
+  var diff = (day < weekStartsOn ? 7 : 0) + day - weekStartsOn;
+  date.setDate(date.getDate() - diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+/**
+ * @name startOfYear
+ * @category Year Helpers
+ * @summary Return the start of a year for the given date.
+ *
+ * @description
+ * Return the start of a year for the given date.
+ * The result will be in the local timezone.
+ *
+ * @param {Date|Number} date - the original date
+ * @returns {Date} the start of a year
+ * @throws {TypeError} 1 argument required
+ *
+ * @example
+ * // The start of a year for 2 September 2014 11:55:00:
+ * const result = startOfYear(new Date(2014, 8, 2, 11, 55, 00))
+ * //=> Wed Jan 01 2014 00:00:00
+ */
+
+function startOfYear(dirtyDate) {
+  requiredArgs(1, arguments);
+  var cleanDate = toDate(dirtyDate);
+  var date = new Date(0);
+  date.setFullYear(cleanDate.getFullYear(), 0, 1);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+/**
+ * @name parseISO
+ * @category Common Helpers
+ * @summary Parse ISO string
+ *
+ * @description
+ * Parse the given string in ISO 8601 format and return an instance of Date.
+ *
+ * Function accepts complete ISO 8601 formats as well as partial implementations.
+ * ISO 8601: http://en.wikipedia.org/wiki/ISO_8601
+ *
+ * If the argument isn't a string, the function cannot parse the string or
+ * the values are invalid, it returns Invalid Date.
+ *
+ * @param {String} argument - the value to convert
+ * @param {Object} [options] - an object with options.
+ * @param {0|1|2} [options.additionalDigits=2] - the additional number of digits in the extended year format
+ * @returns {Date} the parsed date in the local time zone
+ * @throws {TypeError} 1 argument required
+ * @throws {RangeError} `options.additionalDigits` must be 0, 1 or 2
+ *
+ * @example
+ * // Convert string '2014-02-11T11:30:30' to date:
+ * const result = parseISO('2014-02-11T11:30:30')
+ * //=> Tue Feb 11 2014 11:30:30
+ *
+ * @example
+ * // Convert string '+02014101' to date,
+ * // if the additional number of digits in the extended year format is 1:
+ * const result = parseISO('+02014101', { additionalDigits: 1 })
+ * //=> Fri Apr 11 2014 00:00:00
+ */
+
+function parseISO(argument, options) {
+  var _options$additionalDi;
+
+  requiredArgs(1, arguments);
+  var additionalDigits = toInteger((_options$additionalDi = options === null || options === void 0 ? void 0 : options.additionalDigits) !== null && _options$additionalDi !== void 0 ? _options$additionalDi : 2);
+
+  if (additionalDigits !== 2 && additionalDigits !== 1 && additionalDigits !== 0) {
+    throw new RangeError('additionalDigits must be 0, 1 or 2');
+  }
+
+  if (!(typeof argument === 'string' || Object.prototype.toString.call(argument) === '[object String]')) {
+    return new Date(NaN);
+  }
+
+  var dateStrings = splitDateString(argument);
+  var date;
+
+  if (dateStrings.date) {
+    var parseYearResult = parseYear(dateStrings.date, additionalDigits);
+    date = parseDate(parseYearResult.restDateString, parseYearResult.year);
+  }
+
+  if (!date || isNaN(date.getTime())) {
+    return new Date(NaN);
+  }
+
+  var timestamp = date.getTime();
+  var time = 0;
+  var offset;
+
+  if (dateStrings.time) {
+    time = parseTime(dateStrings.time);
+
+    if (isNaN(time)) {
+      return new Date(NaN);
+    }
+  }
+
+  if (dateStrings.timezone) {
+    offset = parseTimezone(dateStrings.timezone);
+
+    if (isNaN(offset)) {
+      return new Date(NaN);
+    }
+  } else {
+    var dirtyDate = new Date(timestamp + time); // js parsed string assuming it's in UTC timezone
+    // but we need it to be parsed in our timezone
+    // so we use utc values to build date in our timezone.
+    // Year values from 0 to 99 map to the years 1900 to 1999
+    // so set year explicitly with setFullYear.
+
+    var result = new Date(0);
+    result.setFullYear(dirtyDate.getUTCFullYear(), dirtyDate.getUTCMonth(), dirtyDate.getUTCDate());
+    result.setHours(dirtyDate.getUTCHours(), dirtyDate.getUTCMinutes(), dirtyDate.getUTCSeconds(), dirtyDate.getUTCMilliseconds());
+    return result;
+  }
+
+  return new Date(timestamp + time + offset);
+}
+var patterns = {
+  dateTimeDelimiter: /[T ]/,
+  timeZoneDelimiter: /[Z ]/i,
+  timezone: /([Z+-].*)$/
+};
+var dateRegex = /^-?(?:(\d{3})|(\d{2})(?:-?(\d{2}))?|W(\d{2})(?:-?(\d{1}))?|)$/;
+var timeRegex = /^(\d{2}(?:[.,]\d*)?)(?::?(\d{2}(?:[.,]\d*)?))?(?::?(\d{2}(?:[.,]\d*)?))?$/;
+var timezoneRegex = /^([+-])(\d{2})(?::?(\d{2}))?$/;
+
+function splitDateString(dateString) {
+  var dateStrings = {};
+  var array = dateString.split(patterns.dateTimeDelimiter);
+  var timeString; // The regex match should only return at maximum two array elements.
+  // [date], [time], or [date, time].
+
+  if (array.length > 2) {
+    return dateStrings;
+  }
+
+  if (/:/.test(array[0])) {
+    timeString = array[0];
+  } else {
+    dateStrings.date = array[0];
+    timeString = array[1];
+
+    if (patterns.timeZoneDelimiter.test(dateStrings.date)) {
+      dateStrings.date = dateString.split(patterns.timeZoneDelimiter)[0];
+      timeString = dateString.substr(dateStrings.date.length, dateString.length);
+    }
+  }
+
+  if (timeString) {
+    var token = patterns.timezone.exec(timeString);
+
+    if (token) {
+      dateStrings.time = timeString.replace(token[1], '');
+      dateStrings.timezone = token[1];
+    } else {
+      dateStrings.time = timeString;
+    }
+  }
+
+  return dateStrings;
+}
+
+function parseYear(dateString, additionalDigits) {
+  var regex = new RegExp('^(?:(\\d{4}|[+-]\\d{' + (4 + additionalDigits) + '})|(\\d{2}|[+-]\\d{' + (2 + additionalDigits) + '})$)');
+  var captures = dateString.match(regex); // Invalid ISO-formatted year
+
+  if (!captures) return {
+    year: NaN,
+    restDateString: ''
+  };
+  var year = captures[1] ? parseInt(captures[1]) : null;
+  var century = captures[2] ? parseInt(captures[2]) : null; // either year or century is null, not both
+
+  return {
+    year: century === null ? year : century * 100,
+    restDateString: dateString.slice((captures[1] || captures[2]).length)
+  };
+}
+
+function parseDate(dateString, year) {
+  // Invalid ISO-formatted year
+  if (year === null) return new Date(NaN);
+  var captures = dateString.match(dateRegex); // Invalid ISO-formatted string
+
+  if (!captures) return new Date(NaN);
+  var isWeekDate = !!captures[4];
+  var dayOfYear = parseDateUnit(captures[1]);
+  var month = parseDateUnit(captures[2]) - 1;
+  var day = parseDateUnit(captures[3]);
+  var week = parseDateUnit(captures[4]);
+  var dayOfWeek = parseDateUnit(captures[5]) - 1;
+
+  if (isWeekDate) {
+    if (!validateWeekDate(year, week, dayOfWeek)) {
+      return new Date(NaN);
+    }
+
+    return dayOfISOWeekYear(year, week, dayOfWeek);
+  } else {
+    var date = new Date(0);
+
+    if (!validateDate(year, month, day) || !validateDayOfYearDate(year, dayOfYear)) {
+      return new Date(NaN);
+    }
+
+    date.setUTCFullYear(year, month, Math.max(dayOfYear, day));
+    return date;
+  }
+}
+
+function parseDateUnit(value) {
+  return value ? parseInt(value) : 1;
+}
+
+function parseTime(timeString) {
+  var captures = timeString.match(timeRegex);
+  if (!captures) return NaN; // Invalid ISO-formatted time
+
+  var hours = parseTimeUnit(captures[1]);
+  var minutes = parseTimeUnit(captures[2]);
+  var seconds = parseTimeUnit(captures[3]);
+
+  if (!validateTime(hours, minutes, seconds)) {
+    return NaN;
+  }
+
+  return hours * millisecondsInHour + minutes * millisecondsInMinute + seconds * 1000;
+}
+
+function parseTimeUnit(value) {
+  return value && parseFloat(value.replace(',', '.')) || 0;
+}
+
+function parseTimezone(timezoneString) {
+  if (timezoneString === 'Z') return 0;
+  var captures = timezoneString.match(timezoneRegex);
+  if (!captures) return 0;
+  var sign = captures[1] === '+' ? -1 : 1;
+  var hours = parseInt(captures[2]);
+  var minutes = captures[3] && parseInt(captures[3]) || 0;
+
+  if (!validateTimezone(hours, minutes)) {
+    return NaN;
+  }
+
+  return sign * (hours * millisecondsInHour + minutes * millisecondsInMinute);
+}
+
+function dayOfISOWeekYear(isoWeekYear, week, day) {
+  var date = new Date(0);
+  date.setUTCFullYear(isoWeekYear, 0, 4);
+  var fourthOfJanuaryDay = date.getUTCDay() || 7;
+  var diff = (week - 1) * 7 + day + 1 - fourthOfJanuaryDay;
+  date.setUTCDate(date.getUTCDate() + diff);
+  return date;
+} // Validation functions
+// February is null to handle the leap year (using ||)
+
+
+var daysInMonths = [31, null, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function isLeapYearIndex(year) {
+  return year % 400 === 0 || year % 4 === 0 && year % 100 !== 0;
+}
+
+function validateDate(year, month, date) {
+  return month >= 0 && month <= 11 && date >= 1 && date <= (daysInMonths[month] || (isLeapYearIndex(year) ? 29 : 28));
+}
+
+function validateDayOfYearDate(year, dayOfYear) {
+  return dayOfYear >= 1 && dayOfYear <= (isLeapYearIndex(year) ? 366 : 365);
+}
+
+function validateWeekDate(_year, week, day) {
+  return week >= 1 && week <= 53 && day >= 0 && day <= 6;
+}
+
+function validateTime(hours, minutes, seconds) {
+  if (hours === 24) {
+    return minutes === 0 && seconds === 0;
+  }
+
+  return seconds >= 0 && seconds < 60 && minutes >= 0 && minutes < 60 && hours >= 0 && hours < 25;
+}
+
+function validateTimezone(_hours, minutes) {
+  return minutes >= 0 && minutes <= 59;
+}
+
+/**
+ * @name formatISO
+ * @category Common Helpers
+ * @summary Format the date according to the ISO 8601 standard (https://support.sas.com/documentation/cdl/en/lrdict/64316/HTML/default/viewer.htm#a003169814.htm).
+ *
+ * @description
+ * Return the formatted date string in ISO 8601 format. Options may be passed to control the parts and notations of the date.
+ *
+ * @param {Date|Number} date - the original date
+ * @param {Object} [options] - an object with options.
+ * @param {'extended'|'basic'} [options.format='extended'] - if 'basic', hide delimiters between date and time values.
+ * @param {'complete'|'date'|'time'} [options.representation='complete'] - format date, time with local time zone, or both.
+ * @returns {String} the formatted date string (in local time zone)
+ * @throws {TypeError} 1 argument required
+ * @throws {RangeError} `date` must not be Invalid Date
+ * @throws {RangeError} `options.format` must be 'extended' or 'basic'
+ * @throws {RangeError} `options.representation` must be 'date', 'time' or 'complete'
+ *
+ * @example
+ * // Represent 18 September 2019 in ISO 8601 format (local time zone is UTC):
+ * const result = formatISO(new Date(2019, 8, 18, 19, 0, 52))
+ * //=> '2019-09-18T19:00:52Z'
+ *
+ * @example
+ * // Represent 18 September 2019 in ISO 8601, short format (local time zone is UTC):
+ * const result = formatISO(new Date(2019, 8, 18, 19, 0, 52), { format: 'basic' })
+ * //=> '20190918T190052'
+ *
+ * @example
+ * // Represent 18 September 2019 in ISO 8601 format, date only:
+ * const result = formatISO(new Date(2019, 8, 18, 19, 0, 52), { representation: 'date' })
+ * //=> '2019-09-18'
+ *
+ * @example
+ * // Represent 18 September 2019 in ISO 8601 format, time only (local time zone is UTC):
+ * const result = formatISO(new Date(2019, 8, 18, 19, 0, 52), { representation: 'time' })
+ * //=> '19:00:52Z'
+ */
+
+function formatISO(date, options) {
+  var _options$format, _options$representati;
+
+  requiredArgs(1, arguments);
+  var originalDate = toDate(date);
+
+  if (isNaN(originalDate.getTime())) {
+    throw new RangeError('Invalid time value');
+  }
+
+  var format = String((_options$format = options === null || options === void 0 ? void 0 : options.format) !== null && _options$format !== void 0 ? _options$format : 'extended');
+  var representation = String((_options$representati = options === null || options === void 0 ? void 0 : options.representation) !== null && _options$representati !== void 0 ? _options$representati : 'complete');
+
+  if (format !== 'extended' && format !== 'basic') {
+    throw new RangeError("format must be 'extended' or 'basic'");
+  }
+
+  if (representation !== 'date' && representation !== 'time' && representation !== 'complete') {
+    throw new RangeError("representation must be 'date', 'time', or 'complete'");
+  }
+
+  var result = '';
+  var tzOffset = '';
+  var dateDelimiter = format === 'extended' ? '-' : '';
+  var timeDelimiter = format === 'extended' ? ':' : ''; // Representation is either 'date' or 'complete'
+
+  if (representation !== 'time') {
+    var day = addLeadingZeros(originalDate.getDate(), 2);
+    var month = addLeadingZeros(originalDate.getMonth() + 1, 2);
+    var year = addLeadingZeros(originalDate.getFullYear(), 4); // yyyyMMdd or yyyy-MM-dd.
+
+    result = "".concat(year).concat(dateDelimiter).concat(month).concat(dateDelimiter).concat(day);
+  } // Representation is either 'time' or 'complete'
+
+
+  if (representation !== 'date') {
+    // Add the timezone.
+    var offset = originalDate.getTimezoneOffset();
+
+    if (offset !== 0) {
+      var absoluteOffset = Math.abs(offset);
+      var hourOffset = addLeadingZeros(Math.floor(absoluteOffset / 60), 2);
+      var minuteOffset = addLeadingZeros(absoluteOffset % 60, 2); // If less than 0, the sign is +, because it is ahead of time.
+
+      var sign = offset < 0 ? '+' : '-';
+      tzOffset = "".concat(sign).concat(hourOffset, ":").concat(minuteOffset);
+    } else {
+      tzOffset = 'Z';
+    }
+
+    var hour = addLeadingZeros(originalDate.getHours(), 2);
+    var minute = addLeadingZeros(originalDate.getMinutes(), 2);
+    var second = addLeadingZeros(originalDate.getSeconds(), 2); // If there's also date, separate it with time with 'T'
+
+    var separator = result === '' ? '' : 'T'; // Creates a time string consisting of hour, minute, and second, separated by delimiters, if defined.
+
+    var time = [hour, minute, second].join(timeDelimiter); // HHmmss or HH:mm:ss.
+
+    result = "".concat(result).concat(separator).concat(time).concat(tzOffset);
+  }
+
+  return result;
+}
+
+/**
+ * @name isWithinInterval
+ * @category Interval Helpers
+ * @summary Is the given date within the interval?
+ *
+ * @description
+ * Is the given date within the interval? (Including start and end.)
+ *
+ * @param {Date|Number} date - the date to check
+ * @param {Interval} interval - the interval to check
+ * @returns {Boolean} the date is within the interval
+ * @throws {TypeError} 2 arguments required
+ * @throws {RangeError} The start of an interval cannot be after its end
+ * @throws {RangeError} Date in interval cannot be `Invalid Date`
+ *
+ * @example
+ * // For the date within the interval:
+ * isWithinInterval(new Date(2014, 0, 3), {
+ *   start: new Date(2014, 0, 1),
+ *   end: new Date(2014, 0, 7)
+ * })
+ * //=> true
+ *
+ * @example
+ * // For the date outside of the interval:
+ * isWithinInterval(new Date(2014, 0, 10), {
+ *   start: new Date(2014, 0, 1),
+ *   end: new Date(2014, 0, 7)
+ * })
+ * //=> false
+ *
+ * @example
+ * // For date equal to interval start:
+ * isWithinInterval(date, { start, end: date }) // => true
+ *
+ * @example
+ * // For date equal to interval end:
+ * isWithinInterval(date, { start: date, end }) // => true
+ */
+function isWithinInterval(dirtyDate, interval) {
+  requiredArgs(2, arguments);
+  var time = toDate(dirtyDate).getTime();
+  var startTime = toDate(interval.start).getTime();
+  var endTime = toDate(interval.end).getTime(); // Throw an exception if start date is after end date or if any date is `Invalid Date`
+
+  if (!(startTime <= endTime)) {
+    throw new RangeError('Invalid interval');
+  }
+
+  return time >= startTime && time <= endTime;
+}
+
+var longFormattersExports = {};
+var longFormatters$1 = {
+  get exports(){ return longFormattersExports; },
+  set exports(v){ longFormattersExports = v; },
+};
+
+(function (module, exports) {
+
+	Object.defineProperty(exports, "__esModule", {
+	  value: true
+	});
+	exports.default = void 0;
+
+	var dateLongFormatter = function dateLongFormatter(pattern, formatLong) {
+	  switch (pattern) {
+	    case 'P':
+	      return formatLong.date({
+	        width: 'short'
+	      });
+
+	    case 'PP':
+	      return formatLong.date({
+	        width: 'medium'
+	      });
+
+	    case 'PPP':
+	      return formatLong.date({
+	        width: 'long'
+	      });
+
+	    case 'PPPP':
+	    default:
+	      return formatLong.date({
+	        width: 'full'
+	      });
+	  }
+	};
+
+	var timeLongFormatter = function timeLongFormatter(pattern, formatLong) {
+	  switch (pattern) {
+	    case 'p':
+	      return formatLong.time({
+	        width: 'short'
+	      });
+
+	    case 'pp':
+	      return formatLong.time({
+	        width: 'medium'
+	      });
+
+	    case 'ppp':
+	      return formatLong.time({
+	        width: 'long'
+	      });
+
+	    case 'pppp':
+	    default:
+	      return formatLong.time({
+	        width: 'full'
+	      });
+	  }
+	};
+
+	var dateTimeLongFormatter = function dateTimeLongFormatter(pattern, formatLong) {
+	  var matchResult = pattern.match(/(P+)(p+)?/) || [];
+	  var datePattern = matchResult[1];
+	  var timePattern = matchResult[2];
+
+	  if (!timePattern) {
+	    return dateLongFormatter(pattern, formatLong);
+	  }
+
+	  var dateTimeFormat;
+
+	  switch (datePattern) {
+	    case 'P':
+	      dateTimeFormat = formatLong.dateTime({
+	        width: 'short'
+	      });
+	      break;
+
+	    case 'PP':
+	      dateTimeFormat = formatLong.dateTime({
+	        width: 'medium'
+	      });
+	      break;
+
+	    case 'PPP':
+	      dateTimeFormat = formatLong.dateTime({
+	        width: 'long'
+	      });
+	      break;
+
+	    case 'PPPP':
+	    default:
+	      dateTimeFormat = formatLong.dateTime({
+	        width: 'full'
+	      });
+	      break;
+	  }
+
+	  return dateTimeFormat.replace('{{date}}', dateLongFormatter(datePattern, formatLong)).replace('{{time}}', timeLongFormatter(timePattern, formatLong));
+	};
+
+	var longFormatters = {
+	  p: timeLongFormatter,
+	  P: dateTimeLongFormatter
+	};
+	var _default = longFormatters;
+	exports.default = _default;
+	module.exports = exports.default;
+} (longFormatters$1, longFormattersExports));
+
+var longFormatters = /*@__PURE__*/getDefaultExportFromCjs(longFormattersExports);
+
+var defaultFormats = {
+    dayOfMonth: "d",
+    fullDate: "PP",
+    fullDateWithWeekday: "PPPP",
+    fullDateTime: "PP p",
+    fullDateTime12h: "PP hh:mm aaa",
+    fullDateTime24h: "PP HH:mm",
+    fullTime: "p",
+    fullTime12h: "hh:mm aaa",
+    fullTime24h: "HH:mm",
+    hours12h: "hh",
+    hours24h: "HH",
+    keyboardDate: "P",
+    keyboardDateTime: "P p",
+    keyboardDateTime12h: "P hh:mm aaa",
+    keyboardDateTime24h: "P HH:mm",
+    minutes: "mm",
+    month: "LLLL",
+    monthAndDate: "MMMM d",
+    monthAndYear: "LLLL yyyy",
+    monthShort: "MMM",
+    weekday: "EEEE",
+    weekdayShort: "EEE",
+    normalDate: "d MMMM",
+    normalDateWithWeekday: "EEE, MMM d",
+    seconds: "ss",
+    shortDate: "MMM d",
+    year: "yyyy",
+};
+var DateFnsUtils = /** @class */ (function () {
+    function DateFnsUtils(_a) {
+        var _this = this;
+        var _b = _a === void 0 ? {} : _a, locale = _b.locale, formats = _b.formats;
+        this.lib = "date-fns";
+        // Note: date-fns input types are more lenient than this adapter, so we need to expose our more
+        // strict signature and delegate to the more lenient signature. Otherwise, we have downstream type errors upon usage.
+        this.is12HourCycleInCurrentLocale = function () {
+            if (_this.locale) {
+                return /a/.test(_this.locale.formatLong.time());
+            }
+            // By default date-fns is using en-US locale with am/pm enabled
+            return true;
+        };
+        this.getFormatHelperText = function (format) {
+            // @see https://github.com/date-fns/date-fns/blob/master/src/format/index.js#L31
+            var longFormatRegexp = /P+p+|P+|p+|''|'(''|[^'])+('|$)|./g;
+            var locale = _this.locale || defaultLocale;
+            return format
+                .match(longFormatRegexp)
+                .map(function (token) {
+                var firstCharacter = token[0];
+                if (firstCharacter === "p" || firstCharacter === "P") {
+                    var longFormatter = longFormatters[firstCharacter];
+                    return longFormatter(token, locale.formatLong, {});
+                }
+                return token;
+            })
+                .join("")
+                .replace(/(aaa|aa|a)/g, "(a|p)m")
+                .toLocaleLowerCase();
+        };
+        this.parseISO = function (isoString) {
+            return parseISO(isoString);
+        };
+        this.toISO = function (value) {
+            return formatISO(value, { format: "extended" });
+        };
+        this.getCurrentLocaleCode = function () {
+            var _a;
+            return ((_a = _this.locale) === null || _a === void 0 ? void 0 : _a.code) || "en-US";
+        };
+        this.addSeconds = function (value, count) {
+            return addSeconds(value, count);
+        };
+        this.addMinutes = function (value, count) {
+            return addMinutes(value, count);
+        };
+        this.addHours = function (value, count) {
+            return addHours(value, count);
+        };
+        this.addDays = function (value, count) {
+            return addDays(value, count);
+        };
+        this.addWeeks = function (value, count) {
+            return addWeeks(value, count);
+        };
+        this.addMonths = function (value, count) {
+            return addMonths(value, count);
+        };
+        this.addYears = function (value, count) {
+            return addYears(value, count);
+        };
+        this.isValid = function (value) {
+            return isValid(_this.date(value));
+        };
+        this.getDiff = function (value, comparing, unit) {
+            switch (unit) {
+                case "years":
+                    return differenceInYears(value, _this.date(comparing));
+                case "quarters":
+                    return differenceInQuarters(value, _this.date(comparing));
+                case "months":
+                    return differenceInMonths(value, _this.date(comparing));
+                case "weeks":
+                    return differenceInWeeks(value, _this.date(comparing));
+                case "days":
+                    return differenceInDays(value, _this.date(comparing));
+                case "hours":
+                    return differenceInHours(value, _this.date(comparing));
+                case "minutes":
+                    return differenceInMinutes(value, _this.date(comparing));
+                case "seconds":
+                    return differenceInSeconds(value, _this.date(comparing));
+                default: {
+                    return differenceInMilliseconds(value, _this.date(comparing));
+                }
+            }
+        };
+        this.isAfter = function (value, comparing) {
+            return isAfter(value, comparing);
+        };
+        this.isBefore = function (value, comparing) {
+            return isBefore(value, comparing);
+        };
+        this.startOfDay = function (value) {
+            return startOfDay(value);
+        };
+        this.endOfDay = function (value) {
+            return endOfDay(value);
+        };
+        this.getHours = function (value) {
+            return getHours(value);
+        };
+        this.setHours = function (value, count) {
+            return setHours(value, count);
+        };
+        this.setMinutes = function (value, count) {
+            return setMinutes(value, count);
+        };
+        this.getSeconds = function (value) {
+            return getSeconds(value);
+        };
+        this.setSeconds = function (value, count) {
+            return setSeconds(value, count);
+        };
+        this.isSameDay = function (value, comparing) {
+            return isSameDay(value, comparing);
+        };
+        this.isSameMonth = function (value, comparing) {
+            return isSameMonth(value, comparing);
+        };
+        this.isSameYear = function (value, comparing) {
+            return isSameYear(value, comparing);
+        };
+        this.isSameHour = function (value, comparing) {
+            return isSameHour(value, comparing);
+        };
+        this.startOfYear = function (value) {
+            return startOfYear(value);
+        };
+        this.endOfYear = function (value) {
+            return endOfYear(value);
+        };
+        this.startOfMonth = function (value) {
+            return startOfMonth(value);
+        };
+        this.endOfMonth = function (value) {
+            return endOfMonth(value);
+        };
+        this.startOfWeek = function (value) {
+            return startOfWeek(value, { locale: _this.locale });
+        };
+        this.endOfWeek = function (value) {
+            return endOfWeek(value, { locale: _this.locale });
+        };
+        this.getYear = function (value) {
+            return getYear(value);
+        };
+        this.setYear = function (value, count) {
+            return setYear(value, count);
+        };
+        this.date = function (value) {
+            if (typeof value === "undefined") {
+                return new Date();
+            }
+            if (value === null) {
+                return null;
+            }
+            return new Date(value);
+        };
+        this.toJsDate = function (value) {
+            return value;
+        };
+        this.parse = function (value, formatString) {
+            if (value === "") {
+                return null;
+            }
+            return parse(value, formatString, new Date(), { locale: _this.locale });
+        };
+        this.format = function (date, formatKey) {
+            return _this.formatByString(date, _this.formats[formatKey]);
+        };
+        this.formatByString = function (date, formatString) {
+            return format(date, formatString, { locale: _this.locale });
+        };
+        this.isEqual = function (date, comparing) {
+            if (date === null && comparing === null) {
+                return true;
+            }
+            return isEqual(date, comparing);
+        };
+        this.isNull = function (date) {
+            return date === null;
+        };
+        this.isAfterDay = function (date, value) {
+            return isAfter(date, endOfDay(value));
+        };
+        this.isBeforeDay = function (date, value) {
+            return isBefore(date, startOfDay(value));
+        };
+        this.isBeforeYear = function (date, value) {
+            return isBefore(date, startOfYear(value));
+        };
+        this.isAfterYear = function (date, value) {
+            return isAfter(date, endOfYear(value));
+        };
+        this.isWithinRange = function (date, _a) {
+            var start = _a[0], end = _a[1];
+            return isWithinInterval(date, { start: start, end: end });
+        };
+        this.formatNumber = function (numberToFormat) {
+            return numberToFormat;
+        };
+        this.getMinutes = function (date) {
+            return getMinutes(date);
+        };
+        this.getDate = function (date) {
+            return getDate(date);
+        };
+        this.setDate = function (date, count) {
+            return setDate(date, count);
+        };
+        this.getMonth = function (date) {
+            return getMonth(date);
+        };
+        this.getDaysInMonth = function (date) {
+            return getDaysInMonth(date);
+        };
+        this.setMonth = function (date, count) {
+            return setMonth(date, count);
+        };
+        this.getMeridiemText = function (ampm) {
+            return ampm === "am" ? "AM" : "PM";
+        };
+        this.getNextMonth = function (date) {
+            return addMonths(date, 1);
+        };
+        this.getPreviousMonth = function (date) {
+            return addMonths(date, -1);
+        };
+        this.getMonthArray = function (date) {
+            var firstMonth = startOfYear(date);
+            var monthArray = [firstMonth];
+            while (monthArray.length < 12) {
+                var prevMonth = monthArray[monthArray.length - 1];
+                monthArray.push(_this.getNextMonth(prevMonth));
+            }
+            return monthArray;
+        };
+        this.mergeDateAndTime = function (date, time) {
+            return _this.setSeconds(_this.setMinutes(_this.setHours(date, _this.getHours(time)), _this.getMinutes(time)), _this.getSeconds(time));
+        };
+        this.getWeekdays = function () {
+            var now = new Date();
+            return eachDayOfInterval({
+                start: startOfWeek(now, { locale: _this.locale }),
+                end: endOfWeek(now, { locale: _this.locale }),
+            }).map(function (day) { return _this.formatByString(day, "EEEEEE"); });
+        };
+        this.getWeekArray = function (date) {
+            var start = startOfWeek(startOfMonth(date), { locale: _this.locale });
+            var end = endOfWeek(endOfMonth(date), { locale: _this.locale });
+            var count = 0;
+            var current = start;
+            var nestedWeeks = [];
+            var lastDay = null;
+            while (isBefore(current, end)) {
+                var weekNumber = Math.floor(count / 7);
+                nestedWeeks[weekNumber] = nestedWeeks[weekNumber] || [];
+                var day = getDay(current);
+                if (lastDay !== day) {
+                    lastDay = day;
+                    nestedWeeks[weekNumber].push(current);
+                    count += 1;
+                }
+                current = addDays(current, 1);
+            }
+            return nestedWeeks;
+        };
+        this.getYearRange = function (start, end) {
+            var startDate = startOfYear(start);
+            var endDate = endOfYear(end);
+            var years = [];
+            var current = startDate;
+            while (isBefore(current, endDate)) {
+                years.push(current);
+                current = addYears(current, 1);
+            }
+            return years;
+        };
+        this.locale = locale;
+        this.formats = Object.assign({}, defaultFormats, formats);
+    }
+    return DateFnsUtils;
+}());
+
+const formatTokenMap = {
+  y: 'year',
+  yy: 'year',
+  yyy: 'year',
+  yyyy: 'year',
+  MMMM: 'month',
+  MM: 'month',
+  DD: 'day',
+  d: 'day',
+  dd: 'day',
+  H: 'hour',
+  HH: 'hour',
+  h: 'hour',
+  hh: 'hour',
+  mm: 'minute',
+  ss: 'second',
+  a: 'am-pm',
+  aa: 'am-pm',
+  aaa: 'am-pm'
+};
+class AdapterDateFns extends DateFnsUtils {
+  constructor(...args) {
+    super(...args);
+    this.formatTokenMap = formatTokenMap;
+
+    this.expandFormat = format => {
+      const longFormatRegexp = /P+p+|P+|p+|''|'(''|[^'])+('|$)|./g; // @see https://github.com/date-fns/date-fns/blob/master/src/format/index.js#L31
+
+      return format.match(longFormatRegexp).map(token => {
+        const firstCharacter = token[0];
+
+        if (firstCharacter === 'p' || firstCharacter === 'P') {
+          const longFormatter = longFormatters[firstCharacter];
+          const locale = this.locale || defaultLocale;
+          return longFormatter(token, locale.formatLong, {});
+        }
+
+        return token;
+      }).join('');
+    };
+
+    this.getFormatHelperText = format => {
+      return this.expandFormat(format).replace(/(aaa|aa|a)/g, '(a|p)m').toLocaleLowerCase();
+    };
+  }
+
+}
+
+var DateField = function (_a) {
+    var field = _a.field, label = _a.label, onChange = _a.onChange, name = _a.name, id = _a.id, minDate = _a.minDate;
+    return (React.createElement(LocalizationProvider, { dateAdapter: AdapterDateFns },
+        React.createElement(MobileDatePicker, { label: label, value: field.value, minDate: minDate, onChange: function (newValue) {
+                onChange(newValue);
+            }, renderInput: function (params) { return (React.createElement(TextField$2, __assign({ id: id, name: name }, params, { helperText: !!field.error ? field.error : null }))); } })));
+};
+
+var RESET = 'reset';
+var UPDATE = 'update';
+var IMPORT = 'import';
+function reducer(state, action) {
+    var _a;
+    switch (action.type) {
+        case UPDATE: {
+            var _b = action.payload, name_1 = _b.name, value = _b.value, error = _b.error;
+            return __assign(__assign({}, state), (_a = {}, _a[name_1] = { value: value, error: error }, _a));
+        }
+        case IMPORT: {
+            return __assign(__assign({}, state), action.payload);
+        }
+        case RESET: {
+            return action.payload;
+        }
+        default:
+            return state;
+    }
+}
+var useForm = function (initialState, validations) {
+    var _a = reactExports.useReducer(reducer, initialState), form = _a[0], dispatch = _a[1];
+    var handleImport = function (payload) { return dispatch({ type: IMPORT, payload: payload }); };
+    var handleChange = function (event) {
+        var _a, _b;
+        var _c = event.target, value = _c.value, name = _c.name;
+        var error = !((_a = validations[name]) === null || _a === void 0 ? void 0 : _a.test(value.trim()))
+            ? (_b = validations[name]) === null || _b === void 0 ? void 0 : _b.message
+            : '';
+        dispatch({
+            type: UPDATE,
+            payload: {
+                name: name,
+                value: value,
+                error: error
+            }
+        });
+    };
+    var handleReset = function () { return dispatch({ type: RESET, payload: initialState }); };
+    var isFormValid = Object.keys(form).every(function (label) { return form[label].value && !form[label].error; });
+    return { form: form, handleChange: handleChange, handleReset: handleReset, handleImport: handleImport, isFormValid: isFormValid };
+};
+
+exports.Button = Button$2;
+exports.DateField = DateField;
 exports.TextField = TextField;
+exports.useForm = useForm;
 //# sourceMappingURL=index.js.map
