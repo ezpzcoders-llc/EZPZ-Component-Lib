@@ -1,9 +1,4 @@
 /// <reference types="react" />
-interface ButtonProps {
-    label: string;
-}
-declare const Button: (props: ButtonProps) => JSX.Element;
-
 type TextFieldProps = {
     field: {
         value: string;
@@ -17,5 +12,4 @@ type TextFieldProps = {
     disabled?: boolean;
 };
 declare const TextField: ({ field, type, id, name, label, onChange, disabled }: TextFieldProps) => JSX.Element;
-
-export { Button, TextField };
+export default TextField;
