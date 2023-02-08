@@ -1,4 +1,4 @@
-export const setColor = (field: {
+export const setInputValidationColor = (field: {
     value: string
     error: string
 }): 'primary' | 'error' | 'success' => {

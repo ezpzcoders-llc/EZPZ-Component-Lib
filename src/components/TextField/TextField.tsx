@@ -8,7 +8,7 @@ import {
 } from '@mui/material'
 import { Visibility, VisibilityOff } from '@mui/icons-material'
 
-import { setColor } from './utilities'
+import { setInputValidationColor } from '../utilities/inputValidations'
 
 type TextFieldProps = {
     field: { value: string; error: string }
@@ -40,10 +40,10 @@ const TextField = ({
     if (type === 'password') {
         return (
             <FormControl
-                color={setColor(field)}
+                color={setInputValidationColor(field)}
                 error={field.error ? true : false}>
                 <MuiTextField
-                    color={setColor(field)}
+                    color={setInputValidationColor(field)}
                     error={field.error ? true : false}
                     variant="outlined"
                     type={showPassword ? 'text' : 'password'}
@@ -80,10 +80,12 @@ const TextField = ({
     }
 
     return (
-        <FormControl color={setColor(field)} error={field.error ? true : false}>
+        <FormControl
+            color={setInputValidationColor(field)}
+            error={field.error ? true : false}>
             <MuiTextField
                 multiline={type === 'textarea'}
-                color={setColor(field)}
+                color={setInputValidationColor(field)}
                 error={field.error ? true : false}
                 variant="outlined"
                 type={type === 'textarea' ? 'text' : type}
